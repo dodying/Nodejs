@@ -1,9 +1,10 @@
 /*
-* @Author: dodying
-* @Date:   2017-11-17 22:01:03
-* @Last Modified by:   dodying
-* @Last Modified time: 2017-12-02 20:56:57
-*/
+ * @Author: dodying
+ * @Date:   2017-11-17 22:01:03
+ * @Description:  avRenamer
+ * @Last Modified by:   dodying
+ * @Last Modified time: 2017-12-02 23:26:43
+ */
 
 //设置
 const useProfile = 'e';
@@ -107,8 +108,6 @@ const superagent = require('superagent');
 require('superagent-proxy')(superagent);
 const cheerio = require('cheerio');
 const async = require('async');
-const EventProxy = require('eventproxy');
-const ep = new EventProxy();
 const Jimp = require("jimp");
 const sizeOf = require('image-size');
 const logger = require('tracer').console({
@@ -263,7 +262,6 @@ const getInfo = (i, html) => { //生成信息
   }
   info.cover = $(lib.cover).attr('src');
   Object.assign(data[i], info);
-  ep.emit('getData');
 }
 
 const rename = i => { //重命名
@@ -336,22 +334,22 @@ const downloadImage = i => { //下载图片
     superagent.get(url).set('header', header).proxy(_.proxy).timeout(_.timeout).retry(_.imageRetry).responseType('blob').end((err, res) => {
       if (err) {
         logger.error(`Request: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
-        reject(err);
-      } else {
-        fs.writeFileSync(targetBanner, res.body);
-        if (_.image === 2) {
-          let size = sizeOf(targetBanner);
-          Jimp.read(targetBanner, (err, image) => {
-            if (err) {
-              logger.error(`File: ${colors.info(target)}\nInfo: ${colors.error(err)}`);
-              reject(err);
-            } else {
-              image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target);
-              resolve();
-            }
-          });
-        }
+        return reject(err);
       }
+      fs.writeFileSync(targetBanner, res.body);
+      if (_.image === 2) {
+        let size = sizeOf(targetBanner);
+        Jimp.read(targetBanner, (err, image) => {
+          if (err) {
+            logger.error(`File: ${colors.info(target)}\nInfo: ${colors.error(err)}`);
+            reject(err);
+          } else {
+            image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target);
+            resolve();
+          }
+        });
+      }
+
     });
   });
 }
@@ -383,10 +381,19 @@ fs.readdir(_.folder, (err, lst) => {
   }
   logger.log(`Work list: ${colors.info(lst.join(', '))}`);
 
-  ep.after('taskDone', lst.length, () => {
-    logger.log(colors.info('All task completed.'));
-  });
-  ep.after('getData', lst.length, () => {
+  async.mapSeries(lst, (i, callback) => {
+    search(i).then((res) => {
+      data[i].url = res.urlTrue;
+      getInfo(i, res.text);
+      callback(null, i);
+    }, err => {
+      callback(null, i);
+    });
+  }, (err, results) => {
+    if (err) {
+      logger.error(colors.error(err));
+      return;
+    }
     logger.log(colors.info('All info request completed.'));
     async.mapSeries(lst, (i, callback) => {
       if (data[i].num !== undefined) {
@@ -394,29 +401,21 @@ fs.readdir(_.folder, (err, lst) => {
         if (_.nfo) nfoFile(i);
         if (_.image) {
           downloadImage(i).then(() => {
-            ep.emit('taskDone');
             callback(null, i);
           }, err => {
-            ep.emit('taskDone');
             callback(null, i);
           });
         } else {
-          ep.emit('taskDone');
           callback(null, i);
         }
-      } else {
-        ep.emit('taskDone');
+      } else {}
+    }, (err, results) => {
+      if (err) {
+        logger.error(colors.error(err));
+        return;
       }
-    });
-  });
-  async.mapSeries(lst, (i, callback) => {
-    search(i).then((res) => {
-      data[i].url = res.urlTrue;
-      getInfo(i, res.text);
-      callback(null, i);
-    }, err => {
-      ep.emit('getData');
-      callback(null, i);
+      logger.log(colors.info('All task completed.'));
+
     });
   });
 });
