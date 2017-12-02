@@ -1,23 +1,28 @@
+/*
+* @Author: dodying
+* @Date:   2017-11-17 22:01:03
+* @Last Modified by:   dodying
+* @Last Modified time: 2017-12-02 20:56:57
+*/
+
 //设置
+const useProfile = 'e';
+
 const _ = {
-  proxy: 'http://127.0.0.1:9666',
-  header: {
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Mobile Safari/537.36',
-    'Cache-Control': 'max-age=0',
-    'Connection': 'keep-alive'
-  },
+  proxy: 'http://127.0.0.1:9666', //代理
+  timeout: 30 * 1000, //请求延迟
   /**
    * [folder description]
    * @type {String}
    * 要整理的目录(只整理根目录)
+   * 绝对路径
    * __dirname：    获得当前执行文件所在目录的完整目录名
    * process.cwd()：获得当前执行node命令时候的文件夹目录名
    * ./：           文件所在目录 path.resolve('./')
    */
-  folder: 'D:\\1\\Censored\\',
-  folderNew: '', //整理后存放的目录
+  folder: 'H:\\',
+  rename: false, //整理目录下的文件名是否需要处理
+  folderNew: '', //整理后存放的目录，形同folder
   /**
    * [folderWith description]
    * @type {String}
@@ -26,7 +31,7 @@ const _ = {
    * 留空表示不建立
    */
   folderWith: 'actor',
-  emptyStr: '---',
+  emptyStr: '---', //某属性为空时，使用的替代字符
   /**
    * [name description]
    * @type {String}
@@ -44,51 +49,42 @@ const _ = {
    * 2 下载图片且裁剪
    */
   image: 2,
-  imageDelay: 500, //下载图片的延迟
+  imageRetry: 3, //下载图片重试次数（仅timeou重试）
   strRemove: ['（ブルーレイディスク）'],
   strReplace: [
     [],
     []
   ],
   nfo: true, //是否生成nfo文件(kodi格式)
+  //http://actress.dmm.co.jp/-/search/=/searchstr=%s/
   actorUrl: 'file:///F:/Actor/', //nfo文件用，演员图片的地址，留空不添加
-  useLib: 'javlib',
-  lib: {
-    'javlib': {
-      search: 'http://www.javlibrary.com/cn/vl_searchbyid.php?keyword={q}',
-      infoPageCheck: '#video_id',
-      result: '.video',
-      cover: '#video_jacket_img',
-      data: {
-        title: '.post-title',
-        num: '#video_id .text',
-        premiered: '#video_date .text',
-        runtime: '#video_length .text',
-        director: '#video_director .text',
-        studio: '#video_maker .text',
-        //label: '#video_label .text',
-        rating: '#video_review .text>.score',
-        genre: '#video_genres .text>.genre',
-        actor: '#video_cast .text>.cast a',
-      }
-    },
-    'javbus': {
-      search: 'https://www.javbus.com/search/{q}',
-      infoPageCheck: '.movie',
-      result: '.item',
-      cover: '.bigImage img',
-      data: {
-        title: 'h3',
-        num: '.info>p:contains("識別碼")>span:nth-child(2)',
-        premiered: '.info>p:contains("發行日期")>span:nth-child(2)',
-        runtime: '.info>p:contains("長度")>span:nth-child(2)',
-        director: '.info>p:contains("導演")>a:nth-child(2)',
-        studio: '.info>p:contains("製作商")>a:nth-child(2)',
-        //label: '.info>p:contains("發行商")>a:nth-child(2)',
-        genre: '.info>p:contains("類別")+p>.genre',
-        actor: '.star-box',
-      }
-    }
+  useLib: 'javlib'
+};
+
+const profile = {
+  Censored: {
+    folder: 'H:\\H\\Censored\\',
+    rename: false,
+    image: 2,
+    useLib: 'javlib'
+  },
+  Uncensored: {
+    folder: 'H:\\H\\Uncensored\\',
+    rename: false,
+    image: 1,
+    useLib: 'javbus'
+  },
+  d: {
+    folder: 'D:\\1\\Censored\\',
+    rename: true,
+    image: 2,
+    useLib: 'javlib'
+  },
+  e: {
+    folder: 'E:\\1\\Censored\\',
+    rename: true,
+    image: 2,
+    useLib: 'javlib'
   }
 };
 
@@ -109,14 +105,16 @@ const Url = require('url');
 const readlineSync = require('readline-sync');
 const superagent = require('superagent');
 require('superagent-proxy')(superagent);
-const binaryParser = require('superagent-binary-parser');
 const cheerio = require('cheerio');
 const async = require('async');
 const EventProxy = require('eventproxy');
 const ep = new EventProxy();
 const Jimp = require("jimp");
 const sizeOf = require('image-size');
-const logger = require('tracer').console();
+const logger = require('tracer').console({
+  format: "{{timestamp}} <{{file}}:L{{line}}:{{pos}}>: {{message}}",
+  dateformat: "HH:MM:ss"
+});
 const colors = require('colors');
 colors.setTheme({
   info: 'green',
@@ -125,39 +123,130 @@ colors.setTheme({
   debug: 'blue',
   error: 'red'
 });
+const argv = require('optimist').argv;
+
 
 //
+if (argv._[0] || useProfile) Object.assign(_, profile[argv._[0] || useProfile]);
+if (Object.keys(argv).length > 2) Object.assign(_, argv);
 const data = {};
-const lib = _.lib[_.useLib];
 _.folderNew = path.resolve(_.folder, _.folderNew);
 if (!fs.exists(_.folderNew)) fs.mkdirSync(_.folderNew);
+const header = {
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+  'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
+  'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Mobile Safari/537.36',
+  'Cache-Control': 'max-age=0',
+  'Connection': 'keep-alive'
+};
+const lib = {
+  'javlib': {
+    search: 'http://www.javlibrary.com/cn/vl_searchbyid.php?keyword={q}',
+    infoPageCheck: '#video_id',
+    result: '.video',
+    cover: '#video_jacket_img',
+    data: {
+      title: '.post-title',
+      num: '#video_id .text',
+      premiered: '#video_date .text',
+      runtime: '#video_length .text',
+      director: '#video_director .text',
+      studio: '#video_maker .text',
+      //label: '#video_label .text',
+      rating: $ => (a = $('#video_review .text>.score')) !== null && a.text().match(/[\d.]+/) ? a.text().match(/[\d.]+/)[0] : 0,
+      genre: '#video_genres .text>.genre',
+      actor: '#video_cast .text>.cast a',
+    }
+  },
+  'javbus': {
+    search: 'https://www.javbus.com/search/{q}',
+    infoPageCheck: '.movie',
+    result: '.item',
+    cover: '.bigImage img',
+    data: {
+      title: 'h3',
+      num: '.info>p:contains("識別碼")>span:nth-child(2)',
+      premiered: $ => $('.info>p:contains("發行日期")').text().match(/[\d-]+/)[0],
+      runtime: $ => $('.info>p:contains("長度")').text().match(/\d+/)[0],
+      director: '.info>p:contains("導演")>a:nth-child(2)',
+      studio: '.info>p:contains("製作商")>a:nth-child(2)',
+      //label: '.info>p:contains("發行商")>a:nth-child(2)',
+      genre: '.info>p:contains("類別")+p>.genre',
+      actor: '.star-box',
+    }
+  }
+}[_.useLib];
 
 const replaceWithDict = (text, a, b = []) => {
   for (let i = 0; i < a.length; i++) {
     text = text.replace(new RegExp(a[i], 'gi'), b[i] || '').trim();
   }
   return text;
-};
+}
 
 String.prototype.replaceWithDict = function(a, b = []) {
   return replaceWithDict(this.toString(), a, b);
-};
+}
 
-const getNum = text => {
+const getNum = text => { //尝试修改名称
   text = text.match(/[^h_0-9].*/)[0];
   text = text.replace(/^tk|tk$/g, '').replace(/00([0-9]{3})/, '$1').replace(/([a-z]+)([0-9]+)/, '$1-$2');
   text = text.toUpperCase();
   return text;
+}
+
+const request = url => {
+  return new Promise((resolve, reject) => {
+    superagent.get(url).set('header', header).proxy(_.proxy).timeout(_.timeout).end((err, res) => {
+      if (err) {
+        logger.error(`Request: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
+        reject(err);
+      } else {
+        res.urlTrue = res.redirects.length ? res.redirects[res.redirects.length - 1] : url;
+        resolve(res);
+      }
+    });
+  });
+}
+
+const search = i => { //搜索番号
+  let keyword = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '');
+  let url = lib.search.replace('{q}', keyword);
+  return new Promise((resolve, reject) => {
+    request(url).then((res) => {
+      const $ = cheerio.load(res.text);
+      if ($(lib.infoPageCheck).length) {
+        resolve(res);
+      } else if ($(lib.result).filter(`:contains("${keyword}")`).length) {
+        let url_1 = $(lib.result).filter(`:contains("${keyword}")`).find('a').attr('href');
+        url_1 = Url.resolve(url, url_1);
+        return request(url_1);
+      } else {
+        logger.warn(`Not find the movie: ${colors.warn(keyword)}`);
+        reject(new Error(`Not find the movie: ${keyword}`));
+      }
+    }, err => {
+      reject(err);
+    }).then((res) => {
+      resolve(res);
+    }, err => {
+      reject(err);
+    });
+  });
 };
 
-const getInfo = (i, html) => {
+const getInfo = (i, html) => { //生成信息
   const $ = cheerio.load(html);
   let info = Object.assign({}, lib.data);
   for (let i in info) {
-    if ($(info[i]).length === 0) {
-      delete info[i];
-    } else {
-      info[i] = $(info[i]).length === 1 ? $(info[i]).text().trim() : $(info[i]).map((i, _this) => $(_this).text()).get().sort();
+    if (typeof info[i] === 'string') {
+      if ($(info[i]).length === 0) {
+        delete info[i];
+      } else {
+        info[i] = $(info[i]).length === 1 ? $(info[i]).text().trim() : $(info[i]).map((i, _this) => $(_this).text()).get().sort();
+      }
+    } else if (typeof info[i] === 'function') {
+      info[i] = info[i]($);
     }
   }
   info.title = info.title.replace(info.num, '').trim();
@@ -173,12 +262,11 @@ const getInfo = (i, html) => {
     }
   }
   info.cover = $(lib.cover).attr('src');
-  info.rating = info.rating ? info.rating.match(/[\d\.]+/)[0] : 0;
   Object.assign(data[i], info);
   ep.emit('getData');
-};
+}
 
-const rename = i => {
+const rename = i => { //重命名
   let result, re = /{(.*?)}/g,
     name = _.name,
     ext = i.match(/\.\w{2,4}$/)[0],
@@ -201,9 +289,9 @@ const rename = i => {
   data[i].path = targetPath;
   if (!fs.exists(targetPath)) fs.mkdirSync(targetPath);
   if (!fs.exists(target)) fs.renameSync(targetOld, target);
-};
+}
 
-const nfoFile = i => {
+const nfoFile = i => { //生成NFO文件
   let d = data[i],
     t = '',
     target = path.resolve(d.path, d.name + '.nfo');
@@ -219,7 +307,7 @@ const nfoFile = i => {
   t += `  <thumb>${d.cover}</thumb>\r\n`;
   t += `  <premiered>${d.premiered}</premiered>\r\n`;
   t += `  <studio>${d.studio}</studio>\r\n`;
-  t += `  <director>${d.director}</director>\r\n`;
+  if (d.director) t += `  <director>${d.director}</director>\r\n`;
   if (d.genre) {
     [].concat(d.genre).forEach(i => {
       t += `  <genre>${i}</genre>\r\n`;
@@ -238,95 +326,97 @@ const nfoFile = i => {
   t += `  <uniqueid default="true" type="unknown">${d.num}</uniqueid>\r\n`;
   t += `</movie>`;
   fs.writeFileSync(target, t);
-};
+}
 
-fs.readdir(_.folder, function(err, lst) {
-  lst = lst.filter(i => fs.statSync(path.resolve(_.folder, i)).isFile());
-  lst = lst.map(i => {
-    let ext = i.match(/\.\w{2,4}$/)[0],
-      t = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '') + ext,
-      tryNum = getNum(t.replace(/\.\w{2,4}$/, '')) + ext;
-    if (t === tryNum) return i;
-    logger.log(`Rename ${colors.info(i)} ==> ${colors.info(tryNum)} ? or ${colors.info('put in')} ${colors.warn('(without Extension)')}`);
-    input = readlineSync.question();
-    tryNum = input ? input + ext : tryNum;
-    if (i !== tryNum) {
-      let target = path.resolve(_.folder, tryNum),
-        targetOld = path.resolve(_.folder, i);
-      if (!fs.exists(target)) {
-        fs.renameSync(targetOld, target);
-        return tryNum;
+const downloadImage = i => { //下载图片
+  let url = Url.resolve(data[i].url, data[i].cover),
+    target = path.resolve(data[i].path, data[i].name + '.jpg'),
+    targetBanner = _.image === 2 ? target.replace('.jpg', '-banner.jpg') : target;
+  return new Promise((resolve, reject) => {
+    superagent.get(url).set('header', header).proxy(_.proxy).timeout(_.timeout).retry(_.imageRetry).responseType('blob').end((err, res) => {
+      if (err) {
+        logger.error(`Request: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
+        reject(err);
+      } else {
+        fs.writeFileSync(targetBanner, res.body);
+        if (_.image === 2) {
+          let size = sizeOf(targetBanner);
+          Jimp.read(targetBanner, (err, image) => {
+            if (err) {
+              logger.error(`File: ${colors.info(target)}\nInfo: ${colors.error(err)}`);
+              reject(err);
+            } else {
+              image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target);
+              resolve();
+            }
+          });
+        }
       }
-    }
-    return i;
+    });
   });
+}
+
+fs.readdir(_.folder, (err, lst) => {
+  lst = lst.filter(i => fs.statSync(path.resolve(_.folder, i)).isFile());
+  if (_.rename) {
+    lst = lst.map(i => {
+      let ext = i.match(/\.\w{2,4}$/)[0],
+        t = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '') + ext,
+        tryNum = getNum(t.replace(/\.\w{2,4}$/, '')) + ext;
+      if (t === tryNum) return i;
+      logger.log(`Rename ${colors.info(i)} ==> ${colors.info(tryNum)} ? or ${colors.info('put in')} ${colors.warn('(without Extension)')}`);
+      input = readlineSync.question();
+      tryNum = input ? input + ext : tryNum;
+      if (i !== tryNum) {
+        let target = path.resolve(_.folder, tryNum),
+          targetOld = path.resolve(_.folder, i);
+        if (!fs.exists(target)) {
+          fs.renameSync(targetOld, target);
+          return tryNum;
+        }
+      }
+      return i;
+    });
+  }
   for (let i = 0; i < lst.length; i++) {
     data[lst[i]] = {};
   }
   logger.log(`Work list: ${colors.info(lst.join(', '))}`);
 
+  ep.after('taskDone', lst.length, () => {
+    logger.log(colors.info('All task completed.'));
+  });
   ep.after('getData', lst.length, () => {
     logger.log(colors.info('All info request completed.'));
-    async.mapSeries(lst, function(i, callback) {
+    async.mapSeries(lst, (i, callback) => {
       if (data[i].num !== undefined) {
         rename(i);
         if (_.nfo) nfoFile(i);
-        if (_.image) { //下载图片
-          let url = Url.resolve(data[i].url, data[i].cover),
-            target = path.resolve(data[i].path, data[i].name + '.jpg'),
-            targetBanner = _.image === 2 ? target.replace('.jpg', '-banner.jpg') : target;
-          if (fs.exists(targetBanner)) return;
-          superagent.get(url).set('header', _.header).proxy(_.proxy).parse(binaryParser).buffer().then(res => {
-            fs.writeFileSync(targetBanner, res.body);
-            if (_.image === 2) {
-              let size = sizeOf(targetBanner);
-              Jimp.read(targetBanner, function(err, image) {
-                if (err) {
-                  logger.error(`File: ${colors.info(target)}\nInfo: ${colors.error(err)}`);
-                } else {
-                  image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target);
-                }
-              });
-            }
+        if (_.image) {
+          downloadImage(i).then(() => {
+            ep.emit('taskDone');
+            callback(null, i);
           }, err => {
-            logger.error(`Url: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
+            ep.emit('taskDone');
+            callback(null, i);
           });
+        } else {
+          ep.emit('taskDone');
+          callback(null, i);
         }
+      } else {
+        ep.emit('taskDone');
       }
-      setTimeout(() => {
-        callback(null, i);
-      }, _.imageDelay);
     });
   });
-  async.mapLimit(lst, 3, (i, callback) => { //搜索番号
-    let keyword = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '');
-    let url = lib.search.replace('{q}', keyword);
-    superagent.get(url).set('header', _.header).proxy(_.proxy).then(res => {
-      const $ = cheerio.load(res.text);
-      if ($(lib.infoPageCheck).length) {
-        callback(null, i);
-        data[i].url = res.redirects.length ? res.redirects[res.redirects.length - 1] : url;
-        getInfo(i, res.text);
-      } else if ($(lib.result).filter(`:contains("${keyword}")`).length) {
-        let url_0 = $(lib.result).filter(`:contains("${keyword}")`).find('a').attr('href');
-        let url_1 = Url.resolve(url, url_0);
-        superagent.get(url_1).set('header', _.header).proxy(_.proxy).then(res_1 => {
-          callback(null, i);
-          data[i].url = res_1.redirects.length ? res_1.redirects[res_1.redirects.length - 1] : url_1;
-          getInfo(i, res_1.text);
-        }, err => {
-          callback(null, i);
-          logger.error(`Request: ${colors.info(url_1)}\nInfo: ${colors.error(err)}`);
-          ep.emit('getData');
-        });
-      } else {
-        logger.warn(`Not find the movie: ${colors.warn(keyword)}`);
-        ep.emit('getData');
-      }
-    }, err => {
+  async.mapSeries(lst, (i, callback) => {
+    search(i).then((res) => {
+      data[i].url = res.urlTrue;
+      getInfo(i, res.text);
       callback(null, i);
-      logger.error(`Request: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
+    }, err => {
       ep.emit('getData');
+      callback(null, i);
     });
   });
 });
