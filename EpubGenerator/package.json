@@ -1,0 +1,24 @@
+{
+  "name": "epubgenerator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "epub",
+    "txt"
+  ],
+  "author": "dodying",
+  "license": "MIT",
+  "bin": {
+    "epub": "./index.js"
+  },
+  "dependencies": {
+    "archiver": "^2.1.1",
+    "glob": "^7.1.2",
+    "rimraf": "^2.6.2"
+  }
+}

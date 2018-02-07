@@ -1,29 +1,26 @@
-/*
- * @Author: dodying
- * @Date:   2017-11-17 22:01:03
- * @Description:  avRenamer
- * @Last Modified by:   dodying
- * @Last Modified time: 2017-12-02 23:26:43
- */
+#!/usr/bin/env node
+
+// ==Headers==
+// @Name:               avRenamer
+// @Description:        avRenamer
+// @Version:            1.0.0
+// @Author:             dodying
+// @Date:               2017-12-02 23:26:18
+// @Last Modified by:   dodying
+// @Last Modified time: 2018-02-06 00:04:37
+// @Namespace:          https://github.com/dodying/Nodejs
+// @SupportURL:         https://github.com/dodying/Nodejs/issues
+// @Require:            readline-sync,superagent,superagent-proxy,cheerio,async,jimp,image-size,tracer,colors
+// ==/Headers==
 
 //设置
-const useProfile = 'e';
-
+const useProfile = 'default';
 const _ = {
-  proxy: 'http://127.0.0.1:9666', //代理
+  proxy: 'socks://127.0.0.1:1080', //代理
   timeout: 30 * 1000, //请求延迟
-  /**
-   * [folder description]
-   * @type {String}
-   * 要整理的目录(只整理根目录)
-   * 绝对路径
-   * __dirname：    获得当前执行文件所在目录的完整目录名
-   * process.cwd()：获得当前执行node命令时候的文件夹目录名
-   * ./：           文件所在目录 path.resolve('./')
-   */
-  folder: 'H:\\',
+  folder: process.cwd(),
   rename: false, //整理目录下的文件名是否需要处理
-  folderNew: '', //整理后存放的目录，形同folder
+  folderNew: '', //整理后存放的目录，形同folder，留空则同folder
   /**
    * [folderWith description]
    * @type {String}
@@ -58,34 +55,32 @@ const _ = {
   ],
   nfo: true, //是否生成nfo文件(kodi格式)
   //http://actress.dmm.co.jp/-/search/=/searchstr=%s/
-  actorUrl: 'file:///F:/Actor/', //nfo文件用，演员图片的地址，留空不添加
+  //actorUrl: 'file:///F:/Actor/', //nfo文件用，演员图片的地址，留空不添加
   useLib: 'javlib'
 };
 
 const profile = {
-  Censored: {
-    folder: 'H:\\H\\Censored\\',
+  default: {
+    rename: true,
+    image: 2,
+    useLib: 'javlib',
+    proxy: 'http://127.0.0.1:9666'
+  },
+  c: { //Censored
     rename: false,
     image: 2,
-    useLib: 'javlib'
+    useLib: 'javlib',
+    proxy: 'http://127.0.0.1:9666'
   },
-  Uncensored: {
-    folder: 'H:\\H\\Uncensored\\',
+  c2: { //Censored
+    rename: false,
+    image: 2,
+    useLib: 'javbus'
+  },
+  u: { //Uncensored
     rename: false,
     image: 1,
     useLib: 'javbus'
-  },
-  d: {
-    folder: 'D:\\1\\Censored\\',
-    rename: true,
-    image: 2,
-    useLib: 'javlib'
-  },
-  e: {
-    folder: 'E:\\1\\Censored\\',
-    rename: true,
-    image: 2,
-    useLib: 'javlib'
   }
 };
 
@@ -188,17 +183,20 @@ String.prototype.replaceWithDict = function(a, b = []) {
 }
 
 const getNum = text => { //尝试修改名称
+  text = text.replace(/mp4$/i, '');
   text = text.match(/[^h_0-9].*/)[0];
-  text = text.replace(/^tk|tk$/g, '').replace(/00([0-9]{3})/, '$1').replace(/([a-z]+)([0-9]+)/, '$1-$2');
+  text = text.replace(/^tk|tk$/g, '').replace(/00([0-9]{3})/g, '$1').replace(/([a-z]+)([0-9]+)/gi, '$1-$2').replace(/([a-z]+-[0-9]+)(R|C|)/i, '$1');
   text = text.toUpperCase();
   return text;
 }
 
 const request = url => {
   return new Promise((resolve, reject) => {
-    superagent.get(url).set('header', header).proxy(_.proxy).timeout(_.timeout).end((err, res) => {
+    superagent.get(url).set(header).proxy(_.proxy).timeout(_.timeout).end((err, res) => {
       if (err) {
-        logger.error(`Request: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
+        if (err.status !== 404) console.error(`Request: ${colors.info(url)}\nInfo: `, {
+          error: err
+        });
         reject(err);
       } else {
         res.urlTrue = res.redirects.length ? res.redirects[res.redirects.length - 1] : url;
@@ -300,7 +298,7 @@ const nfoFile = i => { //生成NFO文件
   t += `  <originaltitle>${d.title}</originaltitle>\r\n`;
   t += `  <sorttitle>${d.num}</sorttitle>\r\n`;
   if (d.rating) t += `  <rating>${d.rating}</rating>\r\n`;
-  t += `  <year>2017</year>\r\n`;
+  if (d.premiered.match(/\d{4}/)) t += `  <year>${d.premiered.match(/\d{4}/)[0]}</year>\r\n`;
   t += `  <runtime>${d.runtime}</runtime>\r\n`;
   t += `  <thumb>${d.cover}</thumb>\r\n`;
   t += `  <premiered>${d.premiered}</premiered>\r\n`;
@@ -331,9 +329,11 @@ const downloadImage = i => { //下载图片
     target = path.resolve(data[i].path, data[i].name + '.jpg'),
     targetBanner = _.image === 2 ? target.replace('.jpg', '-banner.jpg') : target;
   return new Promise((resolve, reject) => {
-    superagent.get(url).set('header', header).proxy(_.proxy).timeout(_.timeout).retry(_.imageRetry).responseType('blob').end((err, res) => {
+    superagent.get(url).set(header).proxy(_.proxy).timeout(_.timeout).retry(_.imageRetry).responseType('blob').end((err, res) => {
       if (err) {
-        logger.error(`Request: ${colors.info(url)}\nInfo: ${colors.error(err)}`);
+        if (err.status !== 404) console.error(`Request: ${colors.info(url)}\nInfo: `, {
+          error: err
+        });
         return reject(err);
       }
       fs.writeFileSync(targetBanner, res.body);
@@ -341,81 +341,92 @@ const downloadImage = i => { //下载图片
         let size = sizeOf(targetBanner);
         Jimp.read(targetBanner, (err, image) => {
           if (err) {
-            logger.error(`File: ${colors.info(target)}\nInfo: ${colors.error(err)}`);
+            if (err.status !== 404) console.error(`Request: ${colors.info(url)}\nInfo: `, {
+              error: err
+            });
             reject(err);
           } else {
-            image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target);
-            resolve();
+            image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target, () => {
+              resolve();
+            });
           }
         });
+      } else {
+        resolve();
       }
-
     });
   });
 }
 
-fs.readdir(_.folder, (err, lst) => {
-  lst = lst.filter(i => fs.statSync(path.resolve(_.folder, i)).isFile());
-  if (_.rename) {
-    lst = lst.map(i => {
-      let ext = i.match(/\.\w{2,4}$/)[0],
-        t = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '') + ext,
-        tryNum = getNum(t.replace(/\.\w{2,4}$/, '')) + ext;
-      if (t === tryNum) return i;
-      logger.log(`Rename ${colors.info(i)} ==> ${colors.info(tryNum)} ? or ${colors.info('put in')} ${colors.warn('(without Extension)')}`);
-      input = readlineSync.question();
-      tryNum = input ? input + ext : tryNum;
-      if (i !== tryNum) {
-        let target = path.resolve(_.folder, tryNum),
-          targetOld = path.resolve(_.folder, i);
-        if (!fs.exists(target)) {
-          fs.renameSync(targetOld, target);
-          return tryNum;
-        }
+let lst = fs.readdirSync(_.folder);
+lst = lst.filter(i => fs.statSync(path.resolve(_.folder, i)).isFile());
+if (_.rename) {
+  lst = lst.map(i => {
+    let ext = i.match(/\.\w{2,4}$/)[0],
+      t = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '').toUpperCase() + ext,
+      tryNum = getNum(t.replace(/\.\w{2,4}$/, '')) + ext;
+    if (t === tryNum) return i;
+    logger.log(`Rename ${colors.info(i)} ==> ${colors.info(tryNum)} ? or ${colors.info('put in')} ${colors.warn('(without Extension)')}`);
+    input = readlineSync.question();
+    tryNum = input ? input + ext : tryNum;
+    if (i !== tryNum) {
+      let target = path.resolve(_.folder, tryNum),
+        targetOld = path.resolve(_.folder, i);
+      if (!fs.exists(target)) {
+        fs.renameSync(targetOld, target);
+        return tryNum;
       }
-      return i;
-    });
-  }
-  for (let i = 0; i < lst.length; i++) {
-    data[lst[i]] = {};
-  }
-  logger.log(`Work list: ${colors.info(lst.join(', '))}`);
+    }
+    return i;
+  });
+}
+for (let i = 0; i < lst.length; i++) {
+  data[lst[i]] = {};
+}
+logger.log(`Work list: ${colors.info(lst.join(', '))}`);
 
-  async.mapSeries(lst, (i, callback) => {
-    search(i).then((res) => {
-      data[i].url = res.urlTrue;
-      getInfo(i, res.text);
-      callback(null, i);
-    }, err => {
-      callback(null, i);
+async.mapSeries(lst, (i, cb) => {
+  logger.log(colors.info(`Start Search: ${i}`));
+  search(i.toUpperCase()).then((res) => {
+    data[i].url = res.urlTrue;
+    getInfo(i, res.text);
+    cb(null, i);
+  }, err => {
+    cb(null, i);
+  });
+}, (err, results) => {
+  if (err) {
+    console.error({
+      error: err
     });
+    return;
+  }
+  logger.log(colors.info('All info request completed.'));
+  async.mapSeries(lst, (i, cb) => {
+    logger.log(colors.info(`Deal with ${data[i].num || i} Info: ${JSON.stringify(data[i])}`));
+    if (data[i].num !== undefined) {
+      rename(i);
+      if (_.nfo) nfoFile(i);
+      if (_.image) {
+        downloadImage(i).then(() => {
+          cb(null, i);
+        }, err => {
+          cb(null, i);
+        });
+      } else {
+        cb(null, i);
+      }
+    } else {
+      cb(null, i);
+    }
   }, (err, results) => {
     if (err) {
-      logger.error(colors.error(err));
+      console.error({
+        error: err
+      });
       return;
     }
-    logger.log(colors.info('All info request completed.'));
-    async.mapSeries(lst, (i, callback) => {
-      if (data[i].num !== undefined) {
-        rename(i);
-        if (_.nfo) nfoFile(i);
-        if (_.image) {
-          downloadImage(i).then(() => {
-            callback(null, i);
-          }, err => {
-            callback(null, i);
-          });
-        } else {
-          callback(null, i);
-        }
-      } else {}
-    }, (err, results) => {
-      if (err) {
-        logger.error(colors.error(err));
-        return;
-      }
-      logger.log(colors.info('All task completed.'));
-
-    });
+    logger.log(colors.info('All task completed.'));
+    process.exit();
   });
 });

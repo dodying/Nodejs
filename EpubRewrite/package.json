@@ -1,0 +1,26 @@
+{
+  "name": "epubrewrite",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "epub"
+  ],
+  "author": "dodying",
+  "license": "MIT",
+  "bin": {
+    "epubr": "./index.js"
+  },
+  "dependencies": {
+    "adm-zip": "^0.4.7",
+    "archiver": "^2.1.1",
+    "async": "^2.6.0",
+    "glob": "^7.1.2",
+    "pixl-xml": "^1.0.13",
+    "rimraf": "^2.6.2"
+  },
+  "description": ""
+}

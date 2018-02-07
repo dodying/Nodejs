@@ -1,10 +1,15 @@
-/*
- * @Author: dodying
- * @Date:   2017-12-02 21:20:29
- * @Description:  actressPicDownloader
- * @Last Modified by:   dodying
- * @Last Modified time: 2017-12-02 23:09:59
- */
+// ==Headers==
+// @Name:               actressPicDownloader
+// @Description:        actressPicDownloader
+// @Version:            1.0.0
+// @Author:             dodying
+// @Date:               2017-12-02 21:20:29
+// @Last Modified by:   dodying
+// @Last Modified time: 2017-12-07 11:29:22
+// @Namespace:          https://github.com/dodying/Nodejs
+// @SupportURL:         https://github.com/dodying/Nodejs/issues
+// @Require:            superagent,superagent-proxy,cheerio,async
+// ==/Headers==
 
 //设置
 const folder = "F:\\Actor";
@@ -31,7 +36,7 @@ require('superagent-proxy')(superagent);
 const cheerio = require('cheerio');
 const async = require('async');
 
-//
+//Function
 const header = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
   'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
@@ -61,9 +66,9 @@ const data = {};
 
 const request = url => {
   return new Promise((resolve, reject) => {
-    superagent.get(url).set('header', header).proxy(proxy).timeout(timeout).retry(3).end((err, res) => {
+    superagent.get(url).set(header).proxy(proxy).timeout(timeout).retry(3).end((err, res) => {
       if (err) {
-        console.error(`Request: ${url}\nInfo: ${err}`);
+        console.error(`Request: ${url}\nInfo: `, err);
         reject(err);
       } else {
         resolve(res);
@@ -76,9 +81,9 @@ const downloadImage = (url, name) => {
   let target = path.resolve(folder, name + '.jpg');
   return new Promise((resolve, reject) => {
     if (fs.exists(target)) return resolve();
-    superagent.get(url).set('header', header).proxy(proxy).timeout(timeout).retry(3).responseType('blob').end((err, res) => {
+    superagent.get(url).set(header).proxy(proxy).timeout(timeout).retry(3).responseType('blob').end((err, res) => {
       if (err) {
-        console.error(`Request: ${url}\nInfo: ${err}`);
+        console.error(`Request: ${url}\nInfo: `, err);
         reject(err);
       } else {
         fs.writeFileSync(target, res.body);
@@ -96,6 +101,7 @@ const Arr2Obj = (a, b) => {
   return c;
 };
 
+//Main
 async.mapLimit(tasks, 3, (i, callback) => {
   request(i).then(res => {
     let $ = cheerio.load(res.text);

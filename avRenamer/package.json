@@ -1,0 +1,35 @@
+{
+  "name": "avrenamer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "1. 将Censored和Uncensored的影片分存两个文件夹\r 2. 一次性最多处理50个Censored影片，或10个Uncensored\r 3. 发生错误后，检查网络及代理正常，手动移动未找到的影片后，再次重试",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "NSFW",
+    "18x",
+    "H",
+    "AV",
+    "JAV",
+    "sort"
+  ],
+  "author": "dodying",
+  "license": "MIT",
+  "bin": {
+    "av": "./index.js"
+  },
+  "dependencies": {
+    "async": "^2.6.0",
+    "cheerio": "^1.0.0-rc.2",
+    "colors": "^1.1.2",
+    "image-size": "^0.6.2",
+    "jimp": "^0.2.28",
+    "optimist": "^0.6.1",
+    "readline-sync": "^1.4.7",
+    "superagent": "^3.8.2",
+    "superagent-proxy": "^1.0.2",
+    "tracer": "^0.8.11"
+  }
+}
