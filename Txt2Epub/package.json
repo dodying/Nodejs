@@ -1,5 +1,5 @@
 {
-  "name": "epubgenerator",
+  "name": "txt2epub",
   "version": "1.0.0",
   "private": true,
   "description": "",
@@ -14,7 +14,7 @@
   "author": "dodying",
   "license": "MIT",
   "bin": {
-    "epub": "./index.js"
+    "txt2epub": "./index.js"
   },
   "dependencies": {
     "archiver": "^2.1.1",

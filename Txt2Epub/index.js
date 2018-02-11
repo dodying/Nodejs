@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 // ==Headers==
-// @Name:               EpubGenerator
-// @Description:        EpubGenerator
+// @Name:               Txt2Epub
+// @Description:        Txt2Epub
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-06 19:39:26
 // @Last Modified by:   dodying
-// @Last Modified time: 2018-02-07 11:03:34
+// @Last Modified time: 2018-02-09 13:18:40
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            glob, archiver, rimraf
@@ -20,7 +20,7 @@ const _ = {
   author: 'novelDownloader',
   cover: 'cover.jpg', //folder目录下
   css: 'body{line-height:130%;text-align:justify;font-family:"Microsoft YaHei";font-size:22px;margin:0 auto;background-color:#CCE8CF;color:#000;}h1{text-align:center;font-weight:bold;font-size:28px;}h2{text-align:center;font-weight:bold;font-size:26px;}h3{text-align:center;font-weight:bold;font-size:24px;}p{text-indent:2em;}',
-  nocover: 'E:\\Desktop\\_\\GitHub\\Nodejs\\EpubGenerator\\nocover.jpg'
+  nocover: 'E:\\Desktop\\_\\GitHub\\Nodejs\\Txt2Epub\\nocover.jpg'
 };
 
 //native modules
