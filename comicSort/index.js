@@ -5,15 +5,15 @@
 // @Author:             dodying
 // @Date:               2017-12-03 08:31:33
 // @Last Modified by:   dodying
-// @Last Modified time: 2018-02-07 11:17:03
+// @Last Modified time: 2018-02-15 20:13:16
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            readline-sync,async,jszip,superagent,image-size,tracer,colors,glob,mkdirp
 // ==/Headers==
 
 //设置
-const comicFolder = 'F:\\Temp';
-const libraryFolder = 'F:\\ComicLibrary';
+const comicFolder = 'e:\\F\\Temp';
+const libraryFolder = 'e:\\F\\ComicLibrary';
 const subFolder = [
   '0.Series',
   '1.Cosplay',
@@ -27,6 +27,7 @@ const subFolder = [
   '9.Artist',
   '10.Other'
 ];
+const jTitle = false;
 
 //导入原生模块
 const fs = require('fs');
@@ -61,7 +62,7 @@ colors.setTheme({
 const glob = require('glob');
 const mkdirp = require('mkdirp');
 
-const CHS = JSON.parse(fs.readFileSync('data.json', 'utf-8'));
+const EHT = JSON.parse(fs.readFileSync('EHT.json', 'utf-8')).dataset;
 
 //Function
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '');
@@ -70,7 +71,8 @@ const parseInfo = text => {
   let a = text.split(/\r\n/),
     b = {},
     info = {
-      title: a[0]
+      title: a[0],
+      jTitle: (a[1].match(/^http/)) ? a[0] : a[1]
     };
   for (let i of a) {
     if (i.match(/^http/)) {
@@ -94,6 +96,28 @@ const parseInfo = text => {
   if ('male' in b || 'female' in b || 'misc' in b) info.tags = [].concat(b.male, b.female, b.misc).filter(i => i).join(', ');
   return info;
 }
+const combineText = (arr, textOnly = undefined) => {
+  return arr instanceof Array ? arr.map(i => {
+    if (i.type === 0) {
+      return i.text;
+    } else if (!textOnly && i.type === 2) {
+      return `"url("${i.src.replace(/http.?:/g,'')}")"`;
+    } else {
+      return null;
+    }
+  }).filter(i => i).join('\\A') : '';
+}
+const findData = (main, sub, textOnly = undefined) => {
+  let data = EHT.filter(i => i.name === main);
+  if (data.length === 0 || data[0].tags.length === 0) return {};
+  data = data[0].tags.filter(i => i.name === sub.replace(/_/g, ' '));
+  if (data.length === 0) return {};
+  return {
+    name: main === 'misc' ? sub : main + ':' + sub,
+    cname: combineText(data[0].cname, textOnly),
+    info: combineText(data[0].info, textOnly)
+  };
+}
 const sortFile = info => {
   if (info.tags && info.tags.match('multi-work series')) {
     return subFolder[0];
@@ -108,11 +132,11 @@ const sortFile = info => {
       return subFolder[4] + '/###Various';
     } else {
       let value = info.series;
-      if (value in CHS.parody) value = CHS.parody[value];
+      value = findData('parody', value, true).cname || value;
       value = escape(value);
       if (info.characters) {
         let value2 = info.characters;
-        value2 = value2.match(', ') ? '###Various' : escape(CHS.character[value2] || value2);
+        value2 = value2.match(', ') ? '###Various' : escape(findData('character', value2, true).cname || value2);
         return subFolder[4] + '/' + value + '/' + value2;
       } else {
         return subFolder[4] + '/' + value;
@@ -128,8 +152,9 @@ const sortFile = info => {
     return subFolder[8];
   } else if (info.artist || info.group) {
     let value = (info.artist || info.group);
-    if ((value in CHS.artist) || (value in CHS.group)) value = CHS.artist[value] || CHS.group[value];
-    return subFolder[9] + '/' + escape(value);
+    value = findData('artist', value, true).cname || findData('group', value, true).cname || value;
+    value = escape(value);
+    return subFolder[9] + '/' + value;
   } else {
     return subFolder[10];
   }
@@ -161,7 +186,7 @@ const moveByInfo = (info, target) => {
   let targetNew = sortFile(info);
   targetNew = path.resolve(libraryFolder, targetNew);
   if (!fs.exists(targetNew)) mkdirp.sync(targetNew);
-  targetNew = path.resolve(targetNew, escape(info.title) + '.cbz');
+  targetNew = path.resolve(targetNew, escape(jTitle ? info.jTitle : info.title) + '.cbz');
   if (targetNew === target) {
     logger.log('文件未移动: ', colors.info(target));
     return;
