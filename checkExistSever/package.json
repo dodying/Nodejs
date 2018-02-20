@@ -4,8 +4,9 @@
   "description": "",
   "main": "index.js",
   "author": "dodying",
-  "license": "MIT"
+  "license": "MIT",
   "dependencies": {
+    "async": "^2.6.0",
     "body-parser": "^1.18.2",
     "express": "^4.16.2"
   },
