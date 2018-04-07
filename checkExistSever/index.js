@@ -7,15 +7,15 @@
 // @Author:             dodying
 // @Date:               2018-02-16 12:49:33
 // @Last Modified by:   dodying
-// @Last Modified time: 2018-02-20 20:04:39
+// @Last Modified time: 2018-04-05 19:30:18
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            express,body-parser
 // ==/Headers==
 
 //CONFIG
-const libraryFolder = 'E:\\F\\';
-const esPath = 'D:\\GreenSoftware\\Everything\\es.exe';
+const libraryFolder = 'F:\\';
+const esPath = 'D:\\GreenSoftware\\_Enhancer\\Everything\\es.exe';
 
 //native modules
 const cp = require('child_process');
@@ -44,7 +44,7 @@ app.get('/', function(req, res) {
 
 app.post('/', function(req, res) {
   if ('name' in req.body) {
-    cp.exec(`${esPath} -p "${libraryFolder}" /a-d -name "${escape(req.body.name)}"`, (error, stdout, stderr) => {
+    cp.exec(`${esPath} -size -p "${libraryFolder}" /a-d -name "${escape(req.body.name)}" -n 20`, (error, stdout, stderr) => {
       let lst = stdout.split(/[\r\n]+/).filter(i => i);
       console.log('POST /', req.body, lst);
       res.writeHead(200, {
@@ -56,7 +56,7 @@ app.post('/', function(req, res) {
     console.log('POST /', req.body);
     async.mapSeries(JSON.parse(req.body.names), (name, cb) => {
       name = name.split(',').map(i => `-name "${escape(i)}"`).join(' ');
-      cp.exec(`${esPath} -p "${libraryFolder}" /a-d ${name}`, (error, stdout, stderr) => {
+      cp.exec(`${esPath} -size -p "${libraryFolder}" /a-d ${name} -n 20`, (error, stdout, stderr) => {
         let lst = stdout.split(/[\r\n]+/).filter(i => i);
         cb(null, lst);
       });
