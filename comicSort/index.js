@@ -5,16 +5,16 @@
 // @Author:             dodying
 // @Date:               2017-12-03 08:31:33
 // @Last Modified by:   dodying
-// @Last Modified time: 2018-02-15 20:13:16
+// @Last Modified time: 2018-04-08 20:00:31
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            readline-sync,async,jszip,superagent,image-size,tracer,colors,glob,mkdirp
+// @Require:            readline-sync,async,jszip,superagent,image-size,tracer,colors,glob,mkdirp,emoji-regex
 // ==/Headers==
 
 //设置
-const comicFolder = 'e:\\F\\Temp';
-const libraryFolder = 'e:\\F\\ComicLibrary';
-const subFolder = [
+const comicFolder = 'F:\\Temp'; //需要整理的文件夹
+const libraryFolder = 'F:\\ComicLibrary'; //整理到那个文件夹
+const subFolder = [ //子文件夹
   '0.Series',
   '1.Cosplay',
   '2.Image Set',
@@ -27,7 +27,22 @@ const subFolder = [
   '9.Artist',
   '10.Other'
 ];
-const jTitle = false;
+const specialFolder = '#Star'; //特殊的子文件夹
+const specialRule = JSON.stringify([
+  {
+    Uploader: 'HUILENDASI',
+    folder: '[后宫]鬼畜王汉化组' //不存在该值时, 移动至specialFolder根目录, 否则移动至specialFolder下的该名称文件夹
+  },
+  {
+    artist: 'akatsuki myuuto',
+    folder: '[后宫]赤月みゅうと'
+  },
+  {
+    artist: 'mizuryu kei',
+    folder: '[乱交]水龍敬'
+  }
+]);
+const jTitle = false; //是否重命名为日本名称
 
 //导入原生模块
 const fs = require('fs');
@@ -61,6 +76,7 @@ colors.setTheme({
 });
 const glob = require('glob');
 const mkdirp = require('mkdirp');
+const emojiRegex = require('emoji-regex');
 
 const EHT = JSON.parse(fs.readFileSync('EHT.json', 'utf-8')).dataset;
 
@@ -84,15 +100,16 @@ const parseInfo = text => {
     let t = i.split(': ');
     if (t.length > 1) b[t[0]] = t[1];
   }
+  Object.assign(info, b);
   if ('parody' in b) info.series = b.parody;
   if (a.indexOf('Uploader Comment:') >= 0) info.summary = a.slice(a.indexOf('Uploader Comment:')).join('\r\n');
-  if ('character' in b) info.characters = b.character;
-  if ('artist' in b) info.artist = b.artist;
-  if ('group' in b) info.group = b.group;
+  //if ('character' in b) info.character = b.character;
+  //if ('artist' in b) info.artist = b.artist;
+  //if ('group' in b) info.group = b.group;
   info.genre = b.Category.match('FREE HENTAI') ? b.Category.match('FREE HENTAI (.*?) GALLERY')[1] : b.Category;
   info.lang = b.Language.match('Chinese') ? 'zh' : b.Language.match('English') ? 'en' : 'ja';
   info.bw = 'misc' in b && b.misc.indexOf('full color') >= 0 ? false : true;
-  if ('Rating' in b) info.rate = b.Rating;
+  if ('Rating' in b) info.rating = b.Rating;
   if ('male' in b || 'female' in b || 'misc' in b) info.tags = [].concat(b.male, b.female, b.misc).filter(i => i).join(', ');
   return info;
 }
@@ -118,8 +135,38 @@ const findData = (main, sub, textOnly = undefined) => {
     info: combineText(data[0].info, textOnly)
   };
 }
+const sortFileBySpecialRule = info => {
+  let rule = JSON.parse(specialRule);
+  for (let i = 0; i < rule.length; i++) {
+    let filter = true;
+    let folder = rule[i].folder || '';
+    delete rule[i].folder;
+    for (let j in rule[i]) {
+      if (typeof rule[i][j] === 'string') {
+        if (rule[i][j] !== info[j]) {
+          filter = false;
+          break;
+        }
+      } else if (rule[i][j] instanceof RegExp) {
+        if (!rule[i][j].exec(info[j])) {
+          filter = false;
+          break;
+        }
+      } else if (rule[i][j] instanceof Function) {
+        if (!rule[i][j](info[j])) {
+          filter = false;
+          break;
+        }
+      }
+    }
+    if (filter) return path.resolve(libraryFolder, specialFolder, folder);
+  }
+  return false;
+}
 const sortFile = info => {
-  if (info.tags && info.tags.match('multi-work series')) {
+  if (sortFileBySpecialRule(info)) {
+    return sortFileBySpecialRule(info);
+  } else if (info.tags && info.tags.match('multi-work series')) {
     return subFolder[0];
   } else if (info.genre.match(/^COSPLAY$/i)) {
     return subFolder[1];
@@ -134,8 +181,9 @@ const sortFile = info => {
       let value = info.series;
       value = findData('parody', value, true).cname || value;
       value = escape(value);
-      if (info.characters) {
-        let value2 = info.characters;
+      if (info.character) {
+        let value2 = info.character;
+        //value2 = value2.match(', ') ? value2.split(', ').map(i => escape(findData('character', i, true).cname || i)).sort().join(', ') : escape(findData('character', value2, true).cname || value2);
         value2 = value2.match(', ') ? '###Various' : escape(findData('character', value2, true).cname || value2);
         return subFolder[4] + '/' + value + '/' + value2;
       } else {
@@ -183,10 +231,10 @@ const scrapeInfo = url => {
 }
 const moveByInfo = (info, target) => {
   info.file = target;
-  let targetNew = sortFile(info);
-  targetNew = path.resolve(libraryFolder, targetNew);
-  if (!fs.exists(targetNew)) mkdirp.sync(targetNew);
-  targetNew = path.resolve(targetNew, escape(jTitle ? info.jTitle : info.title) + '.cbz');
+  let targetFolderNew = sortFile(info).replace(emojiRegex(), '');
+  targetFolderNew = path.resolve(libraryFolder, targetFolderNew);
+  if (!fs.exists(targetFolderNew)) mkdirp.sync(targetFolderNew);
+  let targetNew = path.resolve(targetFolderNew, escape(jTitle ? info.jTitle : info.title) + '.cbz');
   if (targetNew === target) {
     logger.log('文件未移动: ', colors.info(target));
     return;
@@ -205,11 +253,6 @@ const moveByInfo = (info, target) => {
 }
 
 //Main
-if (!fs.exists(libraryFolder)) fs.mkdirSync(libraryFolder);
-subFolder.forEach(i => {
-  let target = path.resolve(libraryFolder, i);
-  if (!fs.exists(target)) fs.mkdirSync(target);
-});
 
 let lst = glob.sync(comicFolder + '\\**\\*.@(zip|cbz)');
 logger.log('当前任务数: ', colors.info(lst.length));
@@ -219,6 +262,11 @@ async.mapSeries(lst, (i, callback) => {
   let data = fs.readFileSync(target);
   let jszip = new JSZip();
   jszip.loadAsync(data).then(zip => {
+    if (Object.keys(zip.files).filter(item => item.indexOf('info.txt') >= 0).length === 0) {
+      logger.warn(colors.warn('压缩档内不存在info.txt: '), target);
+      callback(null, i);
+      return;
+    }
     let imgs = Object.keys(zip.files).filter(item => item.indexOf('info.txt') < 0 && !item.match(/\/$/));
     let singlePage = 0,
       doublePage = 0,
