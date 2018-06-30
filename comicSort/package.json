@@ -11,13 +11,13 @@
   "license": "MIT",
   "dependencies": {
     "async": "^2.6.0",
-    "readline-sync": "^1.4.7",
-    "jszip": "^3.1.5",
-    "superagent": "^3.8.1",
-    "image-size": "^0.6.1",
-    "colors": "^1.1.2",
+    "colors": "^1.2.1",
     "glob": "^7.1.2",
+    "image-size": "^0.6.1",
+    "jszip": "^3.1.5",
     "mkdirp": "^0.5.1",
-    "tracer": "^0.8.11"
+    "readline-sync": "^1.4.9",
+    "superagent": "^3.8.1",
+    "tracer": "^0.8.12"
   }
 }
