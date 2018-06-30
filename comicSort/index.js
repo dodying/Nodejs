@@ -162,11 +162,11 @@ const findData = (main, sub, textOnly = true) => {
       data1 = data[0].tags.filter(i => arr.includes(i.name));
     }
   }
-  return {
+  return data1.length ? {
     name: main === 'misc' ? sub : main + ':' + sub,
     cname: combineText(data1[0].cname, textOnly),
     info: combineText(data1[0].info, textOnly)
-  };
+  } : {};
 }
 const sortFileBySpecialRule = info => {
   let rule = _.specialRule;
