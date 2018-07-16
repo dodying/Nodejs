@@ -1,8 +1,5 @@
-'use strict';
+'use strict'
 
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
 let config = {
   'globRecursive': false,
   'comicFolder': 'F:\\Temp',
@@ -27,6 +24,7 @@ let config = {
     '9.Artist',
     '10.Other'
   ],
+  'subFolderDelete': 'X.Deleted',
   'specialFolder': '#Star',
   'specialRule': [
     {
@@ -306,6 +304,16 @@ let config = {
       'title': /想抱(雷媽|雷妈)/,
       'folder': '[萝莉]想抱雷妈汉化组'
     }, {
+      'mode': 1,
+      'female': 'netorare',
+      'parody': /.*/,
+      'folder': '[标签]女性:NTR\\同人'
+    }, {
+      'mode': 1,
+      'female': 'netorare',
+      'misc': 'story arc',
+      'folder': '[标签]女性:NTR\\故事线'
+    }, {
       'female': 'netorare',
       'folder': '[标签]女性:NTR'
     }
@@ -345,9 +353,9 @@ let config = {
     filter: /valkyria chronicles/gi
   }],
   'removeCharacter': [
-    'teitoku', //提督
-    'producer', //制作人
-    'kazuto kirigaya' //桐谷和人
+    'teitoku', // 提督
+    'producer', // 制作人
+    'kazuto kirigaya' // 桐谷和人
   ]
-};
-exports.default = config;
+}
+module.exports = config

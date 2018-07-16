@@ -13,7 +13,7 @@
 // @Require:            glob, pixl-xml
 // ==/Headers==
 
-//设置
+// 设置
 const _ = {
   database: ['D:\\1', 'E:\\1', 'H:\\H\\Censored', 'H:\\H\\New', 'H:\\H\\New2', 'H:\\H\\Uncensored', 'H:\\H\\Uncensored2'],
   video: ['3g2', '3gp', 'amv', 'asf', 'avi', 'drc', 'flv', 'flv', 'flv', 'f4v', 'f4p', 'f4a', 'f4b', 'gif', 'gifv', 'm4v', 'mkv', 'mng', 'mov', 'qt', 'mp4', 'm4p', 'm4v', 'mpg', 'mp2', 'mpeg', 'mpe', 'mpv', 'mpg', 'mpeg', 'm2v', 'mxf', 'nsv', 'ogv', 'ogg', 'rm', 'rmvb', 'roq', 'svi', 'vob', 'webm', 'wmv', 'yuv'],
@@ -22,46 +22,47 @@ const _ = {
   datalist: ['女仆', '妹妹', '乱伦', '美少女', '高中女生', '艺人', '内衣', '角色扮演', '三上悠亜',
     '明里つむぎ', '橋本ありな', '佐々波綾'],
   reserve: ['rating', 'tag', 'actor']
-};
+}
 
-//导入原生模块
-const fs = require('fs');
+// 导入原生模块
+const fs = require('fs')
+/* eslint-disable node/no-deprecated-api */
 fs.exists = path => {
   try {
-    fs.statSync(path);
+    fs.statSync(path)
   } catch (err) {
-    return false;
+    return false
   }
-  return true;
+  return true
 }
-const path = require('path');
+const path = require('path')
 
-//导入第三方模块
-const glob = require('glob');
-const XML = require('pixl-xml');
+// 导入第三方模块
+const glob = require('glob')
+const XML = require('pixl-xml')
 
 //
 const infoParse = text => {
-  let info = XML.parse(text);
+  let info = XML.parse(text)
   for (let i in info) {
     if (!_['reserve'].includes(i)) {
-      delete info[i];
+      delete info[i]
     } else if (i === 'actor') {
       if (info[i] instanceof Array) {
-        info[i] = info[i].map(i => i.name);
+        info[i] = info[i].map(i => i.name)
       } else if (info[i] instanceof Object) {
-        info[i] = info[i].name;
+        info[i] = info[i].name
       }
     }
   }
-  return info;
-};
+  return info
+}
 
-let lst = [];
+let lst = []
 _['database'].forEach(i => {
-  lst = lst.concat(glob.sync(path.resolve(i) + '\\**\\*.@(' + _['video'].join('|') + ')'));
-});
-console.log(lst.length);
+  lst = lst.concat(glob.sync(path.resolve(i) + '\\**\\*.@(' + _['video'].join('|') + ')'))
+})
+console.log(lst.length)
 lst = lst
   .map(i => path.parse(i))
   .map(i => Object.assign({
@@ -69,10 +70,10 @@ lst = lst
     cover: path.resolve(i.dir, i.name + '.jpg'),
     info: path.resolve(i.dir, i.name + '.nfo')
   }, i))
-  .map(i => fs.exists(i['info']) ? Object.assign(infoParse(fs.readFileSync(i['info'], 'utf-8')), i) : i);
+  .map(i => fs.exists(i['info']) ? Object.assign(infoParse(fs.readFileSync(i['info'], 'utf-8')), i) : i)
 
-let info = lst.map(i => `<li info="${JSON.stringify(i, ['rating', 'tag', 'actor', 'name']).replace(/"/g, '\'')}"><span><img class="cover" data-src="${fs.exists(i['cover']) ? `${i['cover']}` : _['nocover']}"></img><input class="copy" value="${i['sorttitle'] || i['name']}" type="text"></span></li>`).join('');
-let datalist = _['datalist'].map(i => `<option>${i}</option>`);
+let info = lst.map(i => `<li info="${JSON.stringify(i, ['rating', 'tag', 'actor', 'name']).replace(/"/g, '\'')}"><span><img class="cover" data-src="${fs.exists(i['cover']) ? `${i['cover']}` : _['nocover']}"></img><input class="copy" value="${i['sorttitle'] || i['name']}" type="text"></span></li>`).join('')
+let datalist = _['datalist'].map(i => `<option>${i}</option>`)
 
 let html = `<!DOCTYPE html><html>
 <head>
@@ -184,7 +185,7 @@ let html = `<!DOCTYPE html><html>
         let value = _search.value;
         let keyword = e.target.textContent;
         if (value.indexOf(keyword) >= 0) {
-          value = value.replace(keyword, '').replace(/\s+/g, ' ').trim();
+          value = value.replace(keyword, '').replace(/\\s+/g, ' ').trim();
         } else {
           value += (value ? ' ' : '') + keyword;
         }
@@ -194,5 +195,5 @@ let html = `<!DOCTYPE html><html>
     });
   </script>
 </body>
-</html>`;
-fs.writeFileSync(_['output'], html);
+</html>`
+fs.writeFileSync(_['output'], html)

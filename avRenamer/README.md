@@ -6,10 +6,10 @@
 ### Error
 
 #### Not find the movie
-##### 尝试切换搜索源
+尝试切换搜索源
 
 #### Error: Internal Server Error / Service Unavailable
-##### 网络问题或是请求次数次数过多导致请求失败，请稍候重试
+网络问题或是请求次数次数过多导致请求失败，请稍候重试
 
 #### marker was not found
-##### 下载图片错误，导致无法裁剪图片，请稍候重试
+下载图片错误，导致无法裁剪图片，请稍候重试

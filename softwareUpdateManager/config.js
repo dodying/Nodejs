@@ -21,7 +21,7 @@ let config = {
   ],
   request: {// 请求相关
     timeout: 60, // 请求超时(单位秒)
-    proxyHTTP: 'http://127.0.0.1:9667', // HTTP代理(http://user:password@host:port)
+    proxyHTTP: 'http://127.0.0.1:2346', // HTTP代理(http://user:password@host:port)
     proxySocks: true, // Socks代理(有则优先使用Socks代理)
     proxySocksHost: '127.0.0.1', // Socks代理-域名，留空则为localhost
     proxySocksPort: 2345, // Socks代理-端口
