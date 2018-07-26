@@ -35,7 +35,7 @@ const getVersion = filepath => {
       return info.match(/Version\s+([\d.]+)/)[1]
     }
   }
-  return null
+  return '0'
 }
 const spawnSync = (...argsForSpwan) => {
   return new Promise(resolve => {
@@ -53,6 +53,31 @@ const spawnSync = (...argsForSpwan) => {
       resolve(end)
     })
   })
+}
+const versionMax = (v1, v2) => {
+  let arr1 = v1.split('.')
+  let arr2 = v2.split('.')
+  let length = Math.min(arr1.length, arr2.length)
+  for (let i = 0; i < length; i++) {
+    let str1 = arr1[i]
+    let str2 = arr2[i]
+    let float1 = parseFloat(str1)
+    let float2 = parseFloat(str2)
+    if (isNaN(float1) || isNaN(float2)) {
+      if (str1 > str2) {
+        return true
+      } else if (str1 < str2) {
+        return false
+      }
+    } else {
+      if (float1 > float2) {
+        return true
+      } else if (float1 < float2) {
+        return false
+      }
+    }
+  }
+  return arr1.length > arr2.length
 }
 
 // Main
@@ -134,7 +159,15 @@ let init = async () => {
       let re = new RegExp(args[1].split(',').join('|'))
       if (!iPath.match(re)) continue
     }
-    let version = mode === 'onlycheck' ? null : database[i].version || getVersion(iPath)
+    let version
+    let versionLocal = getVersion(iPath)
+    if (mode === 'onlycheck') {
+      version = null
+    } else if ('version' in database[i]) {
+      version = versionMax(database[i].version, versionLocal) ? database[i].version : versionLocal
+    } else {
+      version = versionLocal
+    }
     console.log(`Software:\t${i}\nLocation:\t${iPath}\nVersion:\t${version}\nUrl:\t${software[i].url}`)
     let res = await req(software[i].url, software[i].useProxy)
     if (res.statusMessage === 'OK') {
@@ -155,7 +188,7 @@ let init = async () => {
       console.log(`Latest Version:\t${versionLatest}`)
       if (mode === 'onlycheck') {
         database[i].version = versionLatest
-      } else if (version === null || versionLatest > version) { // new version
+      } else if (version === null || versionMax(versionLatest, version)) { // new version
         if ((_.specialMode[i] > 0 || (!software[i].commercial && _.mode > 0) || (software[i].commercial && _.commercialMode > 0)) && 'download' in software[i]) { // download
           let download
           if ('plain' in software[i].download) { // download url is regular
@@ -212,7 +245,7 @@ let init = async () => {
           let end = await spawnSync(`plugins\\wget.exe`, args)
           if (end === 'error') {
             console.error(`Software:\t${i}\nError: Download new version Error`)
-            if (readlineSync.keyInYN('do you want to open download url?')) cp.execSync(`start "" "${download}"`)
+            if (readlineSync.keyInYNStrict('do you want to open download url?')) cp.execSync(`start "" "${download}"`)
             continue
           }
           if ((_.specialMode[i] === 2 || (!software[i].commercial && _.mode === 2) || (software[i].commercial && _.commercialMode === 2)) && 'install' in software[i]) { // install
@@ -227,11 +260,11 @@ let init = async () => {
             }
           } else {
             console.error(`Software:\t${i}\nTarget\t${iPath}\nOutput:\t${output}`)
-            if (readlineSync.keyInYN('Show in Windows Explorer?')) cp.execSync(`start "" "explorer" /select,"${output}"`)
+            if (readlineSync.keyInYNStrict('Show in Windows Explorer?')) cp.execSync(`start "" "explorer" /select,"${output}"`)
           }
         } else { // open url
           console.error(`New Version: ${versionLatest}\n${software[i].commercial ? i + ' is a commercial Software.\n' : ''}`)
-          if (readlineSync.keyInYN('Continue to open url?')) cp.execSync(`start "" "${software[i].url}"`)
+          if (readlineSync.keyInYNStrict('Continue to open url?')) cp.execSync(`start "" "${software[i].url}"`)
         }
       } else {
         if (_.saveVersion) {

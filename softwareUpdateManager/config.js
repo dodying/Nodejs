@@ -6,7 +6,9 @@ let config = {
   commercialMode: 0, // 对于商业软件 0:只检查有无新版本 1.下载新版本安装包后不自动安装 2.下载并自动安装新版本
   specialMode: { // 为特定软件设置特定模式(最优先)
     'SmartGit': 2,
-    'Velocity': 2
+    'Velocity': 2,
+    'AnyDesk': 2,
+    'DisplayFusion': 2
   },
   useProxy: 1, // 是否使用代理(包括请求与下载) 0.不使用 1.如果配置中声明，则使用 2.强制使用
   rootPath: 'D:/GreenSoftware', // 根路径
@@ -17,7 +19,7 @@ let config = {
   ],
   urlWithoutProxy: [ // 请求与下载的链接如果匹配任一，则不走代理(最优先)
     'sourceforge',
-    'github'
+    // 'github'
   ],
   request: {// 请求相关
     timeout: 60, // 请求超时(单位秒)
@@ -57,6 +59,7 @@ let config = {
     'ChromeUpdateSharp': '_Basis/Chrome/ChromeUpdateSharp.exe',
     'Internet Download Manager': '_Basis/IDM/IDMan.exe', // 共享软件
     'Telegram': '_Basis/Telegram/Telegram.exe',
+    'Tor Browser': '_Basis/Tor Browser/tor.exe', // 因为无法获取真正的版本，所以指向目录下的任一文件
     'uTorrent': '_Basis/uTorrent/uTorrent.exe', // 共享软件
     // Batch
     'Inno Setup Unpacker': '_Batch/innounp.exe',
@@ -105,7 +108,6 @@ let config = {
     'AutoHotkey': '_Program/AutoHotkey/AutoHotkeyU64.exe',
     'AutoIt': '_Program/autoit/AutoIt3_x64.exe',
     'Cmder Mini': '_Program/cmder/Cmder.exe',
-    'DevDocs Desktop': '_Program/DevDocs/DevDocs.exe',
     'golang': '_Program/go/bin/go.exe',
     'launch4j': '_Program/launch4j/launch4j.exe',
     'Lepton': '_Program/Lepton/Lepton.exe',
@@ -117,8 +119,6 @@ let config = {
     'Velocity': '_Program/Velocity/Velocity.exe', // 共享软件
     'Visual Studio Code': '_Program/VSCode/Code.exe',
     'WinHex': '_Program/WinHex/WinHex.exe', // 共享软件
-    'Yosoro': '_Program/Yosoro/Yosoro.exe',
-    'zeal': '_Program/zeal/zeal.exe',
     // Proxy
     'Brook': '_Proxy/Brook/Brook.exe',
     'Brook Tools': '_Proxy/Brook/Brook Tools.exe',
@@ -139,6 +139,8 @@ let config = {
     'Anki': '_Study/Anki/anki.exe',
     'SpeedCrunch': '_Study/SpeedCrunch/speedcrunch.exe',
     // Tool
+    'AnyDesk': '_Tool/AnyDesk.exe',
+    'Hourglass': '_Tool/Hourglass.exe'
   }
 }
 

@@ -16,9 +16,9 @@ let data = {
     const cp = require('child_process')
 
     let parentPath = path.parse(iPath).dir
-    let shell = readlineSync.keyInYN('Do you use context menu in Windows Explorer?')
+    let shell = readlineSync.keyInYNStrict('Do you use context menu in Windows Explorer?')
     if (shell) cp.execSync(`plugins\\RegDll64.exe /calldll "${parentPath}\\bdzshl64.dll" unregSvr`)
-    let portable = shell ? false : readlineSync.keyInYN('Make it portable?')
+    let portable = shell ? false : readlineSync.keyInYNStrict('Make it portable?')
     let installed = require('./../js/install')(output, iPath)
     if (installed) {
       if (shell) cp.execSync(`plugins\\RegDll64.exe /calldll "${parentPath}\\bdzshl64.dll" RegSvr`)

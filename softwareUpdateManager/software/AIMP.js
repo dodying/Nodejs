@@ -18,7 +18,7 @@ let data = {
     const path = require('path')
     let parentPath = path.parse(iPath).dir
     require('child_process').execSync(`"${output}" /AUTO="${parentPath}" /PORTABLE /SILENT`)
-    if (require('readline-sync').keyInYN('Continue to delete backup?')) {
+    if (require('readline-sync').keyInYNStrict('Continue to delete backup?')) {
       require('fs-extra').removeSync(path.resolve(parentPath, '!Backup'))
     }
     return true

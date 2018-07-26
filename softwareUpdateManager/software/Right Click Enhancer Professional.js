@@ -2,6 +2,7 @@
 
 let data = {
   commercial: true,
+  useProxy: true,
   url: 'https://rbsoft.org/downloads/right-click-enhancer/rce-professional-changelog.html',
   version: {
     selector: '#section-changelog>h3'

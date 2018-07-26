@@ -20,7 +20,7 @@ let install = (from, to, excludes = undefined) => {
   let opt = {
     filter: (src, dest) => {
       let arr = require('./../config').excludeGlobal
-      if (excludes)arr = arr.concat(excludes)
+      if (excludes) arr = arr.concat(excludes)
       let str = path.relative(parentPath, dest)
       for (let i = 0; i < arr.length; i++) {
         if (str.match(arr[i])) return false
