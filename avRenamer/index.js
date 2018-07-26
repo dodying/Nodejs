@@ -86,15 +86,6 @@ const profile = {
 
 // 导入原生模块
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 const Url = require('url')
 
@@ -125,7 +116,7 @@ if (argv._[0] || useProfile) Object.assign(_, profile[argv._[0] || useProfile])
 if (Object.keys(argv).length > 2) Object.assign(_, argv)
 const data = {}
 _.folderNew = path.resolve(_.folder, _.folderNew)
-if (!fs.exists(_.folderNew)) fs.mkdirSync(_.folderNew)
+if (!fs.existsSync(_.folderNew)) fs.mkdirSync(_.folderNew)
 const header = {
   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
   'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
@@ -289,15 +280,15 @@ const rename = i => { // 重命名
   let target = path.resolve(targetPath, name + ext)
   let targetOld = path.resolve(_.folder, i)
   data[i].path = targetPath
-  if (!fs.exists(targetPath)) fs.mkdirSync(targetPath)
-  if (!fs.exists(target)) fs.renameSync(targetOld, target)
+  if (!fs.existsSync(targetPath)) fs.mkdirSync(targetPath)
+  if (!fs.existsSync(target)) fs.renameSync(targetOld, target)
 }
 
 const nfoFile = i => { // 生成NFO文件
   let d = data[i]
   let t = ''
   let target = path.resolve(d.path, d.name + '.nfo')
-  if (fs.exists(target)) return
+  if (fs.existsSync(target)) return
   t += `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n`
   t += `<movie>\r\n`
   t += `  <title>${d.num} ${d.title}</title>\r\n`
@@ -382,7 +373,7 @@ if (_.rename) {
     if (i !== tryNum) {
       let target = path.resolve(_.folder, tryNum)
       let targetOld = path.resolve(_.folder, i)
-      if (!fs.exists(target)) {
+      if (!fs.existsSync(target)) {
         fs.renameSync(targetOld, target)
         return tryNum
       }

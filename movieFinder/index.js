@@ -26,15 +26,6 @@ const _ = {
 
 // 导入原生模块
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 
 // 导入第三方模块
@@ -60,7 +51,9 @@ const infoParse = text => {
 
 let lst = []
 _['database'].forEach(i => {
-  lst = lst.concat(glob.sync(path.resolve(i) + '\\**\\*.@(' + _['video'].join('|') + ')'))
+  lst = lst.concat(glob.sync('**\\*.@(' + _['video'].join('|') + ')'), {
+    cwd: path.resolve(i)
+  })
 })
 console.log(lst.length)
 lst = lst
@@ -70,9 +63,9 @@ lst = lst
     cover: path.resolve(i.dir, i.name + '.jpg'),
     info: path.resolve(i.dir, i.name + '.nfo')
   }, i))
-  .map(i => fs.exists(i['info']) ? Object.assign(infoParse(fs.readFileSync(i['info'], 'utf-8')), i) : i)
+  .map(i => fs.existsSync(i['info']) ? Object.assign(infoParse(fs.readFileSync(i['info'], 'utf-8')), i) : i)
 
-let info = lst.map(i => `<li info="${JSON.stringify(i, ['rating', 'tag', 'actor', 'name']).replace(/"/g, '\'')}"><span><img class="cover" data-src="${fs.exists(i['cover']) ? `${i['cover']}` : _['nocover']}"></img><input class="copy" value="${i['sorttitle'] || i['name']}" type="text"></span></li>`).join('')
+let info = lst.map(i => `<li info="${JSON.stringify(i, ['rating', 'tag', 'actor', 'name']).replace(/"/g, '\'')}"><span><img class="cover" data-src="${fs.existsSync(i['cover']) ? `${i['cover']}` : _['nocover']}"></img><input class="copy" value="${i['sorttitle'] || i['name']}" type="text"></span></li>`).join('')
 let datalist = _['datalist'].map(i => `<option>${i}</option>`)
 
 let html = `<!DOCTYPE html><html>

@@ -20,15 +20,6 @@ const _ = {
 
 // native modules
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = a => {
-  try {
-    fs.statSync(a)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 
 // 3rd party modules
@@ -39,7 +30,9 @@ const AdmZip = require('adm-zip')
 const rmdir = require('rimraf')
 
 //
-let books = glob.sync(path.resolve(_['database']) + '\\*.epub')
+let books = glob.sync('*.epub', {
+  cwd: path.resolve(_['database'])
+})
 console.log(books)
 
 async.mapSeries(books, (book, cb) => {
@@ -76,8 +69,8 @@ async.mapSeries(books, (book, cb) => {
     })
   }
 
-  if (!fs.exists('output')) fs.mkdirSync('output')
-  if (!fs.exists(path.resolve('output', bookName))) fs.mkdirSync(path.resolve('output', bookName))
+  if (!fs.existsSync('output')) fs.mkdirSync('output')
+  if (!fs.existsSync(path.resolve('output', bookName))) fs.mkdirSync(path.resolve('output', bookName))
   // 读取并转换chapter内容
   item.chapter.forEach(i => {
     let chapterContent = fs.readFileSync(path.resolve(itemPath, i.href), 'utf-8').replace(/[\r\n]/g, '')

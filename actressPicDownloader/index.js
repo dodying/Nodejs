@@ -18,15 +18,6 @@ const timeout = 30 * 1000
 
 // 导入原生模块
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 // const Url = require('url')
 
@@ -80,7 +71,7 @@ const request = url => {
 const downloadImage = (url, name) => {
   let target = path.resolve(folder, name + '.jpg')
   return new Promise((resolve, reject) => {
-    if (fs.exists(target)) return resolve()
+    if (fs.existsSync(target)) return resolve()
     superagent.get(url).set(header).proxy(proxy).timeout(timeout).retry(3).responseType('blob').end((err, res) => {
       if (err) {
         console.error(`Request: ${url}\nInfo: `, err)

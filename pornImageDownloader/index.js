@@ -18,15 +18,6 @@ const _ = {
 
 // 导入原生模块
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 const cp = require('child_process')
 
@@ -37,7 +28,7 @@ const cp = require('child_process')
 // Main
 let amount = 100
 let folderPath = path.resolve(process.cwd(), _.folder)
-if (!fs.exists(folderPath)) fs.mkdirSync(folderPath)
+if (!fs.existsSync(folderPath)) fs.mkdirSync(folderPath)
 while (amount > 0) {
   amount--
   let url = cp.execSync('downloadheader http://19960707.ml/q.php?.jpg').toString()
@@ -45,7 +36,7 @@ while (amount > 0) {
   let arr = url.split('/')
   let name = arr[arr.length - 1]
   let target = path.resolve(folderPath, name)
-  if (fs.exists(target)) {
+  if (fs.existsSync(target)) {
     let content = cp.execSync(`downloadheader ${url}`).toString()
     content = content.match(/Content-Length:\s+(\d+)/)[1] * 1
     let fileSize = fs.statSync(target).size

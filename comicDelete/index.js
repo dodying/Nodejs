@@ -16,15 +16,6 @@ const deletedPath = 'F:\\ComicLibrary\\X.Deleted'
 
 // 导入原生模块
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 
 // 导入第三方模块
@@ -37,9 +28,9 @@ const readlineSync = require('readline-sync')
 
 process['argv'].splice(2).forEach(async i => {
   let p = path.resolve(process.cwd(), i)
-  if (fs.exists(p)) {
+  if (fs.existsSync(p)) {
     console.log(p)
-    if (p.match('F:\\\\ComicLibrary') || readlineSync.keyInYN('Continue to delete?')) {
+    if (p.match('F:\\\\ComicLibrary') || readlineSync.keyInYNStrict('Continue to delete?')) {
       // await trash(p);
       fs.unlinkSync(p)
       fs.writeFileSync(path.resolve(deletedPath, path.parse(p).base), '')

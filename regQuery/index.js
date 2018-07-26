@@ -17,15 +17,6 @@
 
 // native modules
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const cp = require('child_process')
 
 // 3rd party modules
@@ -90,7 +81,7 @@ if (parm[0] === '-bat') {
   parm = parm.splice(0, 2)
 }
 
-let regMode = !!(parm[0].match(/\.reg("|)$/i) && fs.exists(parm[0]))
+let regMode = !!(parm[0].match(/\.reg("|)$/i) && fs.existsSync(parm[0]))
 if (regMode) {
   let content = fs.readFileSync(parm[0])
   content = iconv.decode(content, 'utf-16').split(/\r\n/).map(i => i.match(/^\[/) ? i.replace(/^\[/, '[HKEY_CURRENT_USER\\Temp\\') : i).join('\r\n')
