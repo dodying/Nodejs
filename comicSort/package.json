@@ -17,7 +17,6 @@
     "jszip": "^3.1.5",
     "mkdirp": "^0.5.1",
     "readline-sync": "^1.4.9",
-    "superagent": "^3.8.1",
     "tracer": "^0.8.12"
   }
 }
