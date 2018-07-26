@@ -26,15 +26,6 @@ const _ = {
 
 // native modules
 const fs = require('fs')
-/* eslint-disable node/no-deprecated-api */
-fs.exists = path => {
-  try {
-    fs.statSync(path)
-  } catch (err) {
-    return false
-  }
-  return true
-}
 const path = require('path')
 
 // 3rd party modules
@@ -43,7 +34,9 @@ const archiver = require('archiver')
 const rmdir = require('rimraf')
 
 // 获取目录下的txt文件
-let books = glob.sync(path.resolve(_['folder']) + '\\*.txt').sort()
+let books = glob.sync('*.txt', {
+  cwd: path.resolve(_['folder'])
+}).sort()
 console.log(books)
 // 根据目录获取书名
 let bookName = path.parse(path.resolve(_['folder'])).base
@@ -65,7 +58,7 @@ fs.mkdirSync(path_oebps)
 fs.writeFileSync(path.resolve(path_oebps, 'stylesheet.css'), _['css'])
 // file: OEBPS/cover.jpg
 let cover = path.resolve(_['folder'], _['cover'])
-if (!fs.exists(cover)) cover = _['nocover']
+if (!fs.existsSync(cover)) cover = _['nocover']
 fs.writeFileSync(path.resolve(path_oebps, 'cover.jpg'), fs.readFileSync(cover))
 //
 var content_opf = '<?xml version="1.0" encoding="UTF-8"?><package version="2.0" unique-identifier="' + uuid + '" xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><dc:title>' + bookName + '</dc:title><dc:creator>' + _['author'] + '</dc:creator><dc:identifier id="' + uuid + '">urn:uuid:' + uuid + '</dc:identifier><dc:language>zh-CN</dc:language><meta name="cover" content="cover-image" /></metadata><manifest>'
@@ -89,7 +82,7 @@ fs.writeFileSync(path.resolve(path_oebps, 'toc.ncx'), toc_ncx)
 fs.writeFileSync(path.resolve(path_oebps, '0'.padStart(books.lenght, '0') + '.html'), '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>' + bookName + '</title><link type="text/css" rel="stylesheet" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h1>' + bookName + '</h1><h2>本电子书由用户脚本' + _['author'] + '制作</h2></body></html>')
 
 // 生成Epub
-if (!fs.exists(_['output'])) fs.mkdirSync(_['output'])
+if (!fs.existsSync(_['output'])) fs.mkdirSync(_['output'])
 var output = fs.createWriteStream(path.resolve(_['output'], bookName + '.epub'))
 var archive = archiver('zip', {
   zlib: {
