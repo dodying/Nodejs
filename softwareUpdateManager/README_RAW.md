@@ -37,3 +37,4 @@
 1. 以下软件，如果`通常版(installer)`与`便携版(portable)`功能相同则一般以绿色版优先，同时64位优先
 2. 大多软件都支持自动安装
 3. 带 :moneybag: 的为**商业软件**， 带 :airplane: 的需**番羽土墙**， 带 :hand: 的需**手动安装**
+4. 这些站点默认视作 :airplane: : [SourceForge](https://sourceforge.net), [Github](https://github.com)
