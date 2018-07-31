@@ -20,6 +20,7 @@ const _ = {
   libraryFolder: 'F:\\ComicLibrary', // 整理到那个文件夹
   jTitle: false, // 是否重命名为日本名称
   delIntroPic: true, // 是否删除宣传图
+  introPicName: [],
   introPic: [],
   checkImageSize: true, // 是否检测图片大小
   rate: 1, // 图片宽高比的分界，大于则为双页
@@ -415,11 +416,16 @@ const main = async () => {
         if (_.delIntroPic) {
           let name = path.parse(imgs[j]).base
           let filter = info.page.filter(p => p.name === name)
-          if (filter.length && _.introPic.includes(filter[0].id)) {
+          if ((filter.length && _.introPic.includes(filter[0].id)) || _.introPicName.some(k => name.match(k))) {
             logger.log(colors.error('Deleted: '), colors.info(imgs[j]))
-            cp.execSync(`${_['7z']} d -tzip -mx9 "${target}" "${imgs[j]}"`, {
-              cwd: targetDir
-            })
+            try {
+              cp.execSync(`${_['7z']} d -tzip -mx9 "${target}" "${imgs[j]}"`, {
+                cwd: targetDir
+              })
+            } catch (error) {
+              logger.error(colors.error('Delete error, skipped this comic pack'))
+              return i
+            }
             deleted = true
           }
         }
