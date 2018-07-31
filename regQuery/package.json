@@ -6,7 +6,8 @@
   "author": "dodying",
   "license": "MIT",
   "dependencies": {
-    "copy-paste": "^1.3.0"
+    "copy-paste": "^1.3.0",
+    "iconv-lite": "^0.4.23"
   },
   "bin": {
     "rq": "./index.js"
