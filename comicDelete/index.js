@@ -8,7 +8,7 @@
 // @Last Modified time: 2018-06-18 15:47:59
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            trash,readline-sync
+// @Require:            readline-sync
 // ==/Headers==
 
 // 设置
@@ -19,19 +19,17 @@ const fs = require('fs')
 const path = require('path')
 
 // 导入第三方模块
-// let trash = require('trash');
 const readlineSync = require('readline-sync')
 
 // Function
 
 // Main
 
-process['argv'].splice(2).forEach(async i => {
+process['argv'].splice(2).forEach(i => {
   let p = path.resolve(process.cwd(), i)
   if (fs.existsSync(p)) {
     console.log(p)
     if (p.match('F:\\\\ComicLibrary') || readlineSync.keyInYNStrict('Continue to delete?')) {
-      // await trash(p);
       fs.unlinkSync(p)
       fs.writeFileSync(path.resolve(deletedPath, path.parse(p).base), '')
       console.log('File Deleted:\t', p)
@@ -40,4 +38,3 @@ process['argv'].splice(2).forEach(async i => {
     console.error('NOT find:\t', p)
   }
 })
-// readlineSync.keyInPause('Press Any Key to Exit');

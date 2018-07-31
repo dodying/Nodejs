@@ -13,7 +13,6 @@
   "author": "dodying",
   "license": "MIT",
   "dependencies": {
-    "readline-sync": "^1.4.9",
-    "trash": "^4.3.0"
+    "readline-sync": "^1.4.9"
   }
 }
