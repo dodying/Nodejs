@@ -1,7 +1,7 @@
 'use strict'
 
 let data = {
-  url: 'https://csharp.love/chrome_update_tool.html',
+  url: 'https://csharp.love/chrome-update-tool.html',
   version: {
     selector: 'li:contains("当前版本")'
   },

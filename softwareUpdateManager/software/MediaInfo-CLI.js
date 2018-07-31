@@ -10,7 +10,7 @@ let data = {
     attr: 'href'
   },
   install: function (output, iPath) {
-    return require('./../js/install')(output, iPath)
+    return require('./../js/install')(output, iPath, [''])
   }
 }
 module.exports = data

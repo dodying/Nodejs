@@ -10,8 +10,7 @@ let data = {
     plain: 'http://wujieliulan.com/download/u.exe'
   },
   install: function (output, iPath) {
-    require('fs-extra').copyFileSync(output, iPath)
-    return true
+    return require('./../js/install_single')(output, iPath)
   }
 }
 module.exports = data

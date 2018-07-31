@@ -1,8 +1,8 @@
 'use strict'
 
 let data = {
-  commercial: true,
   useProxy: true,
+  commercial: true,
   url: 'https://www.displayfusion.com/ChangeLog/',
   version: {
     selector: 'h1+h2'

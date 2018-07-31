@@ -10,8 +10,7 @@ let data = {
     plain: 'https://raw.githubusercontent.com/xiayhc/yhc/master/greenyhc.exe'
   },
   install: function (output, iPath) {
-    require('fs-extra').copyFileSync(output, iPath)
-    return true
+    return require('./../js/install_single')(output, iPath)
   }
 }
 module.exports = data

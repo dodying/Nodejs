@@ -1,9 +1,10 @@
 'use strict'
 
 /**
+ * @description regard the install pack as Windows Installer Package
  * @returns {boolean} if install completed
  * @param {string} from A path to the install pack file.
- * @param {string} to A path to the install bin file.
+ * @param {string} to A path to the bin file.
  * @param {(string | array)} excludes what files you don't want to install
  */
 

@@ -4,7 +4,7 @@
  * @description try to kill the process(es) which under folder of {to}
  * @returns {boolean} if process(es) kill
  * @param {string} from A path to the install pack file.
- * @param {string} to A path to the install bin file.
+ * @param {string} to A path to the bin file.
  */
 
 let kill = (from, to) => {

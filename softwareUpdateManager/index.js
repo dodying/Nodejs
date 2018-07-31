@@ -8,7 +8,7 @@
 // @Last Modified time: 2018-07-09 20:07:11
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            cheerio,fs-extra,readline-sync,request,request-promise,socks5-http-client,socks5-https-client
+// @Require:            cheerio,fs-extra,readline-sync,request,request-promise,socks5-http-client,socks5-https-client,node-notifier
 // ==/Headers==
 
 // 设置
@@ -26,6 +26,7 @@ const readlineSync = require('readline-sync')
 const request = require('request-promise')
 const Agent = require('socks5-http-client/lib/Agent')
 const Agent2 = require('socks5-https-client/lib/Agent')
+const notifier = require('node-notifier')
 
 // Function
 const getVersion = filepath => {
@@ -97,7 +98,15 @@ if (args.length) {
     md += '\n### Supported Software\n#### 支持的软件\n'
     let list = fse.readdirSync('software')
     for (let i = 0; i < list.length; i++) {
-      md += `${i + 1}. [${path.parse(list[i]).name}](${require('./software/' + list[i]).url})\n`
+      if (fse.statSync(path.resolve('software', list[i])).isFile()) {
+        let info = require('./software/' + list[i])
+        md += `${i + 1}. `
+        md += `[${path.parse(list[i]).name}](${info.url})`
+        if (info.commercial) md += ' :moneybag:'
+        if (info.useProxy) md += ' :airplane:'
+        if (!info.install) md += ' :hand:'
+        md += '\n'
+      }
     }
     fse.writeFileSync('README.md', md)
     process.exit()
@@ -189,6 +198,10 @@ let init = async () => {
       if (mode === 'onlycheck') {
         database[i].version = versionLatest
       } else if (version === null || versionMax(versionLatest, version)) { // new version
+        notifier.notify({
+          title: `Software:\t${i}`,
+          message: `Latest Version:\t${versionLatest}`
+        })
         if ((_.specialMode[i] > 0 || (!software[i].commercial && _.mode > 0) || (software[i].commercial && _.commercialMode > 0)) && 'download' in software[i]) { // download
           let download
           if ('plain' in software[i].download) { // download url is regular
