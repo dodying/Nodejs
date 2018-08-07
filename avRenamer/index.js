@@ -10,77 +10,10 @@
 // @Last Modified time: 2018-03-14 16:21:10
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            readline-sync,cheerio,async,jimp,image-size,tracer,colors,cloudflare-bypasser,optimist
 // ==/Headers==
 
 // 设置
-const useProfile = 'default'
-const _ = {
-  proxy: 'http://127.0.0.1:2346', // 代理
-  timeout: 30 * 1000, // 请求延迟
-  folder: process.cwd(),
-  rename: false, // 整理目录下的文件名是否需要处理
-  folderNew: '', // 整理后存放的目录，形同folder，留空则同folder
-  /**
-   * [folderWith description]
-   * @type {String}
-   * 建立层次文件夹
-   * 参考lib.data
-   * 留空表示不建立
-   */
-  folderWith: 'actor',
-  emptyStr: '---', // 某属性为空时，使用的替代字符
-  /**
-   * [name description]
-   * @type {String}
-   * 重命名规则
-   * ${x}
-   * $1 表示原文件名开头用方括号号引用的内容
-   * $2 表示原文件名末尾用方括号引用的内容
-   */
-  name: '$1{num}$2', // 参考lib.data
-  /**
-   * [image description]
-   * @type {Number}
-   * 0 不下载图片
-   * 1 下载图片
-   * 2 下载图片且裁剪
-   */
-  image: 2,
-  imageRetry: 3, // 下载图片重试次数（仅timeou重试）
-  strRemove: ['（ブルーレイディスク）'],
-  strReplace: [
-    [],
-    []
-  ],
-  nfo: true, // 是否生成nfo文件(kodi格式)
-  // http://actress.dmm.co.jp/-/search/=/searchstr=%s/
-  // actorUrl: 'file:///F:/Actor/', //nfo文件用，演员图片的地址，留空不添加
-  useLib: 'javbus'
-}
-
-const profile = {
-  default: {
-    rename: true,
-    image: 2,
-    useLib: 'javbus'
-  },
-  c: { // Censored
-    rename: false,
-    image: 2,
-    useLib: 'javbus'
-  },
-  c2: { // Censored
-    rename: false,
-    image: 2,
-    useLib: 'javbus'
-  },
-  u: { // Uncensored
-    rename: false,
-    image: 1,
-    useLib: 'javbus'
-  }
-}
+const CONFIG = require('./config')
 
 // 导入原生模块
 const fs = require('fs')
@@ -89,8 +22,9 @@ const Url = require('url')
 
 // 导入第三方模块
 const readlineSync = require('readline-sync')
-const CloudflareBypasser = require('cloudflare-bypasser')
-const request = new CloudflareBypasser()
+const request = require('request-promise')
+const Agent = require('socks5-http-client/lib/Agent')
+const Agent2 = require('socks5-https-client/lib/Agent')
 const cheerio = require('cheerio')
 const async = require('async')
 const Jimp = require('jimp')
@@ -110,33 +44,33 @@ colors.setTheme({
 const argv = require('optimist').argv
 
 //
-if (argv._[0] || useProfile) Object.assign(_, profile[argv._[0] || useProfile])
-if (Object.keys(argv).length > 2) Object.assign(_, argv)
+if (argv._[0] || CONFIG.useProfile) Object.assign(CONFIG, CONFIG.profile[argv._[0] || CONFIG.useProfile])
+if (Object.keys(argv).length > 2) Object.assign(CONFIG, argv)
 const data = {}
-_.folderNew = path.resolve(_.folder, _.folderNew)
-if (!fs.existsSync(_.folderNew)) fs.mkdirSync(_.folderNew)
+CONFIG.folderNew = path.resolve(CONFIG.folder, CONFIG.folderNew)
+if (!fs.existsSync(CONFIG.folderNew)) fs.mkdirSync(CONFIG.folderNew)
 const lib = {
-  'javlib': {
-    search: 'http://www.javlibrary.com/cn/vl_searchbyid.php?keyword={q}',
-    infoPageCheck: '#video_id',
-    result: '.video',
-    cover: '#video_jacket_img',
-    data: {
-      title: '.post-title',
-      num: '#video_id .text',
-      premiered: '#video_date .text',
-      runtime: '#video_length .text',
-      director: '#video_director .text',
-      studio: '#video_maker .text',
-      // label: '#video_label .text',
-      rating: $ => {
-        let a = $('#video_review .text>.score')
-        return a !== null && a.text().match(/[\d.]+/) ? a.text().match(/[\d.]+/)[0] : 0
-      },
-      genre: '#video_genres .text>.genre',
-      actor: '#video_cast .text>.cast a'
-    }
-  },
+  // 'javlib': {
+  //   search: 'http://www.javlibrary.com/cn/vl_searchbyid.php?keyword={q}',
+  //   infoPageCheck: '#video_id',
+  //   result: '.video',
+  //   cover: '#video_jacket_img',
+  //   data: {
+  //     title: '.post-title',
+  //     num: '#video_id .text',
+  //     premiered: '#video_date .text',
+  //     runtime: '#video_length .text',
+  //     director: '#video_director .text',
+  //     studio: '#video_maker .text',
+  //     // label: '#video_label .text',
+  //     rating: $ => {
+  //       let a = $('#video_review .text>.score')
+  //       return a !== null && a.text().match(/[\d.]+/) ? a.text().match(/[\d.]+/)[0] : 0
+  //     },
+  //     genre: '#video_genres .text>.genre',
+  //     actor: '#video_cast .text>.cast a'
+  //   }
+  // },
   'javbus': {
     search: 'https://www.javbus.com/search/{q}',
     infoPageCheck: '.movie',
@@ -154,7 +88,7 @@ const lib = {
       actor: '.star-box'
     }
   }
-}[_.useLib]
+}[CONFIG.useLib]
 
 const replaceWithDict = (text, a, b = []) => {
   for (let i = 0; i < a.length; i++) {
@@ -175,15 +109,27 @@ const req = options => {
     headers: {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
       'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
-      'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0.1; SM-G920V Build/MMB29K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.98 Mobile Safari/537.36',
+      'User-Agent': CONFIG.userAgent,
       'Cache-Control': 'max-age=0',
       'Connection': 'keep-alive'
     },
-    proxy: _.proxy,
-    timeout: _.timeout,
+    timeout: CONFIG.timeout * 1000,
     resolveWithFullResponse: true
   }, options)
-  return request.request(options)
+  if (CONFIG.proxySocks) {
+    options.agentClass = options.url.match(/^http:/) ? Agent : Agent2
+    options.agentOptions = {
+      socksHost: CONFIG.proxySocksHost || 'localhost',
+      socksPort: CONFIG.proxySocksPort
+    }
+    if (CONFIG.proxySocksUsername && CONFIG.proxySocksPassword) {
+      options.agentOptions.socksUsername = CONFIG.proxySocksUsername
+      options.agentOptions.socksPassword = CONFIG.proxySocksPassword
+    }
+  } else if (CONFIG.proxyHTTP) {
+    options.proxy = CONFIG.proxyHTTP
+  }
+  return request(options)
 }
 
 const getNum = text => { // 尝试修改名称
@@ -230,10 +176,10 @@ const getInfo = (i, html) => { // 生成信息
   for (let i in info) {
     // let text
     if (typeof info[i] === 'string') {
-      info[i] = info[i].replaceWithDict(_.strRemove).replaceWithDict(_.strReplace[0], _.strReplace[1])
+      info[i] = info[i].replaceWithDict(CONFIG.strRemove).replaceWithDict(CONFIG.strReplace[0], CONFIG.strReplace[1])
     } else if (typeof info[i] === 'object' && 'length' in info[i]) {
       for (let j = 0; j < info[i].length; j++) {
-        if (typeof info[i][j] === 'string') { info[i][j] = info[i][j].replaceWithDict(_.strRemove).replaceWithDict(_.strReplace[0], _.strReplace[1]) }
+        if (typeof info[i][j] === 'string') { info[i][j] = info[i][j].replaceWithDict(CONFIG.strRemove).replaceWithDict(CONFIG.strReplace[0], CONFIG.strReplace[1]) }
       }
     }
   }
@@ -244,11 +190,11 @@ const getInfo = (i, html) => { // 生成信息
 const rename = i => { // 重命名
   let result
   let re = /{(.*?)}/g
-  let name = _.name
+  let name = CONFIG.name
   let ext = i.match(/\.\w{2,4}$/)[0]
   let t = i.replace(ext, '')
   while ((result = re.exec(name)) != null) {
-    name = name.replace(new RegExp(result[0], 'gi'), data[i][result[1]] || _.emptyStr)
+    name = name.replace(new RegExp(result[0], 'gi'), data[i][result[1]] || CONFIG.emptyStr)
   };
   if (name.match(/\$1/)) name = name.replace(/\$1/g, t.match(/^\[.*?\]/) ? t.match(/^\[.*?\]/)[0] : '')
   if (name.match(/\$2/)) {
@@ -257,11 +203,11 @@ const rename = i => { // 重命名
   }
   name = name.replace(/[\\/:*?"<>|]/g, '-')
   data[i].name = name
-  let folderWith = data[i][_.folderWith]
-  let folder = typeof folderWith === 'string' ? folderWith : typeof folderWith === 'undefined' ? _.emptyStr : folderWith.join(',')
-  let targetPath = path.resolve(_.folderNew, _.folderWith ? folder : '').replace(/[*?"<>|]/g, '-')
+  let folderWith = data[i][CONFIG.folderWith]
+  let folder = typeof folderWith === 'string' ? folderWith : typeof folderWith === 'undefined' ? CONFIG.emptyStr : folderWith.join(',')
+  let targetPath = path.resolve(CONFIG.folderNew, CONFIG.folderWith ? folder : '').replace(/[*?"<>|]/g, '-')
   let target = path.resolve(targetPath, name + ext)
-  let targetOld = path.resolve(_.folder, i)
+  let targetOld = path.resolve(CONFIG.folder, i)
   data[i].path = targetPath
   if (!fs.existsSync(targetPath)) fs.mkdirSync(targetPath)
   if (!fs.existsSync(target)) fs.renameSync(targetOld, target)
@@ -295,7 +241,6 @@ const nfoFile = i => { // 生成NFO文件
       t += `  <actor>\r\n`
       t += `    <name>${i}</name>\r\n`
       t += `    <role>${i}</role>\r\n`
-      if (_.actorUrl) t += `    <thumb>${Url.resolve(_.actorUrl, i)}.jpg</thumb>\r\n`
       t += `  </actor>\r\n`
     })
   }
@@ -307,24 +252,23 @@ const nfoFile = i => { // 生成NFO文件
 const downloadImage = async i => { // 下载图片
   let url = Url.resolve(data[i].url, data[i].cover)
   let target = path.resolve(data[i].path, data[i].name + '.jpg')
-  let targetBanner = _.image === 2 ? target.replace('.jpg', '-banner.jpg') : target
+  let targetBanner = CONFIG.image === 2 ? target.replace('.jpg', '-banner.jpg') : target
   let res = await req({
     url: url,
     encoding: null
   })
 
-  let buffer = Buffer.from(res, 'utf8')
-  fs.writeFileSync(targetBanner, buffer)
-  if (_.image === 2) {
+  fs.writeFileSync(targetBanner, res.body)
+  if (CONFIG.image === 2) {
     let size = sizeOf(targetBanner)
     let image = await Jimp.read(targetBanner)
     await image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target)
   }
 }
 
-let lst = fs.readdirSync(_.folder)
-lst = lst.filter(i => fs.statSync(path.resolve(_.folder, i)).isFile())
-if (_.rename) {
+let lst = fs.readdirSync(CONFIG.folder)
+lst = lst.filter(i => fs.statSync(path.resolve(CONFIG.folder, i)).isFile())
+if (CONFIG.rename) {
   lst = lst.map(i => {
     let ext = i.match(/\.\w{2,4}$/)[0]
     let t = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '').toUpperCase() + ext
@@ -334,8 +278,8 @@ if (_.rename) {
     let input = readlineSync.question()
     tryNum = input ? input + ext : tryNum
     if (i !== tryNum) {
-      let target = path.resolve(_.folder, tryNum)
-      let targetOld = path.resolve(_.folder, i)
+      let target = path.resolve(CONFIG.folder, tryNum)
+      let targetOld = path.resolve(CONFIG.folder, i)
       if (!fs.existsSync(target)) {
         fs.renameSync(targetOld, target)
         return tryNum
@@ -367,8 +311,8 @@ async.mapSeries(lst, async i => {
     logger.log(colors.info(`Deal with ${data[i].num || i} Info: ${JSON.stringify(data[i])}`))
     if (data[i].num !== undefined) {
       rename(i)
-      if (_.nfo) nfoFile(i)
-      if (_.image) {
+      if (CONFIG.nfo) nfoFile(i)
+      if (CONFIG.image) {
         await downloadImage(i)
         return i
       }
