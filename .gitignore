@@ -1,7 +1,3 @@
 node_modules
-pornImageDownloader/image
 *.redoing
 *.starting
-\package-lock.json
-\package.json
-\*.js

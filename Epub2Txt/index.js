@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // ==Headers==
-// @Name:               EpubRewrite
-// @Description:        EpubRewrite
+// @Name:               Epub2Txt
+// @Description:        将 EPUB 转换为 TXT 格式
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-06 10:43:07

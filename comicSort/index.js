@@ -1,6 +1,6 @@
 // ==Headers==
 // @Name:               comicSort
-// @Description:        comicSort
+// @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2017-12-03 08:31:33

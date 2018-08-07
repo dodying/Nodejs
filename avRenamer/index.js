@@ -2,7 +2,7 @@
 
 // ==Headers==
 // @Name:               avRenamer
-// @Description:        avRenamer
+// @Description:        将文件夹下的不可描述视频按规则分类并命名
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2017-12-02 23:26:18
@@ -10,7 +10,7 @@
 // @Last Modified time: 2018-03-14 16:21:10
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            readline-sync,superagent,superagent-proxy,cheerio,async,jimp,image-size,tracer,colors
+// @Require:            readline-sync,cheerio,async,jimp,image-size,tracer,colors,cloudflare-bypasser,optimist
 // ==/Headers==
 
 // 设置
@@ -56,21 +56,19 @@ const _ = {
   nfo: true, // 是否生成nfo文件(kodi格式)
   // http://actress.dmm.co.jp/-/search/=/searchstr=%s/
   // actorUrl: 'file:///F:/Actor/', //nfo文件用，演员图片的地址，留空不添加
-  useLib: 'javlib'
+  useLib: 'javbus'
 }
 
 const profile = {
   default: {
     rename: true,
     image: 2,
-    useLib: 'javlib',
-    proxy: 'http://127.0.0.1:2346'
+    useLib: 'javbus'
   },
   c: { // Censored
     rename: false,
     image: 2,
-    useLib: 'javlib',
-    proxy: 'http://127.0.0.1:2346'
+    useLib: 'javbus'
   },
   c2: { // Censored
     rename: false,
@@ -91,8 +89,8 @@ const Url = require('url')
 
 // 导入第三方模块
 const readlineSync = require('readline-sync')
-const superagent = require('superagent')
-require('superagent-proxy')(superagent)
+const CloudflareBypasser = require('cloudflare-bypasser')
+const request = new CloudflareBypasser()
 const cheerio = require('cheerio')
 const async = require('async')
 const Jimp = require('jimp')
@@ -117,13 +115,6 @@ if (Object.keys(argv).length > 2) Object.assign(_, argv)
 const data = {}
 _.folderNew = path.resolve(_.folder, _.folderNew)
 if (!fs.existsSync(_.folderNew)) fs.mkdirSync(_.folderNew)
-const header = {
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-  'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
-  'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Mobile Safari/537.36',
-  'Cache-Control': 'max-age=0',
-  'Connection': 'keep-alive'
-}
 const lib = {
   'javlib': {
     search: 'http://www.javlibrary.com/cn/vl_searchbyid.php?keyword={q}',
@@ -177,6 +168,24 @@ String.prototype.replaceWithDict = function (a, b = []) {
   return replaceWithDict(this.toString(), a, b)
 }
 
+const req = options => {
+  if (typeof options === 'string') options = {url: options}
+  options = Object.assign({
+    method: 'GET',
+    headers: {
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      'Accept-Language': 'zh-CN,zh;q=0.8,zh-TW;q=0.6',
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0.1; SM-G920V Build/MMB29K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.98 Mobile Safari/537.36',
+      'Cache-Control': 'max-age=0',
+      'Connection': 'keep-alive'
+    },
+    proxy: _.proxy,
+    timeout: _.timeout,
+    resolveWithFullResponse: true
+  }, options)
+  return request.request(options)
+}
+
 const getNum = text => { // 尝试修改名称
   text = text.replace(/mp4$/i, '')
   text = text.match(/[^h_0-9].*/)[0]
@@ -185,48 +194,22 @@ const getNum = text => { // 尝试修改名称
   return text
 }
 
-const request = url => {
-  return new Promise((resolve, reject) => {
-    superagent.get(url).set(header).proxy(_.proxy).timeout(_.timeout).end((err, res) => {
-      if (err) {
-        if (err.status !== 404) {
-          console.error(`Request: ${colors.info(url)}\nInfo: `, {
-            error: err
-          })
-        }
-        reject(err)
-      } else {
-        res.urlTrue = res.redirects.length ? res.redirects[res.redirects.length - 1] : url
-        resolve(res)
-      }
-    })
-  })
-}
-
-const search = i => { // 搜索番号
+const search = async i => { // 搜索番号
   let keyword = i.replace(/\.\w{2,4}$/, '').replace(/^\[.*?\]|\[.*?\]$/g, '')
   let url = lib.search.replace('{q}', keyword)
-  return new Promise((resolve, reject) => {
-    request(url).then((res) => {
-      const $ = cheerio.load(res.text)
-      if ($(lib.infoPageCheck).length) {
-        resolve(res)
-      } else if ($(lib.result).filter(`:contains("${keyword}")`).length) {
-        let url1 = $(lib.result).filter(`:contains("${keyword}")`).find('a').attr('href')
-        url1 = Url.resolve(url, url1)
-        return request(url1)
-      } else {
-        logger.warn(`Not find the movie: ${colors.warn(keyword)}`)
-        reject(new Error(`Not find the movie: ${keyword}`))
-      }
-    }, err => {
-      reject(err)
-    }).then((res) => {
-      resolve(res)
-    }, err => {
-      reject(err)
-    })
-  })
+  let res = await req(url)
+  let $ = cheerio.load(res.body)
+  if ($(lib.infoPageCheck).length) {
+    return res
+  } else if ($(lib.result).filter(`:contains("${keyword}")`).length) {
+    let url1 = $(lib.result).filter(`:contains("${keyword}")`).find('a').attr('href')
+    url1 = Url.resolve(url, url1)
+    res = await req(url1)
+    return res
+  } else {
+    logger.warn(`Not find the movie: ${colors.warn(keyword)}`)
+    return new Error(`Not find the movie: ${keyword}`)
+  }
 }
 
 const getInfo = (i, html) => { // 生成信息
@@ -321,42 +304,22 @@ const nfoFile = i => { // 生成NFO文件
   fs.writeFileSync(target, t)
 }
 
-const downloadImage = i => { // 下载图片
+const downloadImage = async i => { // 下载图片
   let url = Url.resolve(data[i].url, data[i].cover)
   let target = path.resolve(data[i].path, data[i].name + '.jpg')
   let targetBanner = _.image === 2 ? target.replace('.jpg', '-banner.jpg') : target
-  return new Promise((resolve, reject) => {
-    superagent.get(url).set(header).proxy(_.proxy).timeout(_.timeout).retry(_.imageRetry).responseType('blob').end((err, res) => {
-      if (err) {
-        if (err.status !== 404) {
-          console.error(`Request: ${colors.info(url)}\nInfo: `, {
-            error: err
-          })
-        }
-        return reject(err)
-      }
-      fs.writeFileSync(targetBanner, res.body)
-      if (_.image === 2) {
-        let size = sizeOf(targetBanner)
-        Jimp.read(targetBanner, (err, image) => {
-          if (err) {
-            if (err.status !== 404) {
-              console.error(`Request: ${colors.info(url)}\nInfo: `, {
-                error: err
-              })
-            }
-            reject(err)
-          } else {
-            image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target, () => {
-              resolve()
-            })
-          }
-        })
-      } else {
-        resolve()
-      }
-    })
+  let res = await req({
+    url: url,
+    encoding: null
   })
+
+  let buffer = Buffer.from(res, 'utf8')
+  fs.writeFileSync(targetBanner, buffer)
+  if (_.image === 2) {
+    let size = sizeOf(targetBanner)
+    let image = await Jimp.read(targetBanner)
+    await image.crop(size.width * 0.475, 0, size.width * 0.525, size.height).write(target)
+  }
 }
 
 let lst = fs.readdirSync(_.folder)
@@ -386,15 +349,12 @@ for (let i = 0; i < lst.length; i++) {
 }
 logger.log(`Work list: ${colors.info(lst.join(', '))}`)
 
-async.mapSeries(lst, (i, cb) => {
+async.mapSeries(lst, async i => {
   logger.log(colors.info(`Start Search: ${i}`))
-  search(i.toUpperCase()).then((res) => {
-    data[i].url = res.urlTrue
-    getInfo(i, res.text)
-    cb(null, i)
-  }, err => {
-    cb(err, i)
-  })
+  let res = await search(i.toUpperCase())
+  data[i].url = res.request.href
+  getInfo(i, res.body)
+  return i
 }, (err, results) => {
   if (err) {
     console.error({
@@ -403,22 +363,15 @@ async.mapSeries(lst, (i, cb) => {
     return
   }
   logger.log(colors.info('All info request completed.'))
-  async.mapSeries(lst, (i, cb) => {
+  async.mapSeries(lst, async i => {
     logger.log(colors.info(`Deal with ${data[i].num || i} Info: ${JSON.stringify(data[i])}`))
     if (data[i].num !== undefined) {
       rename(i)
       if (_.nfo) nfoFile(i)
       if (_.image) {
-        downloadImage(i).then(() => {
-          cb(null, i)
-        }, err => {
-          cb(err, i)
-        })
-      } else {
-        cb(null, i)
+        await downloadImage(i)
+        return i
       }
-    } else {
-      cb(null, i)
     }
   }, (err, results) => {
     if (err) {

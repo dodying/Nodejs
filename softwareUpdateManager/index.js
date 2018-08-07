@@ -1,6 +1,6 @@
 // ==Headers==
-// @Name:               index
-// @Description:        index
+// @Name:               softwareUpdateManager
+// @Description:        软件更新管理器
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-07-09 20:07:11

@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // ==Headers==
 // @Name:               comicDelete
 // @Description:        comicDelete

@@ -1,6 +1,6 @@
 // ==Headers==
-// @Name:               index
-// @Description:        index
+// @Name:               pornImageDownloader
+// @Description:        下载不可描述图
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-06-20 15:52:36

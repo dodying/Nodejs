@@ -1,6 +1,6 @@
 // ==Headers==
 // @Name:               Docsets2Html
-// @Description:        Docsets2Html
+// @Description:        将Dash的Docsets文件夹转换为Html
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-08-06 22:12:51

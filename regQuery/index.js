@@ -2,7 +2,7 @@
 
 // ==Headers==
 // @Name:               regQuery
-// @Description:        regQuery
+// @Description:        请求注册表并复制为 batch/powershell 格式
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-03-20 11:59:57

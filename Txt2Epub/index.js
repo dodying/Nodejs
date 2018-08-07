@@ -2,7 +2,7 @@
 
 // ==Headers==
 // @Name:               Txt2Epub
-// @Description:        Txt2Epub
+// @Description:        将 TXT 转换为 EPUB 格式
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-06 19:39:26

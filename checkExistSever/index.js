@@ -10,7 +10,7 @@
 // @Last Modified time: 2018-06-06 18:08:43
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            express,body-parser
+// @Require:            express,body-parser,async
 // ==/Headers==
 
 // CONFIG

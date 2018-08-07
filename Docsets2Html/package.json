@@ -1,0 +1,16 @@
+{
+  "name": "docsets2html",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "dodying",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index"
+  },
+  "dependencies": {
+    "mkdirp": "^0.5.1",
+    "rimraf": "^2.6.2",
+    "sql.js": "^0.5.0"
+  }
+}

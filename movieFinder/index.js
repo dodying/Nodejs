@@ -2,7 +2,7 @@
 
 // ==Headers==
 // @Name:               movieFinder
-// @Description:        movieFinder
+// @Description:        根据目录生成html
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-04 13:37:23
