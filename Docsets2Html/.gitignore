@@ -1,0 +1,4 @@
+docsets
+*.docsets
+data.json
+data.js
