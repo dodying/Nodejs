@@ -16,7 +16,7 @@ let data = {
     // 1. omitted => /([\d.]+)/[1]
     // 2. /other/ => /other/[1]
     // ---
-    // or func: (res, $) => { return version }
+    // or func: async (res, $) => { return version }
   },
   /**
    * download:
@@ -33,7 +33,7 @@ let data = {
     //   defined variables:
     //     version: the latest version
     // --- mode 2
-    // func: (res, $) => { return url }
+    // func: async (res, $) => { return url }
     selector: 'a[href$=".zip"]:has(small.text-gray)',
     attr: 'href',
     // ?output:
@@ -43,11 +43,18 @@ let data = {
     output: 'Telegram.zip' // this is same as '.zip' or omitted
   },
   /**
-   * download:
    * omitted => install manually
+   * install: async function(output, iPath)
+   * @returns {boolean} if install completed
+   * @param {string} output the path to the install pack file.
+   * @param {string} iPath the path to the bin file.
    */
   install: function (output, iPath) {
     return require('./../js/install')(output, iPath)
   }
+  /**
+   * beforeInstall: async function(output, iPath)
+   * afterInstall: async function(output, iPath)
+   */
 }
 module.exports = data

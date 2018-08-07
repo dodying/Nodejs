@@ -1,3 +1,20 @@
+<!-- TOC -->
+
+- [SoftwareUpdateManager](#softwareupdatemanager)
+  - [软件更新管理器](#软件更新管理器)
+    - [Usage](#usage)
+      - [使用说明](#使用说明)
+    - [Software Example](#software-example)
+      - [软件示例](#软件示例)
+    - [Priority of Some Config](#priority-of-some-config)
+      - [一些设置的优先级](#一些设置的优先级)
+    - [Note](#note)
+      - [说明](#说明)
+    - [Supported Software](#supported-software)
+      - [支持的软件](#支持的软件)
+
+<!-- /TOC -->
+
 # SoftwareUpdateManager
 ## 软件更新管理器
 
@@ -22,7 +39,9 @@
 #### 软件示例
 
 请参照`software\Telegram.js`
-
+```js
+{example}
+```
 
 ### Priority of Some Config
 #### 一些设置的优先级
@@ -38,3 +57,8 @@
 2. 大多软件都支持自动安装
 3. 带 :moneybag: 的为**商业软件**， 带 :airplane: 的需**番羽土墙**， 带 :hand: 的需**手动安装**
 4. 这些站点默认视作 :airplane: : [SourceForge](https://sourceforge.net), [Github](https://github.com)
+
+### Supported Software
+#### 支持的软件
+
+{software}

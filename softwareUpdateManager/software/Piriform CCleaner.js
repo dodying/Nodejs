@@ -4,7 +4,7 @@ let data = {
   commercial: true,
   url: 'https://www.ccleaner.com/ccleaner/download',
   version: {
-    selector: '.icon_square:contains("Release notes")+div>strong'
+    selector: '.icon_square:contains("Release notes")+div strong'
   },
   download: {
     func: async () => {

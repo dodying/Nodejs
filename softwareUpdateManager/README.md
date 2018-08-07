@@ -1,3 +1,20 @@
+<!-- TOC -->
+
+- [SoftwareUpdateManager](#softwareupdatemanager)
+  - [软件更新管理器](#软件更新管理器)
+    - [Usage](#usage)
+      - [使用说明](#使用说明)
+    - [Software Example](#software-example)
+      - [软件示例](#软件示例)
+    - [Priority of Some Config](#priority-of-some-config)
+      - [一些设置的优先级](#一些设置的优先级)
+    - [Note](#note)
+      - [说明](#说明)
+    - [Supported Software](#supported-software)
+      - [支持的软件](#支持的软件)
+
+<!-- /TOC -->
+
 # SoftwareUpdateManager
 ## 软件更新管理器
 
@@ -22,7 +39,69 @@
 #### 软件示例
 
 请参照`software\Telegram.js`
+```js
+'use strict'
 
+let data = {
+  // ?commercial: true/false,
+  // ?useProxy: true/false,
+  useProxy: true,
+  url: 'https://github.com/telegramdesktop/tdesktop/releases/latest',
+  version: {
+    selector: '.release-title'
+    // attr:
+    // 1. text or omitted => text()
+    // 2. html => html()
+    // 3. other => attr(other)
+    //
+    // ?match:
+    // 1. omitted => /([\d.]+)/[1]
+    // 2. /other/ => /other/[1]
+    // ---
+    // or func: async (res, $) => { return version }
+  },
+  /**
+   * download:
+   * omitted => open url
+   */
+  download: {
+    // --- mode 0
+    // selector: 'a:contains("Download Portable Zip 64-bit")',
+    // attr: 'href',
+    // match: '', // omitted => /(.*)/[1]
+    // --- mode 1
+    // plain: 'url/to/download'
+    //   you can use variables with {}
+    //   defined variables:
+    //     version: the latest version
+    // --- mode 2
+    // func: async (res, $) => { return url }
+    selector: 'a[href$=".zip"]:has(small.text-gray)',
+    attr: 'href',
+    // ?output:
+    // save to which
+    // if start with .(dot), it'll be named as software + output
+    // or omitted: software + extension according to download url
+    output: 'Telegram.zip' // this is same as '.zip' or omitted
+  },
+  /**
+   * omitted => install manually
+   * install: async function(output, iPath)
+   * @returns {boolean} if install completed
+   * @param {string} output the path to the install pack file.
+   * @param {string} iPath the path to the bin file.
+   */
+  install: function (output, iPath) {
+    return require('./../js/install')(output, iPath)
+  }
+  /**
+   * beforeInstall: async function(output, iPath)
+   * afterInstall: async function(output, iPath)
+   */
+}
+module.exports = data
+
+```
 
 ### Priority of Some Config
 #### 一些设置的优先级
@@ -41,6 +120,7 @@
 
 ### Supported Software
 #### 支持的软件
+
 1. [7+ Taskbar Tweaker](https://rammichael.com/downloads/7tt_setup.exe?changelog) :airplane:
 2. [7-Zip](https://www.7-zip.org/download.html)
 3. [Actual Title Buttons](https://www.actualtools.com/titlebuttons/) :moneybag: :airplane:
@@ -73,106 +153,108 @@
 30. [DocFetcher](https://sourceforge.net/projects/docfetcher/files) :airplane:
 31. [Dopamine](https://www.digimezzo.com/content/software/dopamine/) :airplane:
 32. [Eric's Movie Database](http://www.emdb.eu/)
-33. [Everything](https://www.voidtools.com/downloads/)
-34. [ExtremeCopy](http://www.easersoft.com/product.html) :moneybag: :airplane:
-35. [FastCopy-M](https://github.com/Mapaler/FastCopy-M/releases/latest) :airplane:
-36. [FastCopy](https://fastcopy.jp/)
-37. [ffmpeg](https://ffmpeg.zeranoe.com/builds/) :airplane:
-38. [FileUploader](http://z-o-o-m.eu/down.htm) :airplane:
-39. [firefly-proxy](https://github.com/yinghuocho/firefly-proxy/releases/latest) :airplane:
-40. [FreeFileSync](https://freefilesync.org/download.php)
-41. [FreeGate](https://github.com/freegate-release/website/) :airplane:
-42. [GifCam](http://blog.bahraniapps.com/gifcam/) :airplane:
-43. [Git for Windows Portable](https://github.com/git-for-windows/git/releases/latest) :airplane:
-44. [Goflyway Tools](https://softs.loan/?dir=%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/PC/GoFlyway/Goflyway%20Tools)
-45. [goflyway](https://github.com/coyove/goflyway/releases) :airplane:
-46. [golang](https://golang.org/dl/) :airplane:
-47. [Honeyview](http://www.bandisoft.com/honeyview/)
-48. [Hourglass](https://github.com/dziemborowicz/hourglass/releases/latest) :airplane:
-49. [ImageMagick](http://www.imagemagick.org/script/download.php#windows)
-50. [Inno Setup Unpacker](https://sourceforge.net/projects/innounp/files/innounp/) :airplane:
-51. [Inno Setup](http://www.jrsoftware.org/isdl.php)
-52. [Internet Download Manager](http://www.internetdownloadmanager.com/) :moneybag: :hand:
-54. [JiJiDownForWPF](http://l.acesheep.com/bili/re.php?callback=?)
-55. [LabelPlus](https://github.com/LabelPlus/LabelPlus/releases/latest) :airplane:
-56. [launch4j](https://sourceforge.net/projects/launch4j/files/) :airplane:
-57. [Lepton](https://github.com/hackjutsu/Lepton/releases/latest) :airplane:
-58. [LICEcap](https://www.cockos.com/licecap/)
-59. [MDB Viewer Plus](http://www.alexnolan.net/software/mdbplus.xml)
-60. [MediaInfo-CLI](https://mediaarea.net/en/MediaInfo/Download/Windows)
-61. [MediaInfo-GUI](https://mediaarea.net/en/MediaInfo/Download/Windows)
-62. [MeGUI](https://sourceforge.net/projects/megui/files) :airplane:
-63. [MemReduct](https://github.com/henrypp/memreduct/releases/latest)
-64. [MiTec EXE Explorer](http://www.mitec.cz/index.html)
-65. [MiTec Task Manager DeLuxe](http://www.mitec.cz/Data/XML/data_tmxvh.xml)
-66. [MPC-BE](https://sourceforge.net/projects/mpcbe/files/) :airplane:
-67. [MPC-HC](https://mpc-hc.org/downloads/)
-68. [Nodejs-LTS](https://nodejs.org/en/download/)
-69. [Nodejs](https://nodejs.org/en/download/current/)
-70. [notepad++](https://notepad-plus-plus.org/download/) :airplane:
-71. [notepad2-mod](https://github.com/XhmikosR/notepad2-mod/releases/latest) :airplane:
-72. [nTurn](https://www.ntrun.com/) :hand:
-73. [OnTopReplica](https://github.com/LorenzCK/OnTopReplica/releases/latest) :airplane:
-74. [PicGo](https://github.com/Molunerfinn/PicGo/releases/latest) :airplane:
-75. [PicPick](https://picpick.app/zh/download) :airplane:
-76. [Piriform CCleaner](https://www.ccleaner.com/ccleaner/download) :moneybag:
-77. [Piriform Defraggler](https://www.ccleaner.com/defraggler/download) :moneybag:
-78. [Piriform Recuva](https://www.ccleaner.com/recuva/download) :moneybag:
-79. [Piriform Speccy](https://www.ccleaner.com/speccy/download) :moneybag:
-80. [PlayTime](http://www.dcmembers.com/skwire/download/playtime/) :airplane:
-81. [PotPlayer](https://potplayer.daum.net/)
-82. [qBittorrent](https://www.qbittorrent.org/download.php) :airplane:
-83. [QTranslate](https://quest-app.appspot.com/) :airplane:
-84. [Rapid Environment Editor](https://www.rapidee.com/en/download) :airplane:
-85. [Registry Workshop](http://www.torchsoft.com/en/download.html) :moneybag:
-86. [Resource Hacker](http://www.angusj.com/resourcehacker/)
-87. [Resource Tuner](http://www.restuner.com/news-history.htm) :moneybag: :airplane:
-88. [Right Click Enhancer Professional](https://rbsoft.org/downloads/right-click-enhancer/rce-professional-changelog.html) :moneybag: :airplane:
-89. [Rufus](https://rufus.akeo.ie/)
-90. [ScreenToGif](https://github.com/NickeManarin/ScreenToGif/releases/latest) :airplane:
-91. [shadowsocks-qt5](https://github.com/shadowsocks/shadowsocks-qt5/releases/latest) :airplane: :hand:
-92. [shadowsocks](https://github.com/shadowsocks/shadowsocks-windows/releases/latest) :airplane:
-93. [shadowsocksr-csharp](https://github.com/shadowsocksrr/shadowsocksr-csharp/releases) :airplane:
-94. [shadowsocksr-electron](https://github.com/erguotou520/electron-ssr/releases/latest) :airplane:
-95. [SmartGit](https://www.syntevo.com/smartgit/download/) :moneybag:
-96. [Sordum BlueLife KeyFreeze](https://www.sordum.org/7921/)
-97. [Sordum Defender Injector](https://www.sordum.org/10636/)
-98. [Sordum Desktop.ini Editor](https://www.sordum.org/10084/)
-99. [Sordum Dns Jumper](https://www.sordum.org/7952/)
-100. [Sordum Drive Letter Changer](https://www.sordum.org/8501/)
-101. [Sordum Firewall App Blocker](https://www.sordum.org/8125/)
-102. [Sordum Folder Painter](https://www.sordum.org/10124/)
-103. [Sordum Reduce Memory](https://www.sordum.org/9197/)
-104. [Sordum Reg Converter](https://www.sordum.org/8478/)
-105. [Sordum Simple Run Blocker](https://www.sordum.org/8486/)
-106. [Sordum Windows Update Blocker](https://www.sordum.org/9470/)
-107. [SpeedCrunch](http://speedcrunch.org/download.html)
-108. [SpeedyFox](https://www.crystalidea.com/speedyfox)
-109. [Telegram](https://github.com/telegramdesktop/tdesktop/releases/latest) :airplane:
-110. [Textify](https://rammichael.com/downloads/textify_setup.exe?changelog) :airplane:
-111. [Tor Browser](https://www.torproject.org/download/download-easy.html.en) :airplane:
-112. [Total Commander](https://www.ghisler.com/download.htm) :moneybag: :airplane:
-113. [Total Uninstall](https://www.martau.com/uninstaller-download.php) :moneybag: :airplane:
-114. [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor/releases/latest) :airplane:
-115. [Transmission](https://github.com/transmission/transmission/releases/latest) :airplane:
-116. [Traymond](https://github.com/fcFn/traymond/releases/latest) :airplane:
-117. [ultraSurf](http://wujieliulan.com/) :airplane:
-118. [Universal Extractor 2](https://github.com/Bioruebe/UniExtract2/releases/latest) :airplane:
-119. [Unreal Commander](https://x-diesel.com/?download)
-120. [uTorrent](http://blog.utorrent.com/releases/windows/) :moneybag: :hand:
-121. [v2ray](https://github.com/v2ray/v2ray-core/releases/latest) :airplane:
-122. [v2rayN](https://github.com/2dust/v2rayN/releases/latest) :airplane:
-123. [Velocity](https://velocity.silverlakesoftware.com/) :moneybag:
-124. [Visual Studio Code](https://github.com/Microsoft/vscode/releases)
-125. [Volume2](https://irzyxa.blogspot.com/p/downloads.html) :airplane:
-126. [WGestures](https://github.com/yingDev/WGestures/releases/latest) :airplane:
-127. [WinCDEmu Portable](http://wincdemu.sysprogs.org/portable/)
-128. [Windows System Control Center](http://www.kls-soft.com/wscc/downloads.php) :airplane:
-129. [WinHex](http://www.x-ways.net/winhex/) :moneybag:
-130. [Xlideit Image Viewer](https://sourceforge.net/projects/xlideit/files) :airplane:
-131. [XX-Net](https://github.com/XX-net/XX-Net/blob/master/code/default/download.md) :airplane:
-132. [Yosoro](https://github.com/IceEnd/Yosoro/releases/latest) :airplane:
-133. [zeal](https://zealdocs.org/download.html) :airplane:
-134. [ZeroNet](https://github.com/HelloZeroNet/ZeroNet/releases/latest) :airplane:
-135. [冰点文库下载器](http://www.bingdian001.com/?p=30) :hand:
-136. [繁化姬](https://github.com/James1201/Fanhuaji-GUI-Release/releases/latest) :airplane:
+33. [Evernote](https://evernote.com/intl/zh-cn/download) :hand:
+34. [Everything](https://www.voidtools.com/downloads/)
+35. [ExtremeCopy](http://www.easersoft.com/product.html) :moneybag: :airplane:
+36. [FastCopy-M](https://github.com/Mapaler/FastCopy-M/releases/latest) :airplane:
+37. [FastCopy](https://fastcopy.jp/)
+38. [ffmpeg](https://ffmpeg.zeranoe.com/builds/) :airplane:
+39. [FileUploader](http://z-o-o-m.eu/down.htm) :airplane:
+40. [firefly-proxy](https://github.com/yinghuocho/firefly-proxy/releases/latest) :airplane:
+41. [FreeFileSync](https://freefilesync.org/download.php)
+42. [FreeGate](https://github.com/freegate-release/website/) :airplane:
+43. [GifCam](http://blog.bahraniapps.com/gifcam/) :airplane:
+44. [Git for Windows Portable](https://github.com/git-for-windows/git/releases/latest) :airplane:
+45. [Goflyway Tools](https://softs.loan/?dir=%E7%A7%91%E5%AD%A6%E4%B8%8A%E7%BD%91/PC/GoFlyway/Goflyway%20Tools)
+46. [goflyway](https://github.com/coyove/goflyway/releases) :airplane:
+47. [golang](https://golang.org/dl/) :airplane:
+48. [Honeyview](http://www.bandisoft.com/honeyview/)
+49. [Hourglass](https://github.com/dziemborowicz/hourglass/releases/latest) :airplane:
+50. [ImageMagick](http://www.imagemagick.org/script/download.php#windows)
+51. [Inno Setup Unpacker](https://sourceforge.net/projects/innounp/files/innounp/) :airplane:
+52. [Inno Setup](http://www.jrsoftware.org/isdl.php)
+53. [Internet Download Manager](http://www.internetdownloadmanager.com/) :moneybag: :hand:
+55. [JiJiDownForWPF](http://l.acesheep.com/bili/re.php?callback=?)
+56. [LabelPlus](https://github.com/LabelPlus/LabelPlus/releases/latest) :airplane:
+57. [launch4j](https://sourceforge.net/projects/launch4j/files/) :airplane:
+58. [Lepton](https://github.com/hackjutsu/Lepton/releases/latest) :airplane:
+59. [LICEcap](https://www.cockos.com/licecap/)
+60. [MDB Viewer Plus](http://www.alexnolan.net/software/mdbplus.xml)
+61. [MediaInfo-CLI](https://mediaarea.net/en/MediaInfo/Download/Windows)
+62. [MediaInfo-GUI](https://mediaarea.net/en/MediaInfo/Download/Windows)
+63. [MeGUI](https://sourceforge.net/projects/megui/files) :airplane:
+64. [MemReduct](https://github.com/henrypp/memreduct/releases/latest)
+65. [MiTec EXE Explorer](http://www.mitec.cz/index.html)
+66. [MiTec Task Manager DeLuxe](http://www.mitec.cz/Data/XML/data_tmxvh.xml)
+67. [MPC-BE](https://sourceforge.net/projects/mpcbe/files/) :airplane:
+68. [MPC-HC](https://mpc-hc.org/downloads/)
+69. [Nodejs-LTS](https://nodejs.org/en/download/)
+70. [Nodejs](https://nodejs.org/en/download/current/)
+71. [notepad++](https://notepad-plus-plus.org/download/) :airplane:
+72. [notepad2-mod](https://github.com/XhmikosR/notepad2-mod/releases/latest) :airplane:
+73. [nTurn](https://www.ntrun.com/) :hand:
+74. [OnTopReplica](https://github.com/LorenzCK/OnTopReplica/releases/latest) :airplane:
+75. [PicGo](https://github.com/Molunerfinn/PicGo/releases/latest) :airplane:
+76. [PicPick](https://picpick.app/zh/download) :airplane:
+77. [Piriform CCleaner](https://www.ccleaner.com/ccleaner/download) :moneybag:
+78. [Piriform Defraggler](https://www.ccleaner.com/defraggler/download) :moneybag:
+79. [Piriform Recuva](https://www.ccleaner.com/recuva/download) :moneybag:
+80. [Piriform Speccy](https://www.ccleaner.com/speccy/download) :moneybag:
+81. [PlayTime](http://www.dcmembers.com/skwire/download/playtime/) :airplane:
+82. [PotPlayer](https://potplayer.daum.net/)
+83. [qBittorrent](https://www.qbittorrent.org/download.php) :airplane:
+84. [QTranslate](https://quest-app.appspot.com/) :airplane:
+85. [Rapid Environment Editor](https://www.rapidee.com/en/download) :airplane:
+86. [Registry Workshop](http://www.torchsoft.com/en/download.html) :moneybag:
+87. [Resource Hacker](http://www.angusj.com/resourcehacker/)
+88. [Resource Tuner](http://www.restuner.com/news-history.htm) :moneybag: :airplane:
+89. [Right Click Enhancer Professional](https://rbsoft.org/downloads/right-click-enhancer/rce-professional-changelog.html) :moneybag: :airplane:
+90. [Rufus](https://rufus.akeo.ie/)
+91. [ScreenToGif](https://github.com/NickeManarin/ScreenToGif/releases/latest) :airplane:
+92. [shadowsocks-qt5](https://github.com/shadowsocks/shadowsocks-qt5/releases/latest) :airplane: :hand:
+93. [shadowsocks](https://github.com/shadowsocks/shadowsocks-windows/releases/latest) :airplane:
+94. [shadowsocksr-csharp](https://github.com/shadowsocksrr/shadowsocksr-csharp/releases) :airplane:
+95. [shadowsocksr-electron](https://github.com/erguotou520/electron-ssr/releases/latest) :airplane:
+96. [SmartGit](https://www.syntevo.com/smartgit/download/) :moneybag:
+97. [Sordum BlueLife KeyFreeze](https://www.sordum.org/7921/)
+98. [Sordum Defender Injector](https://www.sordum.org/10636/)
+99. [Sordum Desktop.ini Editor](https://www.sordum.org/10084/)
+100. [Sordum Dns Jumper](https://www.sordum.org/7952/)
+101. [Sordum Drive Letter Changer](https://www.sordum.org/8501/)
+102. [Sordum Firewall App Blocker](https://www.sordum.org/8125/)
+103. [Sordum Folder Painter](https://www.sordum.org/10124/)
+104. [Sordum Reduce Memory](https://www.sordum.org/9197/)
+105. [Sordum Reg Converter](https://www.sordum.org/8478/)
+106. [Sordum Simple Run Blocker](https://www.sordum.org/8486/)
+107. [Sordum Windows Update Blocker](https://www.sordum.org/9470/)
+108. [SpeedCrunch](http://speedcrunch.org/download.html)
+109. [SpeedyFox](https://www.crystalidea.com/speedyfox)
+110. [Telegram](https://github.com/telegramdesktop/tdesktop/releases/latest) :airplane:
+111. [Textify](https://rammichael.com/downloads/textify_setup.exe?changelog) :airplane:
+112. [Tor Browser](https://www.torproject.org/download/download-easy.html.en) :airplane:
+113. [Total Commander](https://www.ghisler.com/download.htm) :moneybag: :airplane:
+114. [Total Uninstall](https://www.martau.com/uninstaller-download.php) :moneybag: :airplane:
+115. [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor/releases/latest) :airplane:
+116. [Transmission](https://github.com/transmission/transmission/releases/latest) :airplane:
+117. [Traymond](https://github.com/fcFn/traymond/releases/latest) :airplane:
+118. [ultraSurf](http://wujieliulan.com/) :airplane:
+119. [Universal Extractor 2](https://github.com/Bioruebe/UniExtract2/releases/latest) :airplane:
+120. [Unreal Commander](https://x-diesel.com/?download)
+121. [uTorrent](http://blog.utorrent.com/releases/windows/) :moneybag: :hand:
+122. [v2ray](https://github.com/v2ray/v2ray-core/releases/latest) :airplane:
+123. [v2rayN](https://github.com/2dust/v2rayN/releases/latest) :airplane:
+124. [Velocity](https://velocity.silverlakesoftware.com/) :moneybag:
+125. [Visual Studio Code](https://github.com/Microsoft/vscode/releases)
+126. [Volume2](https://irzyxa.blogspot.com/p/downloads.html) :airplane:
+127. [WGestures](https://github.com/yingDev/WGestures/releases/latest) :airplane:
+128. [WinCDEmu Portable](http://wincdemu.sysprogs.org/portable/)
+129. [Windows System Control Center](http://www.kls-soft.com/wscc/downloads.php) :airplane:
+130. [WinHex](http://www.x-ways.net/winhex/) :moneybag:
+131. [Xlideit Image Viewer](https://sourceforge.net/projects/xlideit/files) :airplane:
+132. [XX-Net](https://github.com/XX-net/XX-Net/blob/master/code/default/download.md) :airplane:
+133. [Yosoro](https://github.com/IceEnd/Yosoro/releases/latest) :airplane:
+134. [zeal](https://zealdocs.org/download.html) :airplane:
+135. [ZeroNet](https://github.com/HelloZeroNet/ZeroNet/releases/latest) :airplane:
+136. [冰点文库下载器](http://www.bingdian001.com/?p=30) :hand:
+137. [繁化姬](https://github.com/James1201/Fanhuaji-GUI-Release/releases/latest) :airplane:
+

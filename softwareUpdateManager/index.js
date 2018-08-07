@@ -95,19 +95,22 @@ if (args.length) {
     process.exit()
   } else if (args[0] === '-makemd') {
     let md = fse.readFileSync('README_RAW.md', 'utf-8')
-    md += '\n### Supported Software\n#### 支持的软件\n'
+    let example = fse.readFileSync('software/Telegram.js', 'utf-8')
+    let software = ''
     let list = fse.readdirSync('software')
     for (let i = 0; i < list.length; i++) {
       if (fse.statSync(path.resolve('software', list[i])).isFile()) {
         let info = require('./software/' + list[i])
-        md += `${i + 1}. `
-        md += `[${path.parse(list[i]).name}](${info.url})`
-        if (info.commercial) md += ' :moneybag:'
-        if (info.useProxy) md += ' :airplane:'
-        if (!info.install) md += ' :hand:'
-        md += '\n'
+        software += `${i + 1}. `
+        software += `[${path.parse(list[i]).name}](${info.url})`
+        if (info.commercial) software += ' :moneybag:'
+        if (info.useProxy) software += ' :airplane:'
+        if (!info.install) software += ' :hand:'
+        software += '\n'
       }
     }
+    md = md.replace(/{example}/, example)
+    md = md.replace(/{software}/g, software)
     fse.writeFileSync('README.md', md)
     process.exit()
   } else {
@@ -262,14 +265,12 @@ let init = async () => {
             continue
           }
           if ((_.specialMode[i] === 2 || (!software[i].commercial && _.mode === 2) || (software[i].commercial && _.commercialMode === 2)) && 'install' in software[i]) { // install
-            let installed = software[i].install(output, iPath)
+            if ('beforeInstall' in software[i]) await software[i].beforeInstall(output, iPath)
+            let installed = await software[i].install(output, iPath)
             if (installed) {
-              if (!_.preserveArchive) {
-                fse.unlinkSync(output)
-              }
-              if (_.saveVersion) {
-                database[i].version = versionLatest
-              }
+              if ('afterInstall' in software[i]) await software[i].afterInstall(output, iPath)
+              if (!_.preserveArchive) fse.unlinkSync(output)
+              if (_.saveVersion) database[i].version = versionLatest
             }
           } else {
             console.error(`Software:\t${i}\nTarget\t${iPath}\nOutput:\t${output}`)
