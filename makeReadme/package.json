@@ -1,0 +1,14 @@
+{
+  "name": "makereadme",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "author": "dodying",
+  "license": "MIT",
+  "scripts": {
+    "start": "node index"
+  },
+  "dependencies": {
+    "glob": "^7.1.2"
+  }
+}
