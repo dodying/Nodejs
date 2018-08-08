@@ -114,7 +114,8 @@ const req = options => {
       'Connection': 'keep-alive'
     },
     timeout: CONFIG.timeout * 1000,
-    resolveWithFullResponse: true
+    resolveWithFullResponse: true,
+    simple: false
   }, options)
   if (CONFIG.proxySocks) {
     options.agentClass = options.url.match(/^http:/) ? Agent : Agent2
@@ -296,9 +297,14 @@ logger.log(`Work list: ${colors.info(lst.join(', '))}`)
 async.mapSeries(lst, async i => {
   logger.log(colors.info(`Start Search: ${i}`))
   let res = await search(i.toUpperCase())
-  data[i].url = res.request.href
-  getInfo(i, res.body)
-  return i
+  if (res instanceof Error) {
+    return i
+    // throw res
+  } else {
+    data[i].url = res.request.href
+    getInfo(i, res.body)
+    return i
+  }
 }, (err, results) => {
   if (err) {
     console.error({
