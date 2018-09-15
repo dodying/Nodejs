@@ -48,7 +48,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/telegramdesktop/tdesktop/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
     // attr:
     // 1. text or omitted => text()
     // 2. html => html()
@@ -193,68 +193,70 @@ module.exports = data
 71. [notepad++](https://notepad-plus-plus.org/download/) :airplane:
 72. [notepad2-mod](https://github.com/XhmikosR/notepad2-mod/releases/latest) :airplane:
 73. [nTurn](https://www.ntrun.com/) :hand:
-74. [OnTopReplica](https://github.com/LorenzCK/OnTopReplica/releases/latest) :airplane:
-75. [PicGo](https://github.com/Molunerfinn/PicGo/releases/latest) :airplane:
-76. [PicPick](https://picpick.app/zh/download) :airplane:
-77. [Piriform CCleaner](https://www.ccleaner.com/ccleaner/download) :moneybag:
-78. [Piriform Defraggler](https://www.ccleaner.com/defraggler/download) :moneybag:
-79. [Piriform Recuva](https://www.ccleaner.com/recuva/download) :moneybag:
-80. [Piriform Speccy](https://www.ccleaner.com/speccy/download) :moneybag:
-81. [PlayTime](http://www.dcmembers.com/skwire/download/playtime/) :airplane:
-82. [PotPlayer](https://potplayer.daum.net/)
-83. [qBittorrent](https://www.qbittorrent.org/download.php) :airplane:
-84. [QTranslate](https://quest-app.appspot.com/) :airplane:
-85. [Rapid Environment Editor](https://www.rapidee.com/en/download) :airplane:
-86. [Registry Workshop](http://www.torchsoft.com/en/download.html) :moneybag:
-87. [Resource Hacker](http://www.angusj.com/resourcehacker/)
-88. [Resource Tuner](http://www.restuner.com/news-history.htm) :moneybag: :airplane:
-89. [Right Click Enhancer Professional](https://rbsoft.org/downloads/right-click-enhancer/rce-professional-changelog.html) :moneybag: :airplane:
-90. [Rufus](https://rufus.akeo.ie/)
-91. [ScreenToGif](https://github.com/NickeManarin/ScreenToGif/releases/latest) :airplane:
-92. [shadowsocks-qt5](https://github.com/shadowsocks/shadowsocks-qt5/releases/latest) :airplane: :hand:
-93. [shadowsocks](https://github.com/shadowsocks/shadowsocks-windows/releases/latest) :airplane:
-94. [shadowsocksr-csharp](https://github.com/shadowsocksrr/shadowsocksr-csharp/releases) :airplane:
-95. [shadowsocksr-electron](https://github.com/erguotou520/electron-ssr/releases/latest) :airplane:
-96. [SmartGit](https://www.syntevo.com/smartgit/download/) :moneybag:
-97. [Sordum BlueLife KeyFreeze](https://www.sordum.org/7921/)
-98. [Sordum Defender Injector](https://www.sordum.org/10636/)
-99. [Sordum Desktop.ini Editor](https://www.sordum.org/10084/)
-100. [Sordum Dns Jumper](https://www.sordum.org/7952/)
-101. [Sordum Drive Letter Changer](https://www.sordum.org/8501/)
-102. [Sordum Firewall App Blocker](https://www.sordum.org/8125/)
-103. [Sordum Folder Painter](https://www.sordum.org/10124/)
-104. [Sordum Reduce Memory](https://www.sordum.org/9197/)
-105. [Sordum Reg Converter](https://www.sordum.org/8478/)
-106. [Sordum Simple Run Blocker](https://www.sordum.org/8486/)
-107. [Sordum Windows Update Blocker](https://www.sordum.org/9470/)
-108. [SpeedCrunch](http://speedcrunch.org/download.html)
-109. [SpeedyFox](https://www.crystalidea.com/speedyfox)
-110. [Telegram](https://github.com/telegramdesktop/tdesktop/releases/latest) :airplane:
-111. [Textify](https://rammichael.com/downloads/textify_setup.exe?changelog) :airplane:
-112. [Tor Browser](https://www.torproject.org/download/download-easy.html.en) :airplane:
-113. [Total Commander](https://www.ghisler.com/download.htm) :moneybag: :airplane:
-114. [Total Uninstall](https://www.martau.com/uninstaller-download.php) :moneybag: :airplane:
-115. [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor/releases/latest) :airplane:
-116. [Transmission](https://github.com/transmission/transmission/releases/latest) :airplane:
-117. [Traymond](https://github.com/fcFn/traymond/releases/latest) :airplane:
-118. [ultraSurf](http://wujieliulan.com/) :airplane:
-119. [Universal Extractor 2](https://github.com/Bioruebe/UniExtract2/releases/latest) :airplane:
-120. [Unreal Commander](https://x-diesel.com/?download)
-121. [uTorrent](http://blog.utorrent.com/releases/windows/) :moneybag: :hand:
-122. [v2ray](https://github.com/v2ray/v2ray-core/releases/latest) :airplane:
-123. [v2rayN](https://github.com/2dust/v2rayN/releases/latest) :airplane:
-124. [Velocity](https://velocity.silverlakesoftware.com/) :moneybag:
-125. [Visual Studio Code](https://github.com/Microsoft/vscode/releases)
-126. [Volume2](https://irzyxa.blogspot.com/p/downloads.html) :airplane:
-127. [WGestures](https://github.com/yingDev/WGestures/releases/latest) :airplane:
-128. [WinCDEmu Portable](http://wincdemu.sysprogs.org/portable/)
-129. [Windows System Control Center](http://www.kls-soft.com/wscc/downloads.php) :airplane:
-130. [WinHex](http://www.x-ways.net/winhex/) :moneybag:
-131. [Xlideit Image Viewer](https://sourceforge.net/projects/xlideit/files) :airplane:
-132. [XX-Net](https://github.com/XX-net/XX-Net/blob/master/code/default/download.md) :airplane:
-133. [Yosoro](https://github.com/IceEnd/Yosoro/releases/latest) :airplane:
-134. [zeal](https://zealdocs.org/download.html) :airplane:
-135. [ZeroNet](https://github.com/HelloZeroNet/ZeroNet/releases/latest) :airplane:
-136. [冰点文库下载器](http://www.bingdian001.com/?p=30) :hand:
-137. [繁化姬](https://github.com/James1201/Fanhuaji-GUI-Release/releases/latest) :airplane:
+74. [Office Tool Plus](https://otp.landian.la/zh-cn/)
+75. [OnTopReplica](https://github.com/LorenzCK/OnTopReplica/releases/latest) :airplane:
+76. [PicGo](https://github.com/Molunerfinn/PicGo/releases/latest) :airplane:
+77. [PicPick](https://picpick.app/zh/download) :airplane:
+78. [Piriform CCleaner](https://www.ccleaner.com/ccleaner/download) :moneybag:
+79. [Piriform Defraggler](https://www.ccleaner.com/defraggler/download) :moneybag:
+80. [Piriform Recuva](https://www.ccleaner.com/recuva/download) :moneybag:
+81. [Piriform Speccy](https://www.ccleaner.com/speccy/download) :moneybag:
+82. [PlayTime](http://www.dcmembers.com/skwire/download/playtime/) :airplane:
+83. [PotPlayer](https://potplayer.daum.net/)
+84. [qBittorrent](https://www.qbittorrent.org/download.php) :airplane:
+85. [QTranslate](https://quest-app.appspot.com/) :airplane:
+86. [Rapid Environment Editor](https://www.rapidee.com/en/download) :airplane:
+87. [Registry Workshop](http://www.torchsoft.com/en/download.html) :moneybag:
+88. [Resource Hacker](http://www.angusj.com/resourcehacker/)
+89. [Resource Tuner](http://www.restuner.com/news-history.htm) :moneybag: :airplane:
+90. [Right Click Enhancer Professional](https://rbsoft.org/downloads/right-click-enhancer/rce-professional-changelog.html) :moneybag: :airplane:
+91. [Rufus](https://rufus.akeo.ie/)
+92. [ScreenToGif](https://github.com/NickeManarin/ScreenToGif/releases/latest) :airplane:
+93. [shadowsocks-qt5](https://github.com/shadowsocks/shadowsocks-qt5/releases/latest) :airplane: :hand:
+94. [shadowsocks](https://github.com/shadowsocks/shadowsocks-windows/releases/latest) :airplane:
+95. [shadowsocksr-csharp](https://github.com/shadowsocksrr/shadowsocksr-csharp/releases) :airplane:
+96. [shadowsocksr-electron](https://github.com/erguotou520/electron-ssr/releases/latest) :airplane:
+97. [SmartGit](https://www.syntevo.com/smartgit/download/) :moneybag:
+98. [Sordum BlueLife KeyFreeze](https://www.sordum.org/7921/)
+99. [Sordum Defender Injector](https://www.sordum.org/10636/)
+100. [Sordum Desktop.ini Editor](https://www.sordum.org/10084/)
+101. [Sordum Dns Jumper](https://www.sordum.org/7952/)
+102. [Sordum Drive Letter Changer](https://www.sordum.org/8501/)
+103. [Sordum Firewall App Blocker](https://www.sordum.org/8125/)
+104. [Sordum Folder Painter](https://www.sordum.org/10124/)
+105. [Sordum Reduce Memory](https://www.sordum.org/9197/)
+106. [Sordum Reg Converter](https://www.sordum.org/8478/)
+107. [Sordum Simple Run Blocker](https://www.sordum.org/8486/)
+108. [Sordum Windows Update Blocker](https://www.sordum.org/9470/)
+109. [SpeedCrunch](http://speedcrunch.org/download.html)
+110. [SpeedyFox](https://www.crystalidea.com/speedyfox)
+111. [Telegram](https://github.com/telegramdesktop/tdesktop/releases/latest) :airplane:
+112. [Textify](https://rammichael.com/downloads/textify_setup.exe?changelog) :airplane:
+113. [Tor Browser](https://www.torproject.org/download/download-easy.html.en) :airplane:
+114. [Total Commander](https://www.ghisler.com/download.htm) :moneybag: :airplane:
+115. [Total Uninstall](https://www.martau.com/uninstaller-download.php) :moneybag: :airplane:
+116. [TrafficMonitor](https://github.com/zhongyang219/TrafficMonitor/releases/latest) :airplane:
+117. [Transmission](https://github.com/transmission/transmission/releases/latest) :airplane:
+118. [Traymond](https://github.com/fcFn/traymond/releases/latest) :airplane:
+119. [ultraSurf](http://wujieliulan.com/) :airplane:
+120. [Universal Extractor 2](https://github.com/Bioruebe/UniExtract2/releases/latest) :airplane:
+121. [Unreal Commander](https://x-diesel.com/?download)
+122. [uTorrent](http://blog.utorrent.com/releases/windows/) :moneybag: :hand:
+123. [v2ray](https://github.com/v2ray/v2ray-core/releases/latest) :airplane:
+124. [v2rayN](https://github.com/2dust/v2rayN/releases/latest) :airplane:
+125. [Velocity](https://velocity.silverlakesoftware.com/) :moneybag:
+126. [Video Download Manager](https://github.com/ingbyr/VDM/releases/latest) :airplane:
+127. [Visual Studio Code](https://github.com/Microsoft/vscode/releases)
+128. [Volume2](https://irzyxa.blogspot.com/p/downloads.html) :airplane:
+129. [WGestures](https://github.com/yingDev/WGestures/releases/latest) :airplane:
+130. [WinCDEmu Portable](http://wincdemu.sysprogs.org/portable/)
+131. [Windows System Control Center](http://www.kls-soft.com/wscc/downloads.php) :airplane:
+132. [WinHex](http://www.x-ways.net/winhex/) :moneybag:
+133. [Xlideit Image Viewer](https://sourceforge.net/projects/xlideit/files) :airplane:
+134. [XX-Net](https://github.com/XX-net/XX-Net/blob/master/code/default/download.md) :airplane:
+135. [Yosoro](https://github.com/IceEnd/Yosoro/releases/latest) :airplane:
+136. [zeal](https://zealdocs.org/download.html) :airplane:
+137. [ZeroNet](https://github.com/HelloZeroNet/ZeroNet/releases/latest) :airplane:
+138. [冰点文库下载器](http://www.bingdian001.com/?p=30) :hand:
+139. [繁化姬](https://github.com/James1201/Fanhuaji-GUI-Release/releases/latest) :airplane:
 

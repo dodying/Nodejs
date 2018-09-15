@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/v2ray/v2ray-core/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="windows-64.zip"]:has(small.text-gray)',

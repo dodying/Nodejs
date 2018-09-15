@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/James1201/Fanhuaji-GUI-Release/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="win64.7z"]:has(small.text-gray)',

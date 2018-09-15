@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/IceEnd/Yosoro/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href*="win32-x64"][href$=".zip"]:has(small.text-gray)',

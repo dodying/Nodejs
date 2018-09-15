@@ -6,7 +6,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/telegramdesktop/tdesktop/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
     // attr:
     // 1. text or omitted => text()
     // 2. html => html()

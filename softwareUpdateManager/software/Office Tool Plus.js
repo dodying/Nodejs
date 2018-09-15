@@ -1,14 +1,12 @@
 'use strict'
 
 let data = {
-  commercial: false,
-  useProxy: true,
-  url: 'https://github.com/coyove/goflyway/releases',
+  url: 'https://otp.landian.la/zh-cn/',
   version: {
-    selector: '.release-header a'
+    selector: '.templatemo_homewrapper p'
   },
   download: {
-    selector: 'a[href$="amd64.zip"]:has(small.text-gray)',
+    selector: '.templatemo_homewrapper a',
     attr: 'href'
   },
   install: function (output, iPath) {

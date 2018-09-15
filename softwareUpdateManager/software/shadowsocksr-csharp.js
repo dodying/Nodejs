@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/shadowsocksrr/shadowsocksr-csharp/releases',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$=".zip"]:has(small.text-gray)',

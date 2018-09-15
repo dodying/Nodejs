@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/2dust/v2rayN/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$=".exe"]:has(small.text-gray)',

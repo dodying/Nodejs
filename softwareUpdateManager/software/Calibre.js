@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/kovidgoyal/calibre/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href*="portable"]:has(small.text-gray)',

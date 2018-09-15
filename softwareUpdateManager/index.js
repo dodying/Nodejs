@@ -8,7 +8,6 @@
 // @Last Modified time: 2018-07-09 20:07:11
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            cheerio,fs-extra,readline-sync,request,request-promise,socks5-http-client,socks5-https-client,node-notifier
 // ==/Headers==
 
 // 设置
@@ -164,6 +163,7 @@ let doBeforeExit = () => {
 
 let init = async () => {
   for (let i in software) {
+    process.title = i
     if (!(i in database)) database[i] = {}
     if (mode === 'default' && 'lasttime' in database[i] && (new Date().getTime() - database[i].lasttime < _.checkInterval * 24 * 60 * 60 * 1000)) continue
     let iPath = path.resolve(_.rootPath, _.software[i])
@@ -181,8 +181,13 @@ let init = async () => {
       version = versionLocal
     }
     console.log(`Software:\t${i}\nLocation:\t${iPath}\nVersion:\t${version}\nUrl:\t${software[i].url}`)
-    let res = await req(software[i].url, software[i].useProxy)
-    if (res.statusMessage === 'OK') {
+    let res
+    try {
+      res = await req(software[i].url, software[i].useProxy)
+    } catch (error) { // get latest version error
+      console.log(error.message)
+    }
+    if (res && res.statusMessage === 'OK') {
       let $ = cheerio.load(res.body)
 
       let versionLatest
@@ -194,7 +199,7 @@ let init = async () => {
         versionLatest = await software[i].version.func(res, $)
       } else {
         console.error(`Software:\t${i}\nError:\tNo "selector" or "func" in "version"`)
-        process.exit(1)
+        continue
       }
 
       console.log(`Latest Version:\t${versionLatest}`)
@@ -203,7 +208,8 @@ let init = async () => {
       } else if (version === null || versionMax(versionLatest, version)) { // new version
         notifier.notify({
           title: `Software:\t${i}`,
-          message: `Latest Version:\t${versionLatest}`
+          message: `Latest Version:\t${versionLatest}`,
+          open: software[i].url
         })
         if ((_.specialMode[i] > 0 || (!software[i].commercial && _.mode > 0) || (software[i].commercial && _.commercialMode > 0)) && 'download' in software[i]) { // download
           let download
@@ -286,8 +292,6 @@ let init = async () => {
         }
       }
       database[i].lasttime = new Date().getTime()
-    } else { // get latest version error
-      console.error(`Status:\t${res.statusMessage}`)
     }
     console.log('\n- - - - - - - - - - -\n')
     doBeforeExit()

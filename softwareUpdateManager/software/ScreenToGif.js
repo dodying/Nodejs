@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/NickeManarin/ScreenToGif/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="Portable.zip"]:has(small.text-gray)',

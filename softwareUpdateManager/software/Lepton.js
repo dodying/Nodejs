@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/hackjutsu/Lepton/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="-win.7z"]:has(small.text-gray)',

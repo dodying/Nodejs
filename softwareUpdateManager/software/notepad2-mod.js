@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/XhmikosR/notepad2-mod/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="x64.zip"]:has(small.text-gray)',

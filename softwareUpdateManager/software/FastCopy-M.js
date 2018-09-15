@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/Mapaler/FastCopy-M/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="64bit.zip"]:has(small.text-gray)',

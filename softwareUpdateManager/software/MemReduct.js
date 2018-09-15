@@ -3,7 +3,7 @@
 let data = {
   url: 'https://github.com/henrypp/memreduct/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$=".zip"]:has(small.text-gray)',

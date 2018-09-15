@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/yinghuocho/firefly-proxy/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     plain: 'https://raw.githubusercontent.com/xiayhc/yhc/master/greenyhc.exe'

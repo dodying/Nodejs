@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/cmderdev/cmder/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$="mini.zip"]:has(small.text-gray)'

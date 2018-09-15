@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/aria2/aria2/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href*="win-64bit"][href$=".zip"]:has(small.text-gray)',

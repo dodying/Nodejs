@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/Bioruebe/UniExtract2/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$=".zip"]:has(small.text-gray)',

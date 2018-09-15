@@ -4,7 +4,7 @@ let data = {
   useProxy: true,
   url: 'https://github.com/LorenzCK/OnTopReplica/releases/latest',
   version: {
-    selector: '.release-title'
+    selector: '.release-header a'
   },
   download: {
     selector: 'a[href$=".zip"]:has(small.text-gray)',

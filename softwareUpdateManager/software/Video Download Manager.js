@@ -1,14 +1,13 @@
 'use strict'
 
 let data = {
-  commercial: false,
   useProxy: true,
-  url: 'https://github.com/coyove/goflyway/releases',
+  url: 'https://github.com/ingbyr/VDM/releases/latest',
   version: {
     selector: '.release-header a'
   },
   download: {
-    selector: 'a[href$="amd64.zip"]:has(small.text-gray)',
+    selector: 'a[href$=".zip"]:has(small.text-gray)',
     attr: 'href'
   },
   install: function (output, iPath) {
