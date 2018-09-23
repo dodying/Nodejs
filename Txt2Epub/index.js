@@ -6,11 +6,8 @@
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-06 19:39:26
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-02-09 13:18:40
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            glob, archiver, rimraf
 // ==/Headers==
 /* eslint-disable camelcase */
 

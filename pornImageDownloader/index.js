@@ -4,8 +4,6 @@
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-06-20 15:52:36
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-06-20 15:52:36
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:

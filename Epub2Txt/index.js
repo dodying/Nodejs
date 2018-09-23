@@ -6,11 +6,8 @@
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-06 10:43:07
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-02-07 10:59:33
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            glob, async, pixl-xml, adm-zip, rimraf
 // ==/Headers==
 
 // CONFIG

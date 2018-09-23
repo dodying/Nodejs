@@ -4,11 +4,8 @@
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-08-06 22:12:51
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-08-06 22:12:51
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            sql.js,mkdirp,rimraf
 // ==/Headers==
 
 // 导入原生模块

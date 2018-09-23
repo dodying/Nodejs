@@ -6,11 +6,8 @@
 // @Version:            1.0.0
 // @Author:             dodying
 // @Date:               2018-02-04 13:37:23
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-02-06 20:52:28
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            glob, pixl-xml
 // ==/Headers==
 
 // 设置
