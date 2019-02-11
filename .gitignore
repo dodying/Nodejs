@@ -1,4 +1,8 @@
 node_modules
+@*
+*.temp
+*.doing
 *.redoing
 *.starting
 *.private
+*.backup.js
