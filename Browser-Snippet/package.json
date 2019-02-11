@@ -1,0 +1,12 @@
+{
+  "name": "browser-snippet",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js",
+    "build": "wget \"https://github.com/mozilla/webextension-polyfill/raw/master/api-metadata.json\" --output-document=api-metadata.json & node index.js"
+  },
+  "author": "",
+  "license": "MIT"
+}
