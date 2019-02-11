@@ -1,32 +1,67 @@
-#!/usr/bin/env node
-
 // ==Headers==
 // @Name:               checkExistSever
-// @Description:        checkExistSever
-// @Version:            1.0.0
+// @Description:        检查本地漫画
+// @Version:            1.0.128
 // @Author:             dodying
-// @Date:               2018-02-16 12:49:33
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-06-06 18:08:43
+// @Date:               2019-2-10 11:39:48
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            express,body-parser,async
+// @Require:            body-parser,express
 // ==/Headers==
 
-// CONFIG
-const libraryFolder = 'F:\\'
-const esPath = 'D:\\GreenSoftware\\_Enhancer\\Everything\\es.exe'
+// 设置
+const port = 5555
+const libraryFolderName = 'ComicLibrary'
+const esPath = 'es.exe'
+const excludes = [
+  /\\#\.Tag\\/
+]
+const thread = 5
 
-// native modules
+// 导入原生模块
+const path = require('path')
 const cp = require('child_process')
+const libraryFolder = cp.execSync(`${esPath} ww:${libraryFolderName}`, { encoding: 'utf-8' }).split(/[\r\n]+/)[0]
 
-// 3rd party modules
+// 导入第三方模块
 const express = require('express')
 const bodyParser = require('body-parser')
-const async = require('async')
 
 //
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '')
+const stdout2lst = stdout => {
+  return stdout.split(/[\r\n]+/).map(i => i.replace(/^\s+/g, '')).filter((item, index, arr) => {
+    return item && ['.cbz', '.zip'].includes(path.parse(item).ext) && arr.indexOf(item) === index && !excludes.some(filter => item.match(filter))
+  }).map(i => {
+    let obj = {}
+    let match = i.match(/([\d,]+)\s+([\d:/-]+)\s+(.*)/)
+    obj = {
+      size: (match[1].replace(/,/g, '') / 1024 / 1024).toFixed(2),
+      // dm: match[2],
+      name: path.parse(match[3]).base
+    }
+    return obj
+  })
+}
+const getExecCommand = arr => `${esPath} -sort-path -parent-path "${libraryFolder}" /a-d  -size -date-modified ${[].concat(arr).map(i => `"${escape(i)}"`).join(' ')}`
+const search = async (name) => {
+  let list = [].concat(name)
+  let out = []
+  while (list.length) {
+    let now = list.splice(0, thread)
+    let outNow = []
+    await new Promise((resolve, reject) => {
+      for (let i = 0; i < now.length; i++) {
+        cp.exec(getExecCommand(now[i]), { maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
+          outNow[i] = err ? [] : stdout2lst(stdout)
+          if (outNow.filter(i => i).length === now.length) resolve()
+        })
+      }
+    })
+    out = out.concat(outNow)
+  }
+  return out
+}
 
 const app = express()
 app.use(bodyParser.urlencoded({
@@ -42,20 +77,17 @@ app.all('*', function (req, res, next) {
   next()
 })
 
-app.get('/', function (req, res) {
+app.get('/', async (req, res) => {
   if ('name' in req.query) {
-    cp.exec(`${esPath} -size -p "${libraryFolder}" /a-d -name "${escape(req.query.name)}" -n 20`, (err, stdout, stderr) => {
-      if (err) throw err
-      let lst = stdout.split(/[\r\n]+/).map(i => i.replace(/^\s+/g, '')).filter(i => i)
-      console.log('GET /', req.query, lst)
-      res.writeHead(200, {
-        'Content-Type': 'application/json;charset=utf-8'
-      })
-      res.end(JSON.stringify(lst, null, 2))
+    let lst = await search(req.query.name)
+    console.log('GET /', req.query, lst)
+    res.writeHead(200, {
+      'Content-Type': 'application/json;charset=utf-8'
     })
+    res.end(JSON.stringify(lst, null, 2))
   } else {
     console.log('GET /')
-    let html = '<html><body><form method="post" action="http://localhost:3000">Name: <input type="text" name="name" /><input type="submit" value="Submit" /></form></body>'
+    let html = `<html><body><form method="post" action="http://localhost:${port}">Name: <input type="text" name="name" /><input type="submit" value="Submit" /></form></body>`
     res.writeHead(200, {
       'Content-Type': 'text/html;charset=utf-8'
     })
@@ -63,43 +95,28 @@ app.get('/', function (req, res) {
   }
 })
 
-app.post('/', function (req, res) {
+app.post('/', async (req, res) => {
   if ('name' in req.body) {
-    cp.exec(`${esPath} -size -p "${libraryFolder}" /a-d -name "${escape(req.body.name)}" -n 20`, (err, stdout, stderr) => {
-      if (err) throw err
-      let lst = stdout.split(/[\r\n]+/).map(i => i.replace(/^\s+/g, '')).filter(i => i)
-      console.log('POST /', req.body, lst)
-      res.writeHead(200, {
-        'Content-Type': 'application/json;charset=utf-8'
-      })
-      res.end(JSON.stringify(lst, null, 2))
+    let lst = await search(req.body.name)
+    console.log('POST /', req.body, lst)
+    res.writeHead(200, {
+      'Content-Type': 'application/json;charset=utf-8'
     })
+    res.end(JSON.stringify(lst, null, 2))
   } else if ('names' in req.body) {
-    let body = JSON.parse(req.body.names)
-    console.log('POST /', JSON.stringify(body, null, 2))
-    async.mapLimit(body, 3, (name, cb) => {
-      name = name.split(',').map(i => `-name "${escape(i)}"`).join(' ')
-      cp.exec(`${esPath} -size -p "${libraryFolder}" /a-d ${name} -n 20`, (err, stdout, stderr) => {
-        if (err) throw err
-        let lst = stdout.split(/[\r\n]+/).map(i => i.replace(/^\s+/g, '')).filter(i => i)
-        cb(null, lst)
-      })
-    }, (err, results) => {
-      if (err) console.error(err)
-      let obj = {}
-      results.forEach((i, j) => {
-        obj[j] = i
-      })
-      obj = JSON.stringify(obj, null, 2)
-      console.log('RESPONSE /', obj)
-      res.writeHead(200, {
-        'Content-Type': 'application/json;charset=utf-8'
-      })
-      res.end(obj)
+    let names = JSON.parse(req.body.names)
+    names.length = Object.keys(names).length
+    names = Array.from(names)
+    names = names.map(i => i.split(','))
+    console.log('POST /', JSON.stringify(names, null, 2))
+    let lst = await search(names)
+    console.log('RESPONSE /', lst)
+    res.writeHead(200, {
+      'Content-Type': 'application/json;charset=utf-8'
     })
+    res.end(JSON.stringify(lst, null, 2))
   }
 })
 
-let port = 3000
 app.listen(port)
 console.log('Listening at http://localhost:' + port)
