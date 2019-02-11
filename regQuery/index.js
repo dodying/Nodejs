@@ -3,24 +3,22 @@
 // ==Headers==
 // @Name:               regQuery
 // @Description:        请求注册表并复制为 batch/powershell 格式
-// @Version:            1.0.0
+// @Version:            1.0.5
 // @Author:             dodying
-// @Date:               2018-03-20 11:59:57
-// @Last Modified by:   dodying
-// @Last Modified time: 2018-05-12 09:18:27
+// @Date:               2019-2-2 16:42:11
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            copy-paste,iconv-lite
+// @Require:            clipboardy,iconv-lite
 // ==/Headers==
 
-// CONFIG
+// 设置
 
-// native modules
+// 导入原生模块
 const fs = require('fs')
 const cp = require('child_process')
 
-// 3rd party modules
-const ncp = require('copy-paste')
+// 导入第三方模块
+const clipboardy = require('clipboardy')
 const iconv = require('iconv-lite')
 
 //
@@ -50,16 +48,17 @@ if (process.argv[2] === undefined) {
   console.log('')
   console.log('Usage: rq [Format] [KeyName [ValueName] | RegFile]')
   console.log('')
-  console.log('  Format: Supprot ps1/bat')
+  console.log('  Format: Supprot array/ps1/bat')
   console.log('  KeyName: [\\\\Machine\\]FullKey')
   console.log('  RegFile: path to file of .reg')
   console.log('')
   console.log('Examples:')
   console.log('')
-  console.log('  Get Format of Powershell Command')
+  console.log('  Get Format of Array')
   console.log('    rq HKLM\\EXAMPLE')
   console.log('    rq HKLM\\EXAMPLE (Default)')
   console.log('    rq .\\1.reg')
+  console.log('  Get Format of Powershell Command')
   console.log('    rq -ps1 HKLM\\EXAMPLE')
   console.log('    rq -ps1 .\\1.reg')
   console.log('  Get Format of Batch Command')
@@ -77,12 +76,18 @@ if (parm[0] === '-bat') {
   cmdMode = 'powershell'
   parm = parm.splice(1, 2)
 } else {
-  cmdMode = 'powershell'
+  cmdMode = 'array'
   parm = parm.splice(0, 2)
 }
 
 let regMode = !!(parm[0].match(/\.reg("|)$/i) && fs.existsSync(parm[0]))
 if (regMode) {
+  try {
+    fs.writeFileSync('C:\\Windows\\checkIsAdmin.txt', '')
+  } catch (error) {
+    console.log('Please run as Administrator')
+    process.exit()
+  }
   let content = fs.readFileSync(parm[0])
   content = iconv.decode(content, 'utf-16').split(/\r\n/).map(i => i.match(/^\[/) ? i.replace(/^\[/, '[HKEY_CURRENT_USER\\Temp\\') : i).join('\r\n')
   fs.writeFileSync('1_[temp].reg', iconv.encode(Buffer.from(content, 'utf-8'), 'utf-16'))
@@ -97,12 +102,22 @@ let tocpoy = []
 for (let i = 0; i < lst.length - 1; i++) {
   if (lst[i].match(/^\S+/)) { // keyName
     keyName = lst[i]
+    if (cmdMode === 'powershell') {
+      keyName = keyName.replace(/HKEY_CURRENT_USER/g, 'HKCU:').replace(/HKEY_LOCAL_MACHINE/g, 'HKLM:').replace(/HKEY_CLASSES_ROOT/g, 'HKCR:')
+    } else if (cmdMode === 'array') {
+      keyName = keyName.replace(/HKEY_CURRENT_USER/g, 'HKCU').replace(/HKEY_LOCAL_MACHINE/g, 'HKLM').replace(/HKEY_CLASSES_ROOT/g, 'HKCR').replace(/\\/g, '\\\\')
+    } else {
+      keyName = keyName.replace(/HKEY_CURRENT_USER/g, 'HKCU').replace(/HKEY_LOCAL_MACHINE/g, 'HKLM').replace(/HKEY_CLASSES_ROOT/g, 'HKCR')
+    }
+
     if (lst[i + 1].match(/^\S+/) || lst[i + 1] === '') { // next line is keyName again
       if (!lst[i + 1].match(lst[i].replace(/\\/g, '\\\\'))) { // next line doesn't include this line
         if (cmdMode === 'powershell') {
           tocpoy.push(`RegSet "${keyName}";`)
         } else if (cmdMode === 'batch') {
           tocpoy.push(`reg add "${keyName}" /f`)
+        } else if (cmdMode === 'array') {
+          tocpoy.push(`["${keyName}", "", ""],`)
         }
       }
     }
@@ -150,6 +165,17 @@ for (let i = 0; i < lst.length - 1; i++) {
       }
       if (['REG_SZ', 'REG_EXPAND_SZ'].includes(type)) data = '"' + data.replace(/"/g, '\\"').replace(/%/g, '%%') + '"'
       tocpoy.push(`reg add "${keyName}" /v "${valueName}" /t ${type} /d ${data} /f`)
+    } else if (cmdMode === 'array') {
+      valueName = valueName.replace(/\\/g, '\\\\')
+      data = data.replace(/\\/g, '\\\\')
+
+      if (type === 'REG_DWORD') {
+        data = parseInt(data)
+      } else {
+        data = '"' + data.replace(/"/g, '\\"') + '"'
+      }
+
+      tocpoy.push(`["${keyName}", "${valueName}", ${data}, "${type}"],`)
     }
   }
 }
@@ -158,8 +184,5 @@ if (regMode) {
   cp.execSync('reg delete HKEY_CURRENT_USER\\Temp /f')
   tocpoy = tocpoy.map(i => i.replace(/HKEY_CURRENT_USER\\Temp\\/g, ''))
 }
-if (cmdMode === 'powershell') {
-  tocpoy = tocpoy.map(i => i.replace(/HKEY_CURRENT_USER/g, 'HKCU:').replace(/HKEY_LOCAL_MACHINE/g, 'HKLM:').replace(/HKEY_CLASSES_ROOT/g, 'HKCR:'))
-}
 console.log(tocpoy)
-ncp.copy(tocpoy.join('\r\n'))
+clipboardy.writeSync(tocpoy.join('\r\n'))

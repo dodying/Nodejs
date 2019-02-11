@@ -1,16 +1,21 @@
 {
-  "name": "regQuery",
+  "name": "regquery",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "author": "dodying",
   "license": "MIT",
   "dependencies": {
-    "copy-paste": "^1.3.0",
+    "clipboardy": "^1.2.3",
     "iconv-lite": "^0.4.23"
   },
   "bin": {
     "rq": "./index.js"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "private": true,
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": []
 }
