@@ -1,9 +1,9 @@
 // ==Headers==
-// @Name:               comicDelete
+// @Name:               delete
 // @Description:        删除漫画
-// @Version:            1.0.42
+// @Version:            1.0.43
 // @Author:             dodying
-// @Date:               2019-2-16 16:24:56
+// @Date:               2019-2-16 16:36:31
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            g2-bracket-parser,readline-sync

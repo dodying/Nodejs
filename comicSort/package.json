@@ -10,15 +10,20 @@
   "author": "dodying",
   "license": "MIT",
   "dependencies": {
-    "async": "^2.6.0",
-    "colors": "^1.2.1",
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3",
+    "fs-extra": "^7.0.1",
+    "g2-bracket-parser": "^2.0.0",
     "glob": "^7.1.2",
-    "image-size": "^0.6.1",
+    "image-size": "^0.6.3",
     "jszip": "^3.1.5",
-    "mkdirp": "^0.5.1",
+    "puppeteer": "^1.7.0",
     "readline-sync": "^1.4.9",
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
-    "tracer": "^0.8.12"
-  }
+    "socks5-https-client": "^1.2.1"
+  },
+  "keywords": [],
+  "bin": {},
+  "devDependencies": {}
 }
