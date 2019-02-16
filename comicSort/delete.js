@@ -1,106 +1,69 @@
 // ==Headers==
 // @Name:               delete
 // @Description:        删除漫画
-// @Version:            1.0.43
+// @Version:            1.0.100
 // @Author:             dodying
-// @Date:               2019-2-16 16:36:31
+// @Date:               2019-2-16 17:42:04
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            g2-bracket-parser,readline-sync
+// @Require:            readline-sync
 // ==/Headers==
 
 // 设置
 const _ = require('./config')
-let libraryFolder = _.libraryFolder
 const extensions = ['.cbz', '.jpg', '.zip', '.png']
-const nameMatch = [
-  /^(chinese|cn|中文|中国语|中国語|中国|CHINES|中国翻訳|中文化)$/i,
-  /汉化|漢化|翻譯|机翻|工坊|掃圖|扫图|同好会|CE家族社|嵌字|天鵝之戀/
+const libraryFolderName = 'ComicLibrary'
+const esPath = 'es.exe'
+const excludes = [
+  /\\#\.Tag\\/
 ]
 
 // 导入原生模块
 const fs = require('fs')
 const path = require('path')
+const cp = require('child_process')
 
-let deletedPath = path.join(libraryFolder, _.subFolderDelete)
-let database = path.join(libraryFolder, 'database.json')
+const libraryFolder = cp.execSync(`${esPath} ww:${libraryFolderName}`, { encoding: 'utf-8' }).split(/[\r\n]+/)[0]
+
+const deletedPath = path.join(libraryFolder, _.subFolderDelete)
+if (!fs.existsSync(deletedPath)) fs.mkdirSync(deletedPath)
 
 // 导入第三方模块
 const readlineSync = require('readline-sync')
-const brackets = require('g2-bracket-parser')
 
 // Function
-let nameParsed = name => {
-  name = path.parse(name).name
-  let parsed = brackets(name, {
-    brackets: {
-      '[': { 'start': '[', 'end': ']', 'length': 1 },
-      '{': { 'start': '{', 'end': '}', 'length': 1 },
-      '(': { 'start': '(', 'end': ')', 'length': 1 },
-      '"': { 'start': '"', 'end': '"', 'length': 1 },
-      '\'': { 'start': '\'', 'end': '\'', 'length': 1 },
-      '<': { 'start': '<', 'end': '>', 'length': 1 },
-      '（': { 'start': '（', 'end': '）', 'length': 1 },
-      '【': { 'start': '【', 'end': '】', 'length': 1 }
-    },
-    ignoreMissMatch: true
-  })
-  let length
-  for (let content of parsed) {
-    if (nameMatch.some(i => content.match.content.match(i))) {
-      length = content.match.bracketStart
-      break
-    }
-  }
-  if (length) name = name.substr(0, length)
-  name = name.trim()
-  return name
+const getExecCommand = text => `${esPath} -sort-path -parent-path "${libraryFolder}" /a-d  -size -date-modified "${text}"`
+const stdout2lst = stdout => {
+  return stdout.split(/[\r\n]+/).map(i => i.trim()).filter(i => i).map(i => i.match(/([\d,]+)\s+([\d/-]+)\s+([\d:]+)\s+(.*)/)[4])
 }
 
 // Main
-if (fs.existsSync(database)) {
-  try {
-    database = fs.readFileSync(database, 'utf-8')
-    database = JSON.parse(database)
-  } catch (error) {
-    database = {}
+const main = async () => {
+  let list = process.argv.splice(2).filter(i => extensions.includes(path.parse(i).ext))
+  for (let i of list) {
+    let fullpath = path.resolve(process.cwd(), i)
+    let name = path.parse(fullpath).name
+
+    if (!fullpath.match('ComicLibrary') && !readlineSync.keyInYNStrict('Continue to delete?')) continue
+
+    let sameList = cp.execSync(getExecCommand(name), { encoding: 'utf-8' })
+    sameList = stdout2lst(sameList)
+    for (let j of sameList) {
+      if (path.parse(j).name === name) fs.unlinkSync(fullpath)
+    }
+
+    try {
+      fs.writeFileSync(path.resolve(deletedPath, path.parse(fullpath).base), '')
+      console.log('File Deleted:\t', fullpath)
+    } catch (error) {
+      console.error(error)
+    }
   }
-} else {
-  database = {}
 }
 
-process['argv'].splice(2).filter(i => extensions.includes(path.parse(i).ext)).forEach(i => {
-  let p = path.resolve(process.cwd(), i)
-  if (fs.existsSync(p)) {
-    if (!fs.existsSync(deletedPath)) fs.mkdirSync(deletedPath)
-
-    if (p.match('ComicLibrary') || readlineSync.keyInYNStrict('Continue to delete?')) {
-      fs.unlinkSync(p)
-
-      let { dir, name } = path.parse(p)
-      let cover = path.join(dir, name + '.jpg')
-      if (fs.existsSync(cover)) fs.unlinkSync(cover)
-
-      let nameShort = nameParsed(p)
-      if (nameShort in database) {
-        database[nameShort].link.forEach(i => {
-          let _path = path.join(libraryFolder, i)
-          fs.unlinkSync(_path)
-
-          let { dir, name } = path.parse(_path)
-          let cover = path.join(dir, name + '.jpg')
-          if (fs.existsSync(cover)) fs.unlinkSync(cover)
-        })
-      }
-
-      try {
-        fs.writeFileSync(path.resolve(deletedPath, path.parse(p).base), '')
-      } catch (error) {
-        console.error(error)
-      }
-      console.log('File Deleted:\t', p)
-    }
-  } else {
-    console.error('NOT find:\t', p)
-  }
+main().then(async () => {
+  //
+}, async err => {
+  console.error(err)
+  process.exit()
 })
