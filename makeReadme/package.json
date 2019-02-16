@@ -10,5 +10,9 @@
   },
   "dependencies": {
     "glob": "^7.1.2"
-  }
+  },
+  "private": true,
+  "keywords": [],
+  "bin": {},
+  "devDependencies": {}
 }
