@@ -2,14 +2,6 @@
 
 #### 目录说明
 
-##### @private
-
-Name | Raw | Version | Date | Description
---- | --- | --- | --- | ---
-[getVSCodeFormat](@private/getVSCodeFormat.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/@private/getVSCodeFormat.js) | 1.0.6 | 2019-1-26 15:03:52 | getVSCodeFormat
-[KuShellExtension](@private/KuShellExtension.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/@private/KuShellExtension.js) | 1.0.3 | 2019-1-26 15:04:08 | KuShellExtension
-[symlinkCheck](@private/symlinkCheck.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/@private/symlinkCheck.js) | 1.0.3 | 2019-1-26 15:03:10 | symlinkCheck
-
 ##### avRenamer
 
 Name | Raw | Version | Date | Description
@@ -22,43 +14,35 @@ Name | Raw | Version | Date | Description
 --- | --- | --- | --- | ---
 [Browser-Snippet](Browser-Snippet/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Browser-Snippet/index.js) | 1.0.34 | 2019-2-11 15:44:13 | Browser-Snippet
 
-##### checkExistSever
-
-Name | Raw | Version | Date | Description
---- | --- | --- | --- | ---
-[checkExistSever](checkExistSever/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/checkExistSever/index.js) | 1.0.128 | 2019-2-10 11:39:48 | 检查本地漫画
-
-##### comicDelete
-
-Name | Raw | Version | Date | Description
---- | --- | --- | --- | ---
-[comicDelete](comicDelete/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicDelete/index.js) | 1.0.2 | 2019-2-10 10:59:27 | 删除漫画
-
 ##### comicSort
 
 Name | Raw | Version | Date | Description
 --- | --- | --- | --- | ---
 [browser](comicSort/browser.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/browser.js) | 1.0.1 | 2019-1-26 15:07:40 | 打开puppeteer
-[formatEHT](comicSort/formatEHT.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/formatEHT.js) | 1.0.1 | 2019-1-26 15:07:51 | formatEHT
-[comicSort](comicSort/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/index.js) | 1.0.9 | 2019-2-10 18:09:57 | 将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
+[check](comicSort/check.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/check.js) | 1.0.129 | 2019-2-16 16:36:23 | 检查本地漫画
+[delete](comicSort/delete.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/delete.js) | 1.0.43 | 2019-2-16 16:36:31 | 删除漫画
+[ext](comicSort/ext.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/ext.js) | 1.0.54 | 2019-2-16 16:35:52 | 修改本子后缀名
+[formatEHT](comicSort/formatEHT.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/formatEHT.js) | 1.0.2 | 2019-2-16 16:34:28 | 整理EHT.json
+[comicSort](comicSort/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/index.js) | 1.0.42 | 2019-2-16 15:28:55 | 将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
+[watch](comicSort/watch.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/watch.js) | 1.0.174 | 2019-2-16 16:37:12 | 监控libraryFolder变化
 
 ##### Docsets2Html
 
 Name | Raw | Version | Date | Description
 --- | --- | --- | --- | ---
-[Docsets2Html](Docsets2Html/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Docsets2Html/index.js) | 1.0.1 | 2019-1-26 15:08:02 | 将Dash的Docsets文件夹转换为Html
+[Docsets2Html](Docsets2Html/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Docsets2Html/index.js) | 1.0.4 | 2019-2-12 10:40:49 | 将Dash的Docsets文件夹转换为Html
 
 ##### Epub2Txt
 
 Name | Raw | Version | Date | Description
 --- | --- | --- | --- | ---
-[Epub2Txt](Epub2Txt/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Epub2Txt/index.js) | 1.0.12 | 2019-2-10 11:44:50 | 将 EPUB 转换为 TXT 格式
+[Epub2Txt](Epub2Txt/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Epub2Txt/index.js) | 1.0.14 | 2019-2-12 10:43:15 | 将 EPUB 转换为 TXT 格式
 
 ##### makeReadme
 
 Name | Raw | Version | Date | Description
 --- | --- | --- | --- | ---
-[makeReadme](makeReadme/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/makeReadme/index.js) | 1.0.1 | 2019-1-26 15:23:00 | 根据 Headers 生产 `README.md`
+[makeReadme](makeReadme/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/makeReadme/index.js) | 1.0.2 | 2019-2-16 16:39:18 | 根据 Headers 生产 `README.md`
 
 ##### movieFinder
 
@@ -82,4 +66,4 @@ Name | Raw | Version | Date | Description
 
 Name | Raw | Version | Date | Description
 --- | --- | --- | --- | ---
-[Txt2Epub](Txt2Epub/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Txt2Epub/index.js) | 1.0.4 | 2019-1-26 15:15:00 | 将 TXT 转换为 EPUB 格式
+[Txt2Epub](Txt2Epub/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/Txt2Epub/index.js) | 1.0.6 | 2019-2-12 10:42:08 | 将 TXT 转换为 EPUB 格式
