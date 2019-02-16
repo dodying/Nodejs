@@ -3,11 +3,12 @@
 // ==Headers==
 // @Name:               movieFinder
 // @Description:        根据目录生成html
-// @Version:            1.0.0
+// @Version:            1.0.1
 // @Author:             dodying
-// @Date:               2018-02-04 13:37:23
+// @Date:               2019-1-26 15:13:19
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
+// @Require:            glob,pixl-xml
 // ==/Headers==
 
 // 设置

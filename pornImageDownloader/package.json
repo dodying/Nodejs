@@ -8,5 +8,9 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "dodying",
-  "license": "MIT"
+  "license": "MIT",
+  "keywords": [],
+  "bin": {},
+  "dependencies": {},
+  "devDependencies": {}
 }

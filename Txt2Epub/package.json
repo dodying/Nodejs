@@ -18,7 +18,8 @@
   },
   "dependencies": {
     "archiver": "^2.1.1",
-    "glob": "^7.1.2",
-    "rimraf": "^2.6.2"
-  }
+    "fs-extra": "^7.0.1",
+    "glob": "^7.1.2"
+  },
+  "devDependencies": {}
 }
