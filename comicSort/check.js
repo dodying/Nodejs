@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               check
 // @Description:        检查本地漫画
-// @Version:            1.0.129
+// @Version:            1.0.134
 // @Author:             dodying
-// @Date:               2019-2-16 16:36:23
+// @Date:               2019-2-16 17:45:49
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express
@@ -34,11 +34,11 @@ const stdout2lst = stdout => {
     return item && ['.cbz', '.zip'].includes(path.parse(item).ext) && arr.indexOf(item) === index && !excludes.some(filter => item.match(filter))
   }).map(i => {
     let obj = {}
-    let match = i.match(/([\d,]+)\s+([\d:/-]+)\s+(.*)/)
+    let match = i.match(/([\d,]+)\s+([\d/-]+)\s+([\d:]+)\s+(.*)/)
     obj = {
       size: (match[1].replace(/,/g, '') / 1024 / 1024).toFixed(2),
       // dm: match[2],
-      name: path.parse(match[3]).base
+      name: path.parse(match[4]).base
     }
     return obj
   })
