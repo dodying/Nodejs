@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               check
 // @Description:        检查本地漫画
-// @Version:            1.0.134
+// @Version:            1.0.143
 // @Author:             dodying
-// @Date:               2019-2-16 17:45:49
+// @Date:               2019-2-17 12:22:56
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express
@@ -17,6 +17,7 @@ const excludes = [
   /\\#\.Tag\\/
 ]
 const thread = 5
+const _ = require('./config')
 
 // 导入原生模块
 const path = require('path')
@@ -30,7 +31,7 @@ const bodyParser = require('body-parser')
 //
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '')
 const stdout2lst = stdout => {
-  return stdout.split(/[\r\n]+/).map(i => i.replace(/^\s+/g, '')).filter((item, index, arr) => {
+  return stdout.split(/[\r\n]+/).filter(i => !i.match(path.basename(_.subFolderTag))).map(i => i.replace(/^\s+/g, '')).filter((item, index, arr) => {
     return item && ['.cbz', '.zip'].includes(path.parse(item).ext) && arr.indexOf(item) === index && !excludes.some(filter => item.match(filter))
   }).map(i => {
     let obj = {}
@@ -43,7 +44,7 @@ const stdout2lst = stdout => {
     return obj
   })
 }
-const getExecCommand = arr => `${esPath} -sort-path -parent-path "${libraryFolder}" /a-d  -size -date-modified ${[].concat(arr).map(i => `"${escape(i)}"`).join(' ')}`
+const getExecCommand = arr => `${esPath} -sort-path -parent-path "${libraryFolder}" /a-d -size -date-modified ${[].concat(arr).map(i => `"${escape(i)}"`).join(' ')}`
 const search = async (name) => {
   let list = [].concat(name)
   let out = []

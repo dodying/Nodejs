@@ -5,7 +5,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "sort": "node index.js",
+    "check": "node check.js",
+    "browser": "node browser.js",
+    "delete": "node delete.js",
+    "ext-cbz": "node ext.js .cbz",
+    "ext-zip": "node ext.js .zip",
+    "formatEHT": "node formatEHT.js",
+    "watch": "node watch.js"
   },
   "author": "dodying",
   "license": "MIT",
@@ -14,7 +21,6 @@
     "express": "^4.16.3",
     "fs-extra": "^7.0.1",
     "g2-bracket-parser": "^2.0.0",
-    "glob": "^7.1.2",
     "image-size": "^0.6.3",
     "jszip": "^3.1.5",
     "puppeteer": "^1.7.0",

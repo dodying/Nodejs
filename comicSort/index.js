@@ -1,12 +1,12 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.42
+// @Version:            1.0.71
 // @Author:             dodying
-// @Date:               2019-2-16 15:28:55
+// @Date:               2019-2-17 11:00:04
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            fs-extra,glob,image-size,jszip,puppeteer,request-promise,socks5-https-client
+// @Require:            fs-extra,image-size,jszip,puppeteer,request-promise,socks5-https-client
 // ==/Headers==
 
 // 设置
@@ -34,9 +34,9 @@ try {
 const JSZip = require('jszip')
 const request = require('request-promise')
 const sizeOf = require('image-size')
-const glob = require('glob')
 const fse = require('fs-extra')
 const Agent = require('socks5-https-client/lib/Agent')
+const walk = require('./js/walk')
 
 const EHT = JSON.parse(fse.readFileSync('EHT.json', 'utf-8')).dataset
 
@@ -101,16 +101,11 @@ const colors = {
 }
 
 const symlinkSync = (target, link) => {
-  try {
-    fse.lstatSync(link)
-    fse.unlinkSync(link)
-  } catch (error) {
-  }
-  let parentPath = path.parse(link).dir
+  let { dir: parentPath, base } = path.parse(link)
   let children = fse.readdirSync(parentPath)
   let rawPath = parentPath
   let order = 1
-  while (children.length > 1000) {
+  while (children.length >= 500) {
     parentPath = rawPath + '-' + order
     if (!fse.existsSync(parentPath)) {
       fse.mkdirsSync(parentPath)
@@ -118,6 +113,12 @@ const symlinkSync = (target, link) => {
     }
     order++
     children = fse.readdirSync(parentPath)
+  }
+
+  link = path.join(parentPath, base)
+  try {
+    if (fse.existsSync(link)) fse.unlinkSync(link)
+  } catch (error) {
   }
 
   fse.symlinkSync(path.relative(parentPath, target), link)
@@ -453,10 +454,13 @@ const main = async () => {
       hour12: false
     })
     process.title = d
-    lst = glob.sync((_.globRecursive ? '**/' : '') + '*.@(zip|cbz)', {
-      cwd: _.comicFolder.replace(/\\/g, '/'),
-      ignore: [ '**/' + _.subFolderTag + '/**/*', '**/' + _.subFolderDelete + '/**/*' ]
-    }).reverse()
+    lst = walk(_.comicFolder, {
+      matchFile: /.(cbz|zip)$/,
+      ignoreDir: path.basename(_.subFolderTag),
+      fullpath: false,
+      nodir: true,
+      recursive: _.globRecursive
+    })
     if (lst.length) console.log('当前任务数: ', colors.info(lst.length))
 
     // 开始处理

@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               watch
 // @Description:        监控libraryFolder变化
-// @Version:            1.0.174
+// @Version:            1.0.184
 // @Author:             dodying
-// @Date:               2019-2-16 16:37:12
+// @Date:               2019-2-17 11:00:39
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            g2-bracket-parser,readline-sync
@@ -25,25 +25,7 @@ const readlineSync = require('readline-sync')
 const brackets = require('g2-bracket-parser')
 
 // Function
-let walk = function (dir, option = {}) {
-  if (!option.dir) option.dir = dir
-  option.ignore = [].concat(option.ignore)
-
-  let output = []
-  let list = fs.readdirSync(dir)
-  list.forEach(function (file) {
-    if (option.ignore.some(i => file.match(i))) return
-    let _path = path.join(dir, file)
-    let name = option.fullpath ? _path : path.relative(option.dir, _path)
-    if (fs.existsSync(_path) && fs.statSync(_path).isDirectory()) {
-      if (!option.ignoreDir) output.push(name)
-      output = output.concat(walk(_path, option))
-    } else {
-      output.push(name)
-    }
-  })
-  return output
-}
+let walk = require('./js/walk')
 let nameParsed = name => {
   name = path.parse(name).name
   let parsed = brackets(name, {
@@ -86,7 +68,12 @@ const main = async () => {
   }
   if (!database) {
     database = {}
-    let files = walk(_.libraryFolder, { ignore: [_.subFolderTag, /\.(jpg|png|url)$/i], ignoreDir: true })
+    let files = walk(_.libraryFolder, {
+      ignoreDir: path.basename(_.subFolderTag),
+      ignoreFile: /\.(jpg|png|url)$/i,
+      fullpath: false,
+      nodir: true
+    })
     for (let file of files) {
       let name = nameParsed(file)
       if (name in database) {

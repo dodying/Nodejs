@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               ext
 // @Description:        修改本子后缀名
-// @Version:            1.0.54
+// @Version:            1.0.58
 // @Author:             dodying
-// @Date:               2019-2-16 16:35:52
+// @Date:               2019-2-17 10:59:22
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            readline-sync
@@ -20,31 +20,16 @@ const path = require('path')
 const readlineSync = require('readline-sync')
 
 // Function
-let walk = function (dir, option = {}) {
-  if (!option.dir) option.dir = dir
-  option.ignore = [].concat(option.ignore)
-
-  let output = []
-  let list = fs.readdirSync(dir)
-  list.forEach(function (file) {
-    if (option.ignore.some(i => file.match(i))) return
-    let _path = path.join(dir, file)
-    let name = option.fullpath ? _path : path.relative(option.dir, _path)
-    if (fs.existsSync(_path) && fs.statSync(_path).isDirectory()) {
-      if (!option.ignoreDir) output.push(name)
-      output = output.concat(walk(_path, option))
-    } else {
-      output.push(name)
-    }
-  })
-  return output
-}
+let walk = require('./js/walk')
 
 // Main
 const main = async () => {
   let exts = ['.zip', '.cbz']
   let toExt = exts.includes(process.argv[2]) ? process.argv[2] : '.zip'
-  let files = walk(_.libraryFolder, { ignore: [_.subFolderTag, /\.(jpg|png|url)$/i], fullpath: true }).reverse()
+  let files = walk(_.libraryFolder, {
+    ignoreDir: path.basename(_.subFolderTag),
+    ignoreFile: /\.(jpg|png|url)$/i
+  }).reverse()
 
   for (let file of files) {
     if (fs.statSync(file).isFile()) {
