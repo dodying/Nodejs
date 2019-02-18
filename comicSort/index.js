@@ -1,12 +1,12 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.71
+// @Version:            1.0.134
 // @Author:             dodying
-// @Date:               2019-2-17 11:00:04
+// @Date:               2019-2-17 15:46:30
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            fs-extra,image-size,jszip,puppeteer,request-promise,socks5-https-client
+// @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
 // ==/Headers==
 
 // 设置
@@ -25,12 +25,6 @@ const path = require('path')
 const cp = require('child_process')
 
 // 导入第三方模块
-var puppeteer
-try {
-  puppeteer = require('puppeteer')
-} catch (error) {
-  console.log('Cannot find module \'puppeteer\'')
-}
 const JSZip = require('jszip')
 const request = require('request-promise')
 const sizeOf = require('image-size')
@@ -440,12 +434,21 @@ function waitInMs (time) {
     }, time)
   })
 }
+const deleteInZip = (file, zip, dir) => {
+  console.log(colors.error('Deleted: '), colors.info(file))
+  try {
+    cp.execSync(`${_['7z']} d -tzip -mx9 "${zip}" "${file}"`, { cwd: dir })
+    return true
+  } catch (error) {
+    console.error(colors.error('Delete error, skipped'))
+    return false
+  }
+}
 
 // Main
 const main = async () => {
   let lst
-  let browser
-  let defaultPage
+  let lstIgnore = []
 
   // 读取列表
   let task = async () => {
@@ -461,6 +464,7 @@ const main = async () => {
       nodir: true,
       recursive: _.globRecursive
     })
+    lst = lst.filter(i => !lstIgnore.includes(i))
     if (lst.length) console.log('当前任务数: ', colors.info(lst.length))
 
     // 开始处理
@@ -497,7 +501,7 @@ const main = async () => {
         // 检测有无info.txt
         if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
           console.warn(colors.warn('压缩档内不存在info.txt: '), target)
-          return
+          return new Error('no info.txt')
         }
 
         // 读取info.txt
@@ -508,89 +512,53 @@ const main = async () => {
         // 检测图片及大小
         if ((_.delIntroPic || _.checkImageSize) && info.web.match(/e(-|x)hentai.org/)) {
           let imgs = fileList.filter(item => item.match(/\.(jpg|png|gif)$/))
-          for (let j = 1; j < imgs.length; j++) { // 跳过封面
-            let deleted = false
-            if (_.delIntroPic) {
+          for (let j = 0; j < imgs.length; j++) { // 跳过封面
+            if (_.delIntroPic) { // 检查是否删除图片
               let name = path.parse(imgs[j]).base
               let filter = info.page.filter(p => p.name === name)
               if ((filter.length && _.introPic.includes(filter[0].id)) || _.introPicName.some(k => name.match(k))) {
-                console.log(colors.error('Deleted: '), colors.info(imgs[j]))
-                try {
-                  cp.execSync(`${_['7z']} d -tzip -mx9 "${target}" "${imgs[j]}"`, {
-                    cwd: targetDir
-                  })
-                } catch (error) {
-                  console.error(colors.error('Delete error, skipped this comic pack'))
-                  return
+                if (deleteInZip(imgs[j], target, targetDir)) {
+                  continue
+                } else {
+                  return new Error('can delete file in zip')
                 }
-                deleted = true
               }
             }
-            if (_.checkImageSize && !info.tags.includes('tankoubon') && !info.tags.includes('anthology') && !deleted) {
+            if (_.checkImageSize && !info.tags.includes('tankoubon') && !info.tags.includes('anthology')) { // 检查图片大小
               let img = await zip.files[imgs[j]].async('nodebuffer')
+
+              if (img.length === 0) {
+                if (deleteInZip(imgs[j], target, targetDir)) {
+                  continue
+                } else {
+                  return new Error('can delete file in zip')
+                }
+              }
+
               let size
               try {
                 size = sizeOf(img)
               } catch (error) {
                 continue
               }
+
+              if (size.width < 50 || size.height < 50) {
+                if (deleteInZip(imgs[j], target, targetDir)) {
+                  continue
+                } else {
+                  return new Error('can delete file in zip')
+                }
+              }
+
               let rate = size.width / size.height
               if (rate > _.rate && size.width === _.size) {
-                if (!browser) {
-                  browser = await puppeteer.launch({
-                    headless: false,
-                    userDataDir: `${__dirname}\\User Data`,
-                    defaultViewport: null,
-                    timeout: 0,
-                    args: [
-                      `--disable-extensions-except=${__dirname}\\Extensions\\Proxy-SwitchyOmega`
-                    ]
-                  })
-                  browser.on('disconnected', () => {
-                    process.exit()
-                  })
-                  defaultPage = (await browser.pages())[0]
-                }
-
                 console.log('Size:', colors.info(size.width, '*', size.height), '  Pages:', colors.info(info.length), '  Genre:', colors.info(info.genre))
                 console.log('Page', j, ':', colors.warn(imgs[j]))
                 let web = info.web.replace('http:', 'https:').replace(/(g.|)e-hentai/, 'exhentai').replace(/#\d+$/, '')
                 console.info(colors.info(web))
 
-                let page
-                let result = await new Promise(async (resolve, reject) => {
-                  page = await browser.newPage()
-                  await defaultPage.bringToFront()
-                  page.on('load', async () => {
-                    let url = await page.url()
-                    await page.close()
-                    console.log(url, web)
-                    if (url !== web) {
-                      resolve(true)
-                    } else {
-                      let file = fse.createWriteStream('list.txt', {
-                        flags: 'a'
-                      })
-                      file.write(url)
-                      file.write('\n')
-                      file.end()
-                      resolve()
-                    }
-                  })
-                  await page.goto(web)
-                })
-                if (result === undefined) {
-                  fse.unlinkSync(target)
-                  return
-                } else {
-                  let file = fse.createWriteStream('error.txt', {
-                    flags: 'a'
-                  })
-                  file.write(web)
-                  file.write('\n')
-                  file.end()
-                  return
-                }
+                fse.appendFileSync('error.txt', web + '\n')
+                return new Error('no accepted size')
               }
             }
           }
@@ -656,12 +624,11 @@ const main = async () => {
         // 整理
         moveByInfo(info, target)
       })()
-      if (error) throw error
+      if (error) lstIgnore.push(i)
     }
 
     if (lst.length) console.log(colors.info('任务完成'))
-    if (browser) await browser.close()
-    browser = null
+
     if (_.loop) {
       await waitInMs(5 * 1000)
       await task()

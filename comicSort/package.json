@@ -23,7 +23,6 @@
     "g2-bracket-parser": "^2.0.0",
     "image-size": "^0.6.3",
     "jszip": "^3.1.5",
-    "puppeteer": "^1.7.0",
     "readline-sync": "^1.4.9",
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
