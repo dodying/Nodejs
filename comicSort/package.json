@@ -11,22 +11,22 @@
     "delete": "node delete.js",
     "ext-cbz": "node ext.js .cbz",
     "ext-zip": "node ext.js .zip",
-    "formatEHT": "node formatEHT.js",
     "watch": "node watch.js"
   },
   "author": "dodying",
   "license": "MIT",
   "dependencies": {
     "body-parser": "^1.18.3",
-    "express": "^4.16.3",
+    "express": "^4.16.4",
     "fs-extra": "^7.0.1",
     "g2-bracket-parser": "^2.0.0",
-    "image-size": "^0.6.3",
+    "image-size": "^0.7.1",
     "jszip": "^3.1.5",
     "readline-sync": "^1.4.9",
     "request": "^2.87.0",
     "request-promise": "^4.2.2",
-    "socks5-https-client": "^1.2.1"
+    "socks5-https-client": "^1.2.1",
+    "iconv-lite": "^0.4.24"
   },
   "keywords": [],
   "bin": {},

@@ -1,16 +1,16 @@
 // ==Headers==
 // @Name:               watch
 // @Description:        监控libraryFolder变化
-// @Version:            1.0.184
+// @Version:            1.0.187
 // @Author:             dodying
-// @Date:               2019-2-17 11:00:39
+// @Modified:           2020-1-21 09:28:29
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            g2-bracket-parser,readline-sync
 // ==/Headers==
 
 // 设置
-const _ = require('./config')
+const _ = require('./../config')
 const nameMatch = [
   /^(chinese|cn|中文|中国语|中国語|中国|CHINES|中国翻訳|中文化)$/i,
   /汉化|漢化|翻譯|机翻|工坊|掃圖|扫图|同好会|CE家族社|嵌字|天鵝之戀/
@@ -25,7 +25,7 @@ const readlineSync = require('readline-sync')
 const brackets = require('g2-bracket-parser')
 
 // Function
-let walk = require('./js/walk')
+let walk = require('./../js/walk')
 let nameParsed = name => {
   name = path.parse(name).name
   let parsed = brackets(name, {

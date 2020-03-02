@@ -1,16 +1,18 @@
 // ==Headers==
-// @Name:               ext
+// @Name:               changeExt
 // @Description:        修改本子后缀名
-// @Version:            1.0.58
+// @Version:            1.0.65
 // @Author:             dodying
-// @Date:               2019-2-17 10:59:22
+// @Modified:           2020-1-21 12:23:28
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            readline-sync
 // ==/Headers==
 
+// usage: extWithDot
+
 // 设置
-const _ = require('./config')
+const _ = require('./../config')
 
 // 导入原生模块
 const fs = require('fs')
@@ -20,7 +22,7 @@ const path = require('path')
 const readlineSync = require('readline-sync')
 
 // Function
-let walk = require('./js/walk')
+let walk = require('./../js/walk')
 
 // Main
 const main = async () => {
