@@ -1,0 +1,211 @@
+body, html {
+  height: 100%;
+  margin: 0;
+  font-family: Arial;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+.navBar {
+  display: flex;
+  text-align: center;
+}
+
+.navBar>span {
+  background-color: #3282b8;
+  color: #fff;
+  border: none;
+  outline: none;
+  padding: 14px 16px;
+  font-size: 17px;
+  flex: 1;
+}
+
+.navBar>span.actived {
+  background-color: white;
+  color: #555;
+}
+
+.navBar>span:not([disabled]):hover {
+  cursor: pointer;
+  background-color: #0f4c75;
+  color: #fff;
+}
+
+.navBar>span[disabled] {
+  background-color: #606060;
+}
+
+.bottomBar {
+  display: flex;
+  font-size: 20px;
+  padding: 5px;
+}
+
+.bottomBar>div:nth-child(1) {
+  flex: 60%;
+}
+
+.bottomBar span {
+  color: white;
+  border: 1px solid black;
+  border-radius: 10%;
+  background-color: #3282b8;
+  padding: 5px;
+}
+
+.bottomBar span:not([disabled]):hover {
+  cursor: pointer;
+  background-color: #0f4c75;
+}
+
+.bottomBar span[disabled] {
+  background-color: #606060;
+}
+
+.tabContent {
+  display: none;
+  padding: 20px 20px;
+  height: calc(100% - 140px);
+}
+
+.tabContent.actived {
+  display: flex;
+}
+
+.tabContent:not([name="config"])>div {
+  flex: 1;
+  border: solid 1px black;
+}
+
+.tabContent input[name="nextEvent"] {
+  display: none;
+}
+
+.tabContent[name="start"] [name="currentWorkStatus"]::after {
+  content: "请选择文件";
+  color: red;
+}
+
+.tabContent[name="start"] [name="currentWorkStatus"].actived::after {
+  content: "直接开始 " attr(files);
+  color: green;
+}
+
+.tabContent[name="chapter"]>div:nth-child(1) {
+  flex: 4;
+}
+
+.tabContent[name="chapter"]>div:nth-child(2) {
+  flex: 6;
+}
+
+.tabContent[name="pretreat"] [name="content"], .tabContent[name="chapter"] [name="content"] {
+  background: url(./background.png);
+  white-space: pre-wrap;
+  overflow: auto;
+  height: calc(100% - 20px);
+  word-break: break-all;
+  text-indent: 2em;
+  line-height: 130%;
+  text-align: justify;
+  font-family: "Microsoft YaHei";
+  font-size: 22px;
+  color: #000;
+}
+
+.tabContent[name="chapter"] [name="patternPre"], .tabContent[name="chapter"] [name="patternNumber"], .tabContent[name="chapter"] [name="patternSuf"] {
+  width: 48px;
+}
+
+.tabContent[name="chapter"]>div>div {
+  border: solid 1px black;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"] {
+  height: calc(100% - 100px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  counter-reset: chapterOrder;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"] {
+  direction: rtl;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div {
+  direction: ltr;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div.actived, .tabContent[name="chapter"]>div>div[name="chapterList"]>div:hover {
+  background-color: #3282b8;
+}
+
+.tabContent[name="chapter"] [name="chapterList"]>div.hide {
+  position: absolute;
+  left: -9999px;
+  max-height: 0px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.tabContent[name="chapter"] [name="chapterList"]>div.warn {
+  color: #e8f044;
+  background: #4d089a;
+}
+
+.tabContent[name="chapter"] [name="chapterList"]>div.filter {
+  color: white;
+  background: black;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(1) {
+  width: 36px;
+  display: inline-block;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(1)::before {
+  content: counter(chapterOrder);
+  counter-increment: chapterOrder;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(2) {
+  width: 60px;
+  display: inline-block;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(3) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  width: calc(100% - 240px);
+  cursor: pointer;
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(3):empty::before {
+  content: "未命名章节"
+}
+
+.tabContent[name="chapter"]>div>div[name="chapterList"]>div>input[type="button"] {
+  width: 18px;
+  padding: 0;
+  margin: 0;
+}
+
+.tabContent[name="chapter"] [name="title"] {
+  width: calc(100% - 200px);
+}
+
+.tabContent[name="chapter"] [name="length"] {
+  float: right;
+  width: 64px;
+}
+
+.tabContent.actived[name="config"] {
+  display: block;
+}
