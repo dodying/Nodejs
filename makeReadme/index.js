@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               makeReadme
 // @Description:        根据 Headers 生产 `README.md`
-// @Version:            1.0.2
+// @Version:            1.0.10
 // @Author:             dodying
-// @Date:               2019-2-16 16:39:18
+// @Modified:           2019-8-6 13:37:08
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            glob
@@ -72,8 +72,8 @@ Object.keys(_).forEach(i => {
     let folder = j
     md += `\r\n`
     md += `##### ${folder}\r\n\r\n`
-    md += `Name | Raw | Version | Date | Description\r\n`
-    md += `--- | --- | --- | --- | ---\r\n`
+    md += `Name | Raw | Version | Last-Modified | Create-Time | Description\r\n`
+    md += `--- | --- | --- | --- | --- | ---\r\n`
     for (let k in info[j]) {
       let item = k
       let _info = info[j][k]
@@ -82,10 +82,11 @@ Object.keys(_).forEach(i => {
       let url = folder + '/' + item
       let rawUrl = Url.resolve(_[i].repo, folder + '/' + item).replace('/tree/', '/raw/')
       let version = _info['version'].replace(/\.\d{13,}$/, '')
-      let time = _info['date'] || ''
+      let modified = _info['modified'] || _info['date'] || ''
+      let created = _info['created'] || _info['date'] || ''
       let description = _info['description:zh-CN'] || _info['description'] || ''
 
-      md += `[${name}](${url}) | [Raw](${rawUrl}) | ${version} | ${time} | ${description}\r\n`
+      md += `[${name}](${url}) | [Raw](${rawUrl}) | ${version} | ${modified} | ${created} | ${description}\r\n`
     }
   }
   fs.writeFileSync(path.resolve(i, 'README.md'), md)
