@@ -1,0 +1,122 @@
+:root {
+  --main-bg-color: #29c7ac;
+}
+
+.sidebar {
+  background-color: var(--main-bg-color);
+  transition: margin-left 2s;
+  position: fixed;
+  overflow: auto;
+  width: 20vw;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  display: none;
+}
+
+.sidebar>ul>li {
+  white-space: nowrap;
+}
+
+.btnBox {
+  position: fixed;
+  top: 40vh;
+  right: 20vw;
+  background: var(--main-bg-color);
+  color: #fff;
+}
+
+.btnBox>button {
+  border: 0;
+  height: 75px;
+  background: var(--main-bg-color);
+  cursor: pointer;
+}
+
+.btnBox-hide {
+  right: 0vw;
+}
+
+.query>.filter {
+  text-align: center;
+  /* background-color: #fff; */
+  /* margin: auto; */
+  /* left: 0; */
+  /* right: 0; */
+}
+
+.query>.preview {
+  position: fixed;
+  padding: 5px 0;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 2px solid #6f6f6f4d;
+  top: 0;
+  left: 0;
+  background: var(--main-bg-color);
+  white-space: pre-wrap;
+  max-width: 320px;
+  display: none;
+}
+
+.query>.preview>img {
+  max-width: 320px;
+}
+
+.datalist>ol {
+  list-style: none;
+  counter-reset: datalistOrder;
+  max-height: 20vh;
+  overflow: auto;
+}
+
+.datalist>ol>li {
+  cursor: pointer;
+}
+
+.datalist>ol>li::before {
+  padding: 0 8px;
+  content: counter(datalistOrder)".";
+  counter-increment: datalistOrder;
+  font-weight: bold;
+}
+
+.datalist>ol>li::after {
+  padding: 0 8px;
+  content: attr(cname);
+  /* font-size: 10px; */
+  font-weight: bold;
+  color: #00a8cc;
+}
+
+.datalist>ol>li:hover, .datalistHover {
+  color: #f00;
+  font-weight: bold;
+  font-size: large;
+}
+
+.result>table {
+  border-spacing: 0;
+}
+
+.result>table, .result>table th, .result>table td {
+  border: solid 1px black;
+}
+
+.result>table tr:hover, .result>table .trHover {
+  color: #f00;
+  background-color: #4a86e8;
+}
+
+.result>table tr[star="1"], .result>table tr[star="1"]>td {
+  background-color: #8cba51;
+  color: #1b262c;
+}
+
+.result tr[star="1"] [name="star"]::before {
+  content: "UnStar"
+}
+
+.result tr [name="star"]::before {
+  content: "Star"
+}

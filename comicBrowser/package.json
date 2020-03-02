@@ -1,0 +1,17 @@
+{
+  "name": "comic-browser",
+  "version": "1.0.0",
+  "description": "",
+  "author": "dodying",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron ./main.js"
+  },
+  "main": "main.js",
+  "dependencies": {
+    "mysql2": "^2.1.0"
+  },
+  "devDependencies": {
+    "electron": "^6.1.7"
+  }
+}

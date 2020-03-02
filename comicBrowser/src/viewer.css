@@ -1,0 +1,186 @@
+:root {
+  --scrollbar-width: 1vw;
+}
+
+body {
+  background-color: #202020;
+}
+
+.bar {
+  position: fixed;
+  display: none;
+  left: 0;
+  right: 0;
+  text-align: center;
+  background: #666;
+  opacity: 0.9;
+  z-index: 8;
+  width: 80vw;
+  margin: 0px 10vw;
+}
+
+.titlebar {
+  top: 0;
+}
+
+.statusbar {
+  bottom: 0;
+}
+
+.sidebar {
+  cursor: pointer;
+  position: fixed;
+  top: 0;
+  width: 5vw;
+  /* display: flex; */
+  flex-direction: column;
+  justify-content: center;
+  font-size: 100px;
+  font-weight: bold;
+  display: none;
+  z-index: 7;
+  height: 80vh;
+  margin: 10vh 0px;
+}
+
+.side-left {
+  left: 0;
+}
+
+.side-left::before {
+  content: "<"
+}
+
+.side-right {
+  right: var(--scrollbar-width);
+  text-align: right;
+}
+
+.side-right::before {
+  content: ">"
+}
+
+.content::before {
+  content: "到顶啦"
+}
+
+.content::after {
+  content: "到底啦"
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 99vh;
+  overflow: auto;
+  text-align: center;
+  max-width: 100vw;
+  /* scroll-behavior: smooth; */
+}
+
+.content>div {
+  max-width: 99vw;
+  margin: 5px 0;
+}
+
+.content>div>img {
+  width: 100%;
+}
+
+.openfile {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+}
+
+.openfile>div {
+  cursor: pointer;
+  margin: auto;
+  padding: 100px;
+}
+
+.keyBindings {
+  text-align: right;
+}
+
+.keyBindings>span {
+  background-color: rgb(243, 243, 243);
+  color: rgb(33, 33, 33);
+  margin-left: 2px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+  padding-left: 4px;
+  padding-right: 4px;
+  border-radius: 3px;
+  border: solid 1px #ccc;
+  border-bottom-color: #bbb;
+  box-shadow: inset 0 -1px 0 #bbb;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.helpDescription {
+  text-align: left;
+}
+
+.statusbar>[name="range"] {
+  -webkit-appearance: none;
+  width: 20%;
+  height: 25px;
+  background: #d3d3d3;
+  outline: none;
+  opacity: 0.7;
+  -webkit-transition: .2s;
+  transition: opacity .2s;
+}
+
+.statusbar>[name="range"]:hover {
+  opacity: 1;
+}
+
+.statusbar>[name="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 25px;
+  height: 25px;
+  background: #4CAF50;
+  cursor: pointer;
+}
+
+.content::-webkit-scrollbar {
+  z-index: 9999999;
+  width: var(--scrollbar-width);
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: #666;
+  min-height: 10vh;
+  border-radius: 3px;
+}
+
+.preview {
+  position: fixed;
+  right: var(--scrollbar-width);
+  bottom: 0;
+  z-index: 9;
+  display: none;
+  cursor: crosshair;
+}
+
+.preview>.coverBox {
+  height: 20px;
+  position: relative;
+  top: 20px;
+  width: 20px;
+  padding: 0;
+  margin: 0;
+  display: none;
+  background-color: #202020;
+  opacity: 0.6;
+}
+
+.preview img {
+  width: 5vw;
+}

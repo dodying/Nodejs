@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>CONFIG</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./../src/main.css">
+  <script>if (typeof module === 'object') { window.module = module; module = undefined; }</script>
+  <script src="./../src/lib/jquery.js"></script>
+  <script src="./../src/lib/mousetrap.min.js"></script>
+  <script>if (window.module) module = window.module;</script>
+</head>
+
+<body>
+  <div name="config">
+    <div name="database">
+      host: <input type="text" id="config-host">
+      <br>
+      user: <input type="text" id="config-user">
+      <br>
+      password: <input type="text" id="config-password">
+      <br>
+      database: <input type="text" id="config-database">
+      <br>
+      <input type="button" name="database-test" value="Test">
+      <input type="button" name="database-delete" value="Delete">
+      <input type="button" name="database-init" value="Init">
+      <input type="button" name="database-update" value="Update">
+      <span name="database-result"></span>
+    </div>
+    <div>
+      libraryFolder: <input type="text" id="config-libraryFolder">
+      <br>
+      <input type="checkbox" id="config-rememberLastCondition"> 记住上次条件
+      <br>
+      <input type="checkbox" id="config-rememberLastTabs"> 记住使用(Ctrl+Shift+S)保存的网页
+      <br>
+      <input type="checkbox" id="config-deleteLastTabs"> 恢复使用(Ctrl+Shift+S)保存的网页后，删除
+      <br>
+      <input type="checkbox" id="config-fastQuery"> 打开搜索页面后立即查询
+      <br>
+      <input type="checkbox" id="config-rememberHistory"> 记录历史
+    </div>
+  </div>
+  <input type="button" id="config-btnSave" value="保存">
+  <input type="button" id="config-btnCancel" value="返回">
+  <script src="./../src/config.js"></script>
+  <script src="./../src/main.js"></script>
+</body>
+
+</html>

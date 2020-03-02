@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>VIEWER</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./../src/main.css">
+  <link rel="stylesheet" href="./../src/viewer.css">
+  <link rel="stylesheet" href="./../src/lib/jquery-confirm.min.css">
+  <script>if (typeof module === 'object') { window.module = module; module = undefined; }</script>
+  <script src="./../src/lib/jquery.js"></script>
+  <script src="./../src/lib/jquery-confirm.min.js"></script>
+  <script src="./../src/lib/mousetrap.min.js"></script>
+  <script>if (window.module) module = window.module;</script>
+</head>
+
+<body>
+  <div class="titlebar bar"></div>
+  <div class="sidebar side-left"></div>
+  <div class="content" tabindex="1"></div>
+  <div class="sidebar side-right"></div>
+  <div class="openfile">
+    <div>Open File</div>
+  </div>
+  <div class="statusbar bar">
+    <span name="current"></span>
+    <input type="range" name="range" min="1">
+    <span name="max"></span>
+  </div>
+  <div class="preview">
+    <div class="coverBox"></div>
+    <div></div>
+  </div>
+  <script src="./../src/viewer.js"></script>
+  <script src="./../src/main.js"></script>
+</body>
+
+</html>

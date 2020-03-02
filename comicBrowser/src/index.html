@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>INDEX</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="./../src/main.css">
+  <link rel="stylesheet" href="./../src/index.css">
+  <link rel="stylesheet" href="./../src/lib/jquery-confirm.min.css">
+  <link rel="stylesheet" href="./../src/lib/jquery.tablesorter.theme.blackice.min.css">
+  <script>if (typeof module === 'object') { window.module = module; module = undefined; }</script>
+  <script src="./../src/lib/jquery.js"></script>
+  <script src="./../src/lib/jquery.tablesorter.min.js"></script>
+  <script src="./../src/lib/jquery.tablesorter.widgets.min.js"></script>
+  <script src="./../src/lib/jquery-confirm.min.js"></script>
+  <script src="./../src/lib/mousetrap.min.js"></script>
+  <script>if (window.module) module = window.module;</script>
+</head>
+
+<body>
+  <div class="query">
+    <div class="filter">
+      <div class="condition">
+        <input type="checkbox" name="not-condition">
+        <span class="pointer" name="toggle-not-condition">:NOT</span>
+
+        <select name="column">
+          <option type="json" value="tags">tags</option>
+          <option type="text" value="path">path</option>
+          <option type="text" value="title">title</option>
+          <option type="text" value="title_jpn">title_jpn</option>
+          <option type="number" value="size">size</option>
+          <option type="number" value="rating">rating</option>
+          <option type="text" value="category">category</option>
+          <option type="text" value="web">web</option>
+          <option type="text" value="language">language</option>
+          <option type="number" value="pages">pages</option>
+          <option type="datetime" value="time_upload">time_upload</option>
+          <option type="text" value="uploader">uploader</option>
+          <option type="number" value="favorited">favorited</option>
+          <option type="datetime" value="time_download">time_download</option>
+          <option type="text" value="summary">summary</option>
+          <!-- <option type="json" value="page">page</option> -->
+        </select>
+
+        <select class="comparison hide" name="comp-text">
+          <option value="LIKE">包含</option>
+          <option value="NOT LIKE">不包含</option>
+          <option value="REGEXP">正则表达式</option>
+          <option value="NOT REGEXP">NOT 正则表达式</option>
+          <option value="=">==</option>
+          <option value="!=">!=</option>
+          <option value="!=">!=</option>
+          <option value="Duplicate">重复值</option>
+        </select>
+        <select class="comparison hide" name="comp-number">
+          <option value="=">==</option>
+          <option value="!=">!=</option>
+          <option value=">">&gt;</option>
+          <option value=">=">&gt;=</option>
+          <option value="<">&lt;</option>
+          <option value="<=">&lt;=</option>
+          <option value="Duplicate">重复值</option>
+        </select>
+        <select class="comparison hide" name="comp-datetime">
+          <option value="today">这天||今天</option>
+          <option value="this_week">这周</option>
+          <option value="this_year">今年</option>
+          <option value="yesteday">这天的昨天||昨天</option>
+          <option value="the day before yesterday">这天的前天||前天</option>
+          <option value="tomorrow">这天的明天||明天</option>
+          <option value="the day after tomorrow">这天的后天||后天</option>
+
+          <option value="=">==</option>
+          <option value="!=">!=</option>
+          <option value=">">&gt;</option>
+          <option value=">=">&gt;=</option>
+          <option value="<">&lt;</option>
+          <option value="<=">&lt;=</option>
+          <option value="BETWEEN AND">BETWEEN AND</option>
+          <option value="NOT BETWEEN AND">NOT BETWEEN AND</option>
+        </select>
+        <select class="comparison hide" name="comp-boolean">
+          <option value="1">是</option>
+          <option value="0">否</option>
+        </select>
+        <select class="comparison" name="comp-json">
+          <option value="tags:*">tags:*</option>
+          <option value="tags:language">tags:language</option>
+          <option value="tags:parody">tags:parody</option>
+          <option value="tags:character">tags:character</option>
+          <option value="tags:group">tags:group</option>
+          <option value="tags:artist">tags:artist</option>
+          <option value="tags:female">tags:female</option>
+          <option value="tags:male">tags:male</option>
+          <option value="tags:misc">tags:misc</option>
+        </select>
+
+        <input class="value" type="text" name="value-common" list="">
+        <input class="value hide" type="date" name="value-time1">
+        <input class="value hide" type="date" name="value-time2">
+
+        <input type="button" name="new-condition" value="新增条件">
+        <input type="button" name="delete-condition" value="删除条件">
+      </div>
+      <div class="datalist hide">
+        <ol>
+        </ol>
+      </div>
+      <div>
+        <input type="button" name="query" value="查询">
+        <input type="button" name="save-condition" value="保存条件">
+        <input type="button" name="bookmark-condition" value="收藏条件">
+        <input type="button" name="new-query" value="新建查询">
+        <input type="button" name="config" value="打开设置">
+        <input type="button" name="viewer" value="打开阅读器">
+        <input type="button" name="database-update" value="更新数据库">
+        <input type="button" name="move-files" value="移动结果">
+      </div>
+    </div>
+
+    <div class="result">
+    </div>
+    <div class="preview"></div>
+  </div>
+  <div class="btnBox btnBox-hide">
+    <button name="bookmarks">⭐</button>
+    <br>
+    <button name="history">📜</button>
+  </div>
+  <div class="sidebar bookmarks"></div>
+  <div class="sidebar history"></div>
+  <script src="./../src/index.js"></script>
+  <script src="./../src/main.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,124 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: #34353b;
+  color: #dddddd;
+  scroll-behavior: smooth;
+}
+
+.hide {
+  display: none;
+}
+
+.pointer {
+  cursor: pointer;
+}
+
+.highlight {
+  color: #0f0;
+  background-color: #000;
+  margin: 3px;
+  font-size: 125%;
+  font-weight: bold;
+}
+
+.jconfirm .jconfirm-box div.jconfirm-content-pane::-webkit-scrollbar {
+  width: 10px!important;
+}
+
+.jconfirm-content li:hover {
+  color: #f00;
+  background-color: #4a86e8;
+}
+
+.jconfirm.jconfirm-banner .jconfirm-cell {
+  vertical-align: top;
+}
+
+.jconfirm.jconfirm-banner .jconfirm-holder {
+  padding-top: 0!important;
+}
+
+.jconfirm.jconfirm-banner .jconfirm-bg {
+  /* background-color: rgba(54, 70, 93, 0.95) */
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box {
+  /* background-color: transparent; */
+  background-color: rgba(54, 70, 93, 0.95);
+  width: 100%!important;
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box.jconfirm-type-blue {
+  border: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box.jconfirm-type-green {
+  border: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box.jconfirm-type-red {
+  border: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box.jconfirm-type-orange {
+  border: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box.jconfirm-type-purple {
+  border: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box.jconfirm-type-dark {
+  border: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box div.jconfirm-closeIcon {
+  color: white
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box div.jconfirm-title-c {
+  text-align: center;
+  color: white;
+  font-size: 28px;
+  font-weight: normal
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box div.jconfirm-title-c>* {
+  padding-bottom: 25px
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box div.jconfirm-title-c .jconfirm-icon-c {
+  margin-right: 8px;
+  margin-left: 0
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box div.jconfirm-content-pane {
+  margin-bottom: 25px
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box div.jconfirm-content {
+  text-align: center;
+  color: white
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box .jconfirm-buttons {
+  text-align: center
+}
+
+.jconfirm.jconfirm-banner .jconfirm-box .jconfirm-buttons button {
+  font-size: 16px;
+  border-radius: 2px;
+  background: #303f53;
+  text-shadow: none;
+  border: 0;
+  color: white;
+  padding: 10px;
+  min-width: 100px
+}
+
+.jconfirm.jconfirm-banner.jconfirm-rtl .jconfirm-box div.jconfirm-title-c .jconfirm-icon-c {
+  margin-left: 8px;
+  margin-right: 0
+}
