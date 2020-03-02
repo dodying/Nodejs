@@ -3,9 +3,9 @@
 // ==Headers==
 // @Name:               Txt2Epub
 // @Description:        将 TXT 转换为 EPUB 格式
-// @Version:            1.0.6
+// @Version:            1.0.8
 // @Author:             dodying
-// @Date:               2019-2-12 10:42:08
+// @Modified:           2020-1-29 20:35:10
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            archiver,fs-extra,glob
@@ -59,8 +59,8 @@ if (!fse.existsSync(cover)) cover = _['nocover']
 fse.writeFileSync(path.resolve(path_oebps, 'cover.jpg'), fse.readFileSync(cover))
 //
 var content_opf = '<?xml version="1.0" encoding="UTF-8"?><package version="2.0" unique-identifier="' + uuid + '" xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><dc:title>' + bookName + '</dc:title><dc:creator>' + _['author'] + '</dc:creator><dc:identifier id="' + uuid + '">urn:uuid:' + uuid + '</dc:identifier><dc:language>zh-CN</dc:language><meta name="cover" content="cover-image" /></metadata><manifest>'
-var toc_ncx = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd"><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:' + uuid + '"/><meta name="dtb:depth" content="1"/><meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head><docTitle><text>' + bookName + '</text></docTitle><navMap><navPoint id="navpoint-1" playOrder="1"><navLabel><text>首页</text></navLabel><content src="' + '0'.padStart(books.lenght, '0') + '.html"/></navPoint>'
-var item = '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/><item id="cover" href="' + '0'.padStart(books.lenght, '0') + '.html" media-type="application/xhtml+xml"/><item id="css" href="stylesheet.css" media-type="text/css"/>'
+var toc_ncx = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd"><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:' + uuid + '"/><meta name="dtb:depth" content="1"/><meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head><docTitle><text>' + bookName + '</text></docTitle><navMap><navPoint id="navpoint-1" playOrder="1"><navLabel><text>首页</text></navLabel><content src="' + '0'.padStart(books.length, '0') + '.html"/></navPoint>'
+var item = '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/><item id="cover" href="' + '0'.padStart(books.length, '0') + '.html" media-type="application/xhtml+xml"/><item id="css" href="stylesheet.css" media-type="text/css"/>'
 var itemref = '<itemref idref="cover" linear="yes"/>'
 
 for (let i = 0; i < books.length; i++) {
@@ -72,11 +72,11 @@ for (let i = 0; i < books.length; i++) {
   itemref += '<itemref idref="chapter' + chapterOrder + '" linear="yes"/>'
   fse.writeFileSync(path.resolve(path_oebps, chapterOrder + '.html'), '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>' + chapterName + '</title><link type="text/css" rel="stylesheet" media="all" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h3>' + chapterName + '</h3><div><p>' + chapterContent + '</p></div></body></html>')
 }
-content_opf = content_opf + item + '<item id="cover-image" href="cover.jpg" media-type="image/jpeg"/></manifest><spine toc="ncx">' + itemref + '</spine><guide><reference href="' + '0'.padStart(books.lenght, '0') + '.html" type="cover" title="Cover"/></guide></package>'
+content_opf = content_opf + item + '<item id="cover-image" href="cover.jpg" media-type="image/jpeg"/></manifest><spine toc="ncx">' + itemref + '</spine><guide><reference href="' + '0'.padStart(books.length, '0') + '.html" type="cover" title="Cover"/></guide></package>'
 toc_ncx += '</navMap></ncx>'
 fse.writeFileSync(path.resolve(path_oebps, 'content.opf'), content_opf)
 fse.writeFileSync(path.resolve(path_oebps, 'toc.ncx'), toc_ncx)
-fse.writeFileSync(path.resolve(path_oebps, '0'.padStart(books.lenght, '0') + '.html'), '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>' + bookName + '</title><link type="text/css" rel="stylesheet" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h1>' + bookName + '</h1><h2>本电子书由用户脚本' + _['author'] + '制作</h2></body></html>')
+fse.writeFileSync(path.resolve(path_oebps, '0'.padStart(books.length, '0') + '.html'), '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>' + bookName + '</title><link type="text/css" rel="stylesheet" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h1>' + bookName + '</h1><h2>本电子书由用户脚本' + _['author'] + '制作</h2></body></html>')
 
 // 生成Epub
 if (!fse.existsSync(_['output'])) fse.mkdirSync(_['output'])
