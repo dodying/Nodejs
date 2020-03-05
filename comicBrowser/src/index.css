@@ -1,5 +1,5 @@
 :root {
-  --main-bg-color: #29c7ac;
+  --main-bg-color: #34353b;
 }
 
 .sidebar {
@@ -45,22 +45,26 @@
   /* right: 0; */
 }
 
-.query>.preview {
+.query>.preview[name="cover"]>img {
+  position: fixed;
+  max-width: 25vw;
+  max-height: 50vh;
+  left: 2vw;
+  top: 2vh;
+}
+
+.query>.preview[name="tags"] {
   position: fixed;
   padding: 5px 0;
   font-size: 16px;
   border-radius: 8px;
   border: 2px solid #6f6f6f4d;
-  top: 0;
   left: 0;
+  top: 0;
   background: var(--main-bg-color);
   white-space: pre-wrap;
-  max-width: 320px;
   display: none;
-}
-
-.query>.preview>img {
-  max-width: 320px;
+  max-width: 25vw;
 }
 
 .datalist>ol {
@@ -95,6 +99,17 @@
   font-size: large;
 }
 
+a, .result button, .result input[type="button"] {
+  border: none;
+  background-color: #d1cebd;
+  color: -webkit-link;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  margin: 0 1px;
+  font-size: 11px;
+}
+
 .result>table {
   border-spacing: 0;
 }
@@ -104,8 +119,13 @@
 }
 
 .result>table tr:hover, .result>table .trHover {
-  color: #f00;
-  background-color: #4a86e8;
+  font-weight: bolder;
+  font-size: larger;
+}
+
+.result>table tr:hover>td, .result>table .trHover>td {
+  color: #ccc!important;
+  background-color: #000!important;
 }
 
 .result>table tr[star="1"], .result>table tr[star="1"]>td {
@@ -119,4 +139,8 @@
 
 .result tr [name="star"]::before {
   content: "Star"
+}
+
+.result td[name="rating"] {
+  color: #1b262c;
 }

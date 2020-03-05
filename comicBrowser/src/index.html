@@ -27,8 +27,11 @@
         <select name="column">
           <option type="json" value="tags">tags</option>
           <option type="text" value="path">path</option>
+          <option type="text" value="artist">artist</option>
           <option type="text" value="title">title</option>
+          <option type="text" value="title_main">title_main</option>
           <option type="text" value="title_jpn">title_jpn</option>
+          <option type="text" value="title_jpn_main">title_jpn_main</option>
           <option type="number" value="size">size</option>
           <option type="number" value="rating">rating</option>
           <option type="text" value="category">category</option>
@@ -39,8 +42,6 @@
           <option type="text" value="uploader">uploader</option>
           <option type="number" value="favorited">favorited</option>
           <option type="datetime" value="time_download">time_download</option>
-          <option type="text" value="summary">summary</option>
-          <!-- <option type="json" value="page">page</option> -->
         </select>
 
         <select class="comparison hide" name="comp-text">
@@ -116,12 +117,14 @@
         <input type="button" name="viewer" value="打开阅读器">
         <input type="button" name="database-update" value="更新数据库">
         <input type="button" name="move-files" value="移动结果">
+        <input type="button" name="clear" value="清理">
       </div>
     </div>
 
     <div class="result">
     </div>
-    <div class="preview"></div>
+    <div class="preview" name="cover"></div>
+    <div class="preview" name="tags"></div>
   </div>
   <div class="btnBox btnBox-hide">
     <button name="bookmarks">⭐</button>

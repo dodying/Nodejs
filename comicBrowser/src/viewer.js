@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1047
+// @Version:            1.0.1048
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-3-2 15:33:34
+// @Modified:           2020-3-4 12:14:08
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -129,8 +129,6 @@ const parseInfo = require('./../../comicSort/js/parseInfo')
 const findData = require('./../../comicSort/js/findData')
 const ipcRenderer = electron.ipcRenderer
 const Menu = electron.remote.Menu
-const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data
-findData.init(EHT)
 
 // Function
 async function configChange (func) {

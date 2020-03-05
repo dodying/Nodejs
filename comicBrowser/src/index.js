@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.831
+// @Version:            1.0.1006
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-2 15:33:23
+// @Modified:           2020-3-5 10:23:44
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron
@@ -21,6 +21,60 @@ let lastTooltip = null
 // 可自定义
 let keypressTimeout = 80
 let scrollHeight = 30
+let showInfo = { // 按key顺序显示
+  'category': true, // 类别
+  'language': false, // 语言
+  'time_upload': true,
+  'time_download': true, // 下载时间
+  'time_view': true, // (#)上次阅读事件
+  'pages': true, // 页数
+  'size': false, // 文件大小
+  'rating': true, // 评分
+  'favorited': false, // 收藏人数
+  'web': true, // 网址
+  'event': true, // (#)
+  'view': true, // (#)
+  'delete': true, // (#)
+  'artist': true, // 作者
+  'title_main': true, // 英文标题的主要内容
+  'title': true, // 英文标题
+  'title_jpn': true, // 日文标题
+  'title_jpn_main': false, // 日文标题的主要内容
+  'path': true, // 路径
+  'uploader': false, // 上传者
+  'tags': false, // 标签
+  'tag:parody': true, // (#)标签:原作
+  'tag:female': true, // (#)标签:女性
+  'tag:male': true, // (#)标签:男性
+  'tag:misc': true // (#)标签:杂项
+}
+let showInfoChs = {
+  'category': '类别',
+  'language': '语言',
+  'time_upload': '上传时间',
+  'time_download': '下载时间',
+  'time_view': '最近阅读',
+  'pages': '页数',
+  'size': '大小',
+  'rating': '评分',
+  'favorited': '星标数',
+  'web': '网址',
+  'event': '事件',
+  'view': '阅读',
+  'delete': '删除',
+  'artist': '作者',
+  'title': '标题',
+  'title_main': '标题(主)',
+  'title_jpn': '标题(日文)',
+  'title_jpn_main': '标题(日文)(主)',
+  'path': '路径',
+  'uploader': '上传者',
+  'tags': '标签',
+  'tag:parody': '标签:原作',
+  'tag:female': '标签:女性',
+  'tag:male': '标签:男性',
+  'tag:misc': '标签:杂项'
+}
 let keyMap = {
   up: ['w', 'up', '8'],
   down: ['s', 'down', '5'],
@@ -87,108 +141,64 @@ function tooltip (option, content) {
 let showResult = (rows = []) => {
   let CONFIG = ipcRenderer.sendSync('config')
 
-  // category: "MANGA"
-  // language: "zh"
-  // time_upload: "2011-10-21T07:37:00.000Z"
-  // time_download: "2019-12-23T05:46:00.000Z"
-  // favorited: 635
-  // pages: 195
-  // path: "#Star\#阅览注意\EBA\[EBA] Datsu ☆ Imouto Sengen [Chinese].cbz"
-  // rating: 4.85
-  // size: 38598782
-  // summary: "Uploader Comment: [EBA] 脱☆妹宣言 [Badluck1205掃圖#029] [2011-10]"
-  // tags: {artist: Array(1), female: Array(5), language: Array(2), misc: Array(2)}
-  // title: "[EBA] Datsu ☆ Imouto Sengen [Chinese]"
-  // title_jpn: "[EBA] 脱☆妹宣言 [中国翻訳]"
-  // uploader: "badluck1205"
-  // web: "https://exhentai.org/g/424583/0542c0c2a9/"
-
-  let html = [
-    '<table>',
-    '  <thead>',
-    '    <th></th>',
-    '    <th>类别</th>',
-    // '    <th>语言</th>',
-    '    <th>上传时间</th>',
-    '    <th>下载时间</th>',
-    '    <th>最近阅读</th>',
-    // '    <th>星标</th>',
-    '    <th>页数</th>',
-    '    <th>评分</th>',
-    // '    <th>大小</th>',
-    '    <th>事件</th>',
-    '    <th>标题</th>',
-    '    <th>标题(日文)</th>',
-    '    <th>路径</th>',
-    // '    <th>上传者</th>',
-    '  </thead>',
-    '  <tbody>'
-  ]
+  let html = [ '<table>', '<thead>', '<th></th>' ]
+  for (let i in showInfo) {
+    if (showInfo[i]) html.push(`<th>${showInfoChs[i] || i}</th>`)
+  }
+  html.push('</thead>', '<tbody>')
   let condition = encodeURIComponent(JSON.stringify(getCondition()))
 
   let order = 1
   for (let row of rows) {
     // tr
-    let tagString = encodeURIComponent(row.tagString)
+    let tagString = encodeURIComponent(JSON.stringify(row.tags))
     let star = CONFIG.star && CONFIG.star[row.path] ? CONFIG.star[row.path] : 0
     let tr = `<tr path="${row.path}" star="${star}" tags="${tagString}">` // path 用于定位
 
     // td order
     tr += `<td>${order++}</td>`
 
-    // td category
-    tr += `<td>${row.category}</td>`
+    for (let i in showInfo) {
+      if (showInfo[i]) {
+        let attr = [ `name="${i}"` ]
+        let text = ''
+        if (['time_upload', 'time_download', 'time_view'].includes(i)) {
+          let time = ['time_view'].includes(i) ? (CONFIG.lastViewTime && CONFIG.lastViewTime[row.path] ? CONFIG.lastViewTime[row.path] : null) : row[i]
 
-    // td language
-    // tr += `<td>${row.language}</td>`
+          attr.push(`datetime="${time}"`, `sort-value="${new Date(time).getTime()}"`)
+        } else if (['rating'].includes(i)) {
+          let precent = row.rating / 5 * 100
+          let color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00'
 
-    // td time_upload,time_download,time_view
-    let lastViewTime = CONFIG.lastViewTime && CONFIG.lastViewTime[row.path] ? CONFIG.lastViewTime[row.path] : null
-    tr += `<td datetime="${row.time_upload}" sort-value="${new Date(row.time_upload).getTime()}"></td>`
-    tr += `<td datetime="${row.time_download}" sort-value="${new Date(row.time_download).getTime()}"></td>`
-    tr += `<td name="time_view" datetime="${lastViewTime}" sort-value="${new Date(lastViewTime).getTime()}"></td>`
-
-    // td favorited
-    // tr += `<td>${row.favorited}</td>`
-
-    // td pages
-    tr += `<td>${row.pages}</td>`
-
-    // td rating
-    let precent = row.rating / 5 * 100
-    let color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00'
-    tr += `<td style="background:-webkit-linear-gradient(left, ${color} ${precent}%, white ${100 - precent}%);">${row.rating}</td>`
-
-    // td size
-    // tr += `<td>${(row.size / 1024 / 1024).toFixed(2)} MB</td>`
-
-    // td Event
-    tr += [
-      '<td>',
-      // `<a href="${row.path}" name="path" target="_blank">Open</a>`,
-      `<a href="${row.path}" name="delete" target="_blank">Delete</a>`,
-      ' ',
-      `<a href="${row.web}" target="_blank">Web</a>`,
-      '<br>',
-      `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}">View</a>`,
-      ' ',
-      `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`,
-      '<br>',
-      '<button name="star"></button>',
-      ' ',
-      '<button name="clear">Clear</button>',
-      '</td>'
-    ].join('')
-
-    // td title,title_jpn
-    tr += `<td>${row.title}</td>`
-    tr += `<td>${row.title_jpn}</td>`
-
-    // td path
-    tr += `<td>${path.dirname(row.path)}</td>`
-
-    // td uploader
-    // tr += `<td>${row.uploader}</td>`
+          attr.push(`style="background:-webkit-linear-gradient(left, ${color} ${precent}%, white ${100 - precent}%);"`)
+          text = row.rating
+        } else if (['size'].includes(i)) {
+          text = `${(row.size / 1024 / 1024).toFixed(2)} MB`
+        } else if (['event'].includes(i)) {
+          text = [
+            '<button name="star"></button>',
+            '<button name="clear">Clear</button>'
+          ].join('')
+        } else if (['path'].includes(i)) {
+          text = `<a href="${row.path}" name="item">${path.dirname(row[i])}</a>`
+        } else if (['web'].includes(i)) {
+          text = `<a href="${row.web}">Web</a>`
+        } else if (['view'].includes(i)) {
+          text = [
+            `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}">View</a>`,
+            `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`
+          ].join('')
+        } else if (['delete'].includes(i)) {
+          text = `<a href="${row.path}" name="delete">Delete</a>`
+        } else if (i.match(/^tag:(.*)$/)) {
+          let main = i.match(/^tag:(.*)$/)[1]
+          if (row.tags && main in row.tags) text = row.tags[main].map(i => findData(main, i).cname || i).sort().join(', ')
+        } else {
+          text = row[i] instanceof Object ? JSON.stringify(row[i]) : row[i]
+        }
+        tr += `<td ${attr.join(' ')}>${text}</td>`
+      }
+    }
 
     tr += '</tr>'
     html.push(tr)
@@ -215,7 +225,7 @@ let showResult = (rows = []) => {
 
   setTimeout(() => {
     let times = $('.result tbody>tr>td[name="time_view"]').toArray().map(i => $(i).attr('sort-value')).sort().reverse()
-    if (times[0] !== '0') $(`.result tbody>tr:has(td[name="time_view"][sort-value="${times[0]}"])`).get(0).scrollIntoView()
+    if (times.length && times[0] !== '0') $(`.result tbody>tr:has(td[name="time_view"][sort-value="${times[0]}"])`).get(0).scrollIntoView()
   })
 }
 let showBookmarks = () => {
@@ -263,6 +273,31 @@ let getCondition = () => {
     condition.push([not, column, comparison, value, value1])
   }
   return condition
+}
+let getConditionReadable = () => {
+  let condition = getCondition()
+  let text = condition.map(i => {
+    let text = i[0] ? '!' : ''
+    if (i[1] === 'tags') {
+      let main = i[2].split(':')[1]
+      if (main === '*') {
+        main = null
+        text += '*:'
+      } else {
+        text += findData(main).cname + ':'
+      }
+
+      text += findData(main, i[3]).cname || i[3]
+    } else if ($('.comparison:not(.hide)').attr('name') === 'comp-datetime') {
+      text += `${i[1]}:${i[2]}`
+    } else if (i[2] === 'Duplicate') {
+      text += `重复值:${i[1]}`
+    } else {
+      text += i[3]
+    }
+    return text
+  }).join('||')
+  return text
 }
 let rememberLastCondition = () => {
   configChange((CONFIG) => {
@@ -334,7 +369,7 @@ function waitInMs (time) {
 }
 let updateTitleUrl = () => {
   let condition = getCondition()
-  document.title = condition.map(i => i[3]).join('||')
+  document.title = getConditionReadable()
 
   let params = new URLSearchParams()
   params.set('condition', JSON.stringify(condition))
@@ -455,7 +490,7 @@ const main = async () => {
       if (main === '*') {
         tags = EHT
       } else {
-        tags = EHT.filter(i => i.name === main)[0]
+        tags = EHT.filter(i => i.namespace === main)
       }
 
       tags.forEach(i => {
@@ -493,7 +528,6 @@ const main = async () => {
 
   // 按钮-查询
   $('.filter').find('[name="query"]').on('click', async (e) => {
-    updateTitleUrl()
     rememberLastCondition()
 
     let condition = getCondition()
@@ -502,6 +536,7 @@ const main = async () => {
     console.log(rows)
     window.localStorage.setItem(JSON.stringify(condition), JSON.stringify(rows.map(i => i.path)))
     showResult(rows)
+    updateTitleUrl()
   })
 
   // 按钮-保存/收藏
@@ -516,8 +551,9 @@ const main = async () => {
         boxWidth: '30%',
         useBootstrap: false,
         title: 'Please put in NAME:',
-        content: `<input name="name" style="width:95%;border:none;" value="${condition.map(i => i[3]).join('||')}">`,
+        content: `<input name="name" style="width:95%;border:none;">`,
         autoClose: 'cancel|20000',
+        backgroundDismiss: 'cancel',
         buttons: {
           submit: {
             text: 'Submit',
@@ -533,7 +569,7 @@ const main = async () => {
           }
         },
         onContentReady: function () {
-          this.$content.find('[name="name"]').focus()
+          this.$content.find('[name="name"]').focus().val(getConditionReadable())
         }
       })
     })
@@ -542,6 +578,7 @@ const main = async () => {
       if (!('bookmarkCondition' in CONFIG)) CONFIG.bookmarkCondition = {}
       CONFIG.bookmarkCondition[name.trim()] = condition
     })
+    tooltip(`保存完成`, name)
   })
 
   // 按钮-打开新窗口
@@ -592,6 +629,12 @@ const main = async () => {
         }
       }
     }
+    tooltip('移动完成')
+  })
+
+  // 按钮-移动结果
+  $('.filter').find('[name="clear"]').on('click', async (e) => {
+    ipcRenderer.send('clear')
   })
 
   // 自动填充-选择项点击
@@ -602,21 +645,21 @@ const main = async () => {
 
   // 结果-预览图片
   let loading = false
-  $('.result').on('mouseover', 'tr', (e) => {
+  $('.result').on('mouseover', 'tr>[name^="title"]', (e) => {
     if (loading) return
     loading = true
     let CONFIG = ipcRenderer.sendSync('config')
-    let target = e.currentTarget
+    let target = e.currentTarget.parentElement
     let file = $(target).attr('path')
-    if (!file) {
+    if (!file || !fs.existsSync(path.resolve(CONFIG.libraryFolder, file))) {
+      if (file) $(target).attr('path', null)
       $('.preview').hide()
       loading = false
       return
     }
-    let html = []
+
     let { dir, name } = path.parse(file)
     let src = path.resolve(CONFIG.libraryFolder, dir, name + '.jpg')
-
     let cover = $(target).attr('cover')
     if (!cover && fs.existsSync(src)) {
       let buffer = fs.readFileSync(src)
@@ -624,41 +667,46 @@ const main = async () => {
       cover = URL.createObjectURL(blob)
       $(target).attr('cover', cover)
     }
-    html.push(`<img src="${cover}" />`)
+    if (cover) $('.preview[name="cover"]').html(`<img src="${cover}" />`).show()
 
+    let html = []
     let tagsChs = $(target).prop('tagsChs')
     if (!tagsChs) {
       let tags = $(target).attr('tags')
-      tags = decodeURIComponent(tags)
-      tags = tags.split('\n')
-      tagsChs = []
-      for (let tag of tags) {
-        let [main, subs] = tag.split(': ')
-        let chs = findData(main).cname + ': '
-        let subChs = []
-        for (let sub of subs.split(', ')) {
-          subChs.push(findData(main, sub).cname || sub)
+      if (!tags || tags === 'null') {
+        tagsChs = ''
+      } else {
+        tags = JSON.parse(decodeURIComponent(tags))
+        tagsChs = []
+        for (let main in tags) {
+          let chs = findData(main).cname + ': '
+          let subChs = []
+          for (let sub of tags[main]) {
+            subChs.push(findData(main, sub).cname || sub)
+          }
+          tagsChs.push(chs + subChs.join(', '))
         }
-        tagsChs.push(chs + subChs.join(', '))
+        tagsChs = tagsChs.map(i => `<span>${i}</span>`).join('<br>')
       }
-      tagsChs = tagsChs.map(i => `<span>${i}</span>`).join('<br>')
       $(target).prop('tagsChs', tagsChs).attr('tags', null)
     }
     html.push(tagsChs)
 
-    $('.preview').html(html.join('<br>')).show()
+    $('.preview[name="tags"]').html(html.join('<br>')).show()
     loading = false
   })
-  $('.result').on('mousemove', 'tr', (e) => {
-    let _width = $('.preview').outerWidth()
-    let _height = $('.preview').outerHeight()
+  $('.result').on('mousemove', 'tr>[name^="title"]', (e) => {
+    let _width = $('.preview[name="tags"]').outerWidth()
+    let _height = $('.preview[name="tags"]').outerHeight()
     let left = _width + e.clientX + 10 < window.innerWidth ? e.clientX + 5 : e.clientX - _width - 5
     let top = _height + e.clientY + 10 < window.innerHeight ? e.clientY + 5 : e.clientY - _height - 5
     if (left < 0) left = 0
     if (top < 0) top = 0
-    $('.preview').css({ left, top })
+    $('.preview[name="tags"]').css({ left, top })
   })
   $('.result').on('mouseout', 'table', (e) => {
+    // if ($(e.toElement).is('table,table *,.preview *')) return
+    // console.log(e.toElement)
     $('.preview').hide()
   })
 
@@ -668,7 +716,7 @@ const main = async () => {
     let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
     parent.addClass('trHover')
   })
-  $('.result').on('click', 'tr>td>button[name="star"]', async (e) => {
+  $('.result').on('click', 'tr[path]>td>button[name="star"]', async (e) => {
     e.preventDefault()
     let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
     let file = parent.attr('path')
@@ -684,7 +732,7 @@ const main = async () => {
     })
     parent.attr('star', star)
   })
-  $('.result').on('click', 'tr>td>button[name="clear"]', async (e) => {
+  $('.result').on('click', 'tr[path]>td>button[name="clear"]', async (e) => {
     e.preventDefault()
     let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
     let file = parent.attr('path')

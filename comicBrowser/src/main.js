@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.98
+// @Version:            1.0.99
 // @Author:             dodying
 // @Created:            2020-02-09 16:15:40
-// @Modified:           2020-2-28 18:29:59
+// @Modified:           2020-3-3 21:21:09
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            null
@@ -55,7 +55,7 @@
         })
       }
     } else {
-      $('.title-bar-btns:visible').hide()
+      $('.title-bar-btns').hide()
     }
   })
 

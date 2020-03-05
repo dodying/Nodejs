@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.582
+// @Version:            1.0.692
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-2 15:28:06
+// @Modified:           2020-3-4 13:32:07
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -35,6 +35,7 @@ const JSZip = require('jszip')
 
 const walk = require('./../comicSort/js/walk')
 const parseInfo = require('./../comicSort/js/parseInfo')
+const getTitleMain = require('./js/getTitleMain')
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, './../comicSort', 'EHT.json'), 'utf-8')).data
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc']
 
@@ -179,7 +180,8 @@ let updateTableFiles = async (obj) => {
   console.debug('New Files\t', files.length, '\nExisted Files:\t', existedInfo.length)
 
   console.time('INSERT INTO')
-  let queryString = `INSERT INTO files (path, size, title, title_jpn, category, web, language, pages, time_upload, uploader, rating, favorited, time_download, summary, page, tags, tagString) values `
+  let column = ['path', 'size', 'title', 'title_main', 'title_jpn', 'title_jpn_main', 'category', 'web', 'language', 'pages', 'time_upload', 'uploader', 'rating', 'favorited', 'time_download', 'tags', 'artist']
+  let queryString = `INSERT INTO files (${column.join(', ')}) values `
   let arr = []
   for (let file of files) {
     if (arr.length >= 100) {
@@ -200,7 +202,12 @@ let updateTableFiles = async (obj) => {
     } catch (error) {
       // console.error(`Error:\t无法读取文件 "${file}"`)
       let title = path.parse(fullpath).name
-      arr.push([file, size, title, title, 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL', 'NULL'])
+      arr.push([
+        file, size,
+        title, getTitleMain(title),
+        title, getTitleMain(title),
+        ...'1'.repeat(column.length - 6).split('').map(i => 'NULL')
+      ])
       continue
     }
 
@@ -223,17 +230,19 @@ let updateTableFiles = async (obj) => {
     for (let i of mainTag) {
       if (i in info) tags[i] = info[i]
     }
+    let artist = tags.artist ? tags.artist.sort().slice(0, 3).join(', ') : tags.group ? tags.group.sort().slice(0, 3).join(', ') : ''
     arr.push([
       file, size,
-      info.title, info.jTitle, info.Category, info.web, info.lang,
+      info.title, getTitleMain(info.title),
+      info.jTitle, getTitleMain(info.jTitle),
+      info.Category, info.web, info.lang,
       isNaN(parseInt(info.length)) ? 0 : parseInt(info.length),
       info.Posted, info.Uploader,
       isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
       isNaN(parseInt(info.Favorited)) ? 0 : parseInt(info.Favorited),
-      info.downloadTime, info.summary,
-      JSON.stringify(info.page),
+      info.downloadTime,
       JSON.stringify(tags),
-      info.tagString
+      artist
     ])
   }
   if (arr.length) {
@@ -346,6 +355,9 @@ ipcMain.on('open-external', async (event, url, name) => {
   if (name === 'path') {
     let fullpath = path.resolve(config.libraryFolder, url)
     await shell.openItem(fullpath)
+  } else if (name === 'item') {
+    let fullpath = path.resolve(config.libraryFolder, url)
+    await shell.showItemInFolder(fullpath)
   } else if (name === 'delete') {
     let fullpath = path.resolve(config.libraryFolder, url)
     if (fse.existsSync(fullpath)) fse.unlinkSync(fullpath)
@@ -378,6 +390,18 @@ ipcMain.on('config', (event, todo = 'get', obj, value) => {
   event.returnValue = configThis
 })
 
+ipcMain.on('clear', (event) => {
+  delete config.history
+  delete config.delete
+  for (let i of ['star', 'lastViewPosition', 'lastViewTime']) {
+    for (let file in config[i]) {
+      let fullpath = path.resolve(config.libraryFolder, file)
+      if (!fse.existsSync(fullpath)) delete config[i][file]
+    }
+  }
+  fse.writeJSONSync('./config.json', config, { spaces: 2 })
+})
+
 ipcMain.on('database-connect', async (event, obj, todo) => {
   obj = obj || config
 
@@ -406,25 +430,28 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
     // await connection.query(queryString)
 
     queryString = 'CREATE TABLE `files` (' + [
-      'id int unsigned not null auto_increment primary key',
-      'path text',
-      'size int unsigned',
-      'title text',
-      'title_jpn text',
-      'category varchar(255)',
-      'web varchar(255)',
-      'language varchar(255)',
+      'id int unsigned not null auto_increment',
+      'path text', // 路径
+      'size int unsigned', // 文件大小
+      'title varchar(511)', // 英文标题
+      'title_main varchar(511)', // 英文标题的主要内容
+      'title_jpn varchar(511)', // 日文标题
+      'title_jpn_main varchar(511)', // 日文标题的主要内容
+      'category varchar(20)', // 类别
+      'web varchar(50)', // 网址
+      'language varchar(2)', // 语言
       'pages int unsigned', // 页数
-      'time_upload timestamp', // '2020-01-02 21:14:16.000'
-      'uploader varchar(255)',
-      'rating float unsigned',
+      'time_upload timestamp', // 上传时间 '2020-01-02 21:14:16.000'
+      'uploader varchar(40)', // 上传者
+      'rating float unsigned', // 评分
       'favorited int unsigned', // 收藏人数
       'time_download timestamp', // 下载时间
-      'summary text',
-      'page json',
-      'tags json',
-      'tagString text'
+      'tags json', // 标签
+      'artist varchar(511)', // 作者
+      'PRIMARY KEY (id)'
+      // 'INDEX index_path (path(255))'
     ].join(', ') + ')'
+    // SELECT MAX(LENGTH(path)) FROM files
     await connection.query(queryString)
     event.returnValue = ['Init Success', code]
   } else if (todo === 'update' && code === 0) {
@@ -460,7 +487,9 @@ ipcMain.on('query-by-condition', async (event, condition) => {
     'tags': 'json',
     'path': 'text',
     'title': 'text',
+    'title_main': 'text',
     'title_jpn': 'text',
+    'title_jpn_main': 'text',
     'size': 'number',
     'rating': 'number',
     'category': 'text',
@@ -471,9 +500,10 @@ ipcMain.on('query-by-condition', async (event, condition) => {
     'uploader': 'text',
     'favorited': 'number',
     'time_download': 'datetime',
-    'summary': 'text'
+    'artist': 'text'
   }
   let querySegment = []
+  let order = ['path', 'time_upload', 'time_download']
   for (let i of condition) {
     let [not, column, comparison, value, value1] = i
     let type = typeLib[column]
@@ -528,12 +558,15 @@ ipcMain.on('query-by-condition', async (event, condition) => {
     } else if (['REGEXP', 'NOT REGEXP'].includes(comparison)) {
       str = `${column} ${comparison} ${mysql.escape(`${value}`)}`
     } else if (['Duplicate'].includes(comparison)) {
-      str = `${column} IN (SELECT ${column} FROM files GROUP BY ${column} HAVING COUNT(${column}) > 1) ORDER BY ${column}`
+      let str1 = `SELECT ${column} FROM files WHERE ${column} != "" GROUP BY ${column} HAVING COUNT(${column}) > 1`
+      str = `${column} IN (${str1})`
+      order = [column, 'artist']
     }
     if (not) str = `NOT(${str})`
     querySegment.push(str)
   }
   query += querySegment.join(' AND ')
+  query += ' ORDER BY ' + order.join(', ')
   console.log('database-query', query)
   let result = [[]]
   try {
