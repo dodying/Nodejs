@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               copyInfo
 // @Description:        copyInfo
-// @Version:            1.0.345
+// @Version:            1.0.346
 // @Author:             dodying
 // @Created:            2020-01-18 15:55:20
-// @Modified:           2020-3-2 14:54:06
+// @Modified:           2020-3-4 12:15:00
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,fs-extra,jszip,readline-sync
@@ -25,8 +25,6 @@ const readlineSync = require('readline-sync')
 const clipboardy = require('clipboardy')
 const parseInfo = require('./../js/parseInfo')
 const findData = require('./../js/findData')
-const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, '../', 'EHT.json'), 'utf-8')).data
-findData.init(EHT)
 
 // Function
 const color = {

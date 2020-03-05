@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               artistTag
 // @Description:        将artist文件夹下子文件夹按照最多的标签重命名
-// @Version:            1.0.125
+// @Version:            1.0.126
 // @Author:             dodying
-// @Modified:           2020-3-2 14:53:15
+// @Modified:           2020-3-4 12:14:54
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:fs-extra,jszip
@@ -20,8 +20,6 @@ const fse = require('fs-extra')
 const JSZip = require('jszip')
 const parseInfo = require('./../js/parseInfo')
 const findData = require('./../js/findData')
-const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, '../', 'EHT.json'), 'utf-8')).data
-findData.init(EHT)
 
 // Function
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '')

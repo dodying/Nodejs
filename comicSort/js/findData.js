@@ -1,18 +1,35 @@
 'use strict'
 
-let Dataset
+const fs = require('fs')
+const path = require('path')
+
+const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../EHT.json'), 'utf-8')).data
+let Dataset = EHT
 let _ = require('./../config')
 
 const findData = (main, sub = undefined, textOnly = true) => {
-  let data = Dataset.filter(i => i.namespace === main)
-  if (data.length === 0) return {}
-  if (sub === undefined) {
-    return {
-      name: main,
-      cname: data[0].frontMatters.name,
-      info: data[0].frontMatters.description
+  if (!main && !sub) return {}
+
+  let data
+  if (main) {
+    data = Dataset.filter(i => i.namespace === main)
+    if (data.length === 0) return {}
+    if (sub === undefined) {
+      return {
+        name: main,
+        cname: data[0].frontMatters.name,
+        info: data[0].frontMatters.description
+      }
+    }
+  } else {
+    data = Dataset.filter(i => !['rows'].includes(i.namespace) && sub.replace(/_/g, ' ') in i.data)
+    if (data.length) {
+      main = data[0].namespace
+    } else {
+      return {}
     }
   }
+
   let data1 = data[0].data[sub.replace(/_/g, ' ')]
   if (!data1) {
     if (sub.match(' \\| ')) {
