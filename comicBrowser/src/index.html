@@ -12,6 +12,8 @@
   <script src="./../src/lib/jquery.js"></script>
   <script src="./../src/lib/jquery.tablesorter.min.js"></script>
   <script src="./../src/lib/jquery.tablesorter.widgets.min.js"></script>
+  <script src="./../src/lib/jquery.tablesorter.pager.min.js"></script>
+  <script src="./../src/lib/widgets/widget-scroller.min.js"></script>
   <script src="./../src/lib/jquery-confirm.min.js"></script>
   <script src="./../src/lib/mousetrap.min.js"></script>
   <script>if (window.module) module = window.module;</script>
@@ -24,25 +26,7 @@
         <input type="checkbox" name="not-condition">
         <span class="pointer" name="toggle-not-condition">:NOT</span>
 
-        <select name="column">
-          <option type="json" value="tags">tags</option>
-          <option type="text" value="path">path</option>
-          <option type="text" value="artist">artist</option>
-          <option type="text" value="title">title</option>
-          <option type="text" value="title_main">title_main</option>
-          <option type="text" value="title_jpn">title_jpn</option>
-          <option type="text" value="title_jpn_main">title_jpn_main</option>
-          <option type="number" value="size">size</option>
-          <option type="number" value="rating">rating</option>
-          <option type="text" value="category">category</option>
-          <option type="text" value="web">web</option>
-          <option type="text" value="language">language</option>
-          <option type="number" value="pages">pages</option>
-          <option type="datetime" value="time_upload">time_upload</option>
-          <option type="text" value="uploader">uploader</option>
-          <option type="number" value="favorited">favorited</option>
-          <option type="datetime" value="time_download">time_download</option>
-        </select>
+        <select name="column"></select>
 
         <select class="comparison hide" name="comp-text">
           <option value="LIKE">包含</option>
@@ -81,10 +65,6 @@
           <option value="BETWEEN AND">BETWEEN AND</option>
           <option value="NOT BETWEEN AND">NOT BETWEEN AND</option>
         </select>
-        <select class="comparison hide" name="comp-boolean">
-          <option value="1">是</option>
-          <option value="0">否</option>
-        </select>
         <select class="comparison" name="comp-json">
           <option value="tags:*">tags:*</option>
           <option value="tags:language">tags:language</option>
@@ -118,12 +98,20 @@
         <input type="button" name="database-update" value="更新数据库">
         <input type="button" name="move-files" value="移动结果">
         <input type="button" name="clear" value="清理">
+        <input type="button" name="toggle-invisible" value="切换invisible">
       </div>
     </div>
 
     <div class="result">
     </div>
-    <div class="preview" name="cover"></div>
+    <div class="pager">
+      <span class="first"></span>
+      <span class="prev"></span>
+      <span class="pagedisplay"></span>
+      <span class="next"></span>
+      <span class="last"></span>
+    </div>
+    <div class="preview" name="cover"><img src="" /></div>
     <div class="preview" name="tags"></div>
   </div>
   <div class="btnBox btnBox-hide">
@@ -133,6 +121,7 @@
   </div>
   <div class="sidebar bookmarks"></div>
   <div class="sidebar history"></div>
+
   <script src="./../src/index.js"></script>
   <script src="./../src/main.js"></script>
 </body>

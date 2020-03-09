@@ -45,6 +45,10 @@
   /* right: 0; */
 }
 
+.query>.preview {
+  display: none;
+}
+
 .query>.preview[name="cover"]>img {
   position: fixed;
   max-width: 25vw;
@@ -100,47 +104,123 @@
 }
 
 a, .result button, .result input[type="button"] {
-  border: none;
-  background-color: #d1cebd;
-  color: -webkit-link;
-  cursor: pointer;
-  text-decoration: underline;
+  background: none;
+  text-decoration: none;
   padding: 0;
+  color: #ccc;
+  border: solid 1px -webkit-link;
+  cursor: pointer;
   margin: 0 1px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
-.result>table {
+.result, .result div {
+  scroll-behavior: smooth;
+}
+
+.result table {
   border-spacing: 0;
 }
 
-.result>table, .result>table th, .result>table td {
+.result table, .result table th, .result table td {
   border: solid 1px black;
 }
 
-.result>table tr:hover, .result>table .trHover {
-  font-weight: bolder;
-  font-size: larger;
-}
-
-.result>table tr:hover>td, .result>table .trHover>td {
+.result table tr:hover>td, .result table .trHover>td {
   color: #ccc!important;
   background-color: #000!important;
 }
 
-.result>table tr[star="1"], .result>table tr[star="1"]>td {
+.result table tr[star="1"], .result table tr[star="1"]>td {
   background-color: #8cba51;
   color: #1b262c;
 }
 
-.result tr[star="1"] [name="star"]::before {
-  content: "UnStar"
+.result table tr[exists="false"]>td:nth-child(1) {
+  background: #512b58!important;
 }
 
-.result tr [name="star"]::before {
-  content: "Star"
+.result tr[star="1"] button[name="star"]::before {
+  content: "🖤"
+}
+
+.result tr[invisible="1"] {
+  position: absolute;
+  left: -9999px;
+  max-height: 0px;
+  overflow: hidden;
+  opacity: 0;
+}
+
+.result tr[raw-invisible="1"] {
+  opacity: 0.5;
+}
+
+.result tr button[name="star"]::before {
+  content: "❤️"
+}
+
+.result tr a[name="delete"]::before {
+  content: "🗑️"
+}
+
+.result tr a[name="native"][href^="./src/viewer.html?file="]::before {
+  content: "📚"
+}
+
+.result tr a[name="native"][href^="./src/viewer.html?file="][href*="&condition="]::before {
+  content: "📜"
+}
+
+.result tr button[name="clear"]::before {
+  content: "🧹"
+}
+
+.result tr a[name="item"]::before {
+  content: "📁"
+}
+
+.result tr button[name="invisible"]::before {
+  content: "🏴"
+}
+
+.result tr a[name="everything"]::before {
+  content: "🔍"
 }
 
 .result td[name="rating"] {
-  color: #1b262c;
+  background-position: 0 100%;
+  background-size: auto 50%;
+  background-repeat: no-repeat;
+}
+
+.pager {
+  display: none;
+  text-align: center;
+}
+
+.pager>* {
+  cursor: pointer;
+  margin: 0 4px;
+}
+
+.pager>.disabled {
+  color: gray;
+  cursor: not-allowed;
+}
+
+.pager>.first::before {
+  content: "|<"
+}
+
+.pager>.prev::before {
+  content: "<<"
+}
+
+.pager>.next::before {
+  content: ">>"
+}
+
+.pager>.last::before {
+  content: ">|"
 }

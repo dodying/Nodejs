@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1048
+// @Version:            1.0.1068
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-3-4 12:14:08
+// @Modified:           2020-3-7 17:05:22
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -25,23 +25,23 @@ let viewInfo = {
 let fileInfo = null
 let viewTime = null
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc']
-let scrollElement = $('.content').get(0)
+const scrollElement = $('.content').get(0)
 
 // 设置
-let sevenZip = '7z'
-let viewTimeMin = 10 * 1000
-let viewPageMin = 3
-let mousemoveDelay = 50
-let fixHeight = 1 // TO ENHANCEMENT 1px 待测试
-let keypressTimeout = 80 // 小于此时间的keypress事件不触发
-let scorllMode = 'jquery' // jquery||auto
-let scrollHeight = 50 // 滚动高度
-let scrollTime = 200 // 仅jquery，每滚动单位高度（可视页面高度）所需时间
-let scrollTimeMax = 2000 // 仅jquery，滚动最大时间
+const sevenZip = '7z'
+const viewTimeMin = 10 * 1000
+const viewPageMin = 3
+const mousemoveDelay = 50
+const fixHeight = 1 // TO ENHANCEMENT 1px 待测试
+const keypressTimeout = 80 // 小于此时间的keypress事件不触发
+const scorllMode = 'jquery' // jquery||auto
+const scrollHeight = 50 // 滚动高度
+const scrollTime = 200 // 仅jquery，每滚动单位高度（可视页面高度）所需时间
+const scrollTimeMax = 2000 // 仅jquery，滚动最大时间
 let zoomPercent = 120 // 缩放百分比
-let zoomPercentStep = 5 // 缩放百分比间隔
-let loadPageHeight = 100 // 距离底部或顶部多高时，读取页面
-let keyMap = {
+const zoomPercentStep = 5 // 缩放百分比间隔
+const loadPageHeight = 100 // 距离底部或顶部多高时，读取页面
+const keyMap = {
   // 全局通用
   separator: [],
   closeAllTabs: ['ctrl+t'],
@@ -75,7 +75,7 @@ let keyMap = {
   upLeft: ['q', '7'],
   upRight: ['e', '9']
 }
-let keyHelp = {
+const keyHelp = {
   help: '显示帮助',
   openFile: '打开文件',
   closeAndSave: '关闭并保存记录',
@@ -113,8 +113,8 @@ let keyHelp = {
 }
 keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`)
 keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`)
-let pageLoadCount = 5 // 一次载入多少页
-let nextPageTop = 200 // 图片距离顶部多远视为下一页
+const pageLoadCount = 5 // 一次载入多少页
+const nextPageTop = 200 // 图片距离顶部多远视为下一页
 
 // 导入原生模块
 const fs = require('fs')
@@ -125,15 +125,17 @@ const cp = require('child_process')
 const electron = require('electron')
 const JSZip = require('jszip')
 
-const parseInfo = require('./../../comicSort/js/parseInfo')
-const findData = require('./../../comicSort/js/findData')
+const waitInMs = require('./../../_lib/waitInMs')
+const parseInfo = require('./../js/parseInfo')
+const findData = require('./../js/findData')
+const removeOtherInfo = require('./../js/removeOtherInfo')
 const ipcRenderer = electron.ipcRenderer
 const Menu = electron.remote.Menu
 
 // Function
 async function configChange (func) {
-  let CONFIG = ipcRenderer.sendSync('config')
-  let noSave = await func(CONFIG)
+  const CONFIG = ipcRenderer.sendSync('config')
+  const noSave = await func(CONFIG)
   if (!noSave) ipcRenderer.sendSync('config', 'set', CONFIG)
 }
 function tooltip (option, content) {
@@ -169,20 +171,9 @@ function tooltip (option, content) {
     }, option))
   })
 }
-function reEscape (text) {
-  // refer https://github.com/lodash/lodash/blob/master/escapeRegExp.js
-  return text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
-}
-function waitInMs (time) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve()
-    }, time)
-  })
-}
-let getCurrentPage = () => {
+const getCurrentPage = () => {
   let onView = $('.content>div').eq(-1)
-  for (let ele of $('.content>div').toArray()) {
+  for (const ele of $('.content>div').toArray()) {
     if ($(ele).offset().top > nextPageTop) {
       onView = $('.content>div').eq($(ele).index() - 1)
       break
@@ -191,32 +182,32 @@ let getCurrentPage = () => {
 
   viewInfo.page = onView.attr('name')
 
-  let img = $(`.content>div[name="${viewInfo.page}"]>img`).attr('src')
+  const img = $(`.content>div[name="${viewInfo.page}"]>img`).attr('src')
   $('.preview>div:nth-child(2)').attr('name', viewInfo.page).html(`<img src="${img}">`)
 }
-let getNaturalWidth = (src) => {
+const getNaturalWidth = (src) => {
   return new Promise((resolve, reject) => {
-    let img = new window.Image()
+    const img = new window.Image()
     img.onload = function () {
       resolve(this.width)
     }
     img.src = src
   })
 }
-let loadImage = async (reverse) => {
+const loadImage = async (reverse) => {
   $('.content').attr('disable-scroll', 'true')
 
   let count = 0
   let i = reverse ? fileList.indexOf($('.content>div').eq(0).attr('name')) - 1 : pageAnchor
   for (; ;) {
     if (i < 0 || i >= fileList.length) break
-    let name = fileList[i]
+    const name = fileList[i]
     if (count >= pageLoadCount) break
     count++
-    let blob = await zipContent.files[name].async('blob')
-    let imageUrl = URL.createObjectURL(blob)
-    let width = await getNaturalWidth(imageUrl)
-    let ele = $(`<div name="${name}"><img src="${imageUrl}" /></div>`).css('width', width * zoomPercent / 100)
+    const blob = await zipContent.files[name].async('blob')
+    const imageUrl = URL.createObjectURL(blob)
+    const width = await getNaturalWidth(imageUrl)
+    const ele = $(`<div name="${name}"><img src="${imageUrl}" /></div>`).css('width', width * zoomPercent / 100)
 
     if (reverse) {
       ele.prependTo('.content')
@@ -230,17 +221,17 @@ let loadImage = async (reverse) => {
 
   $('.content').removeAttr('disable-scroll')
   getCurrentPage()
-  let goon = reverse ? i >= 0 : i < fileList.length
+  const goon = reverse ? i >= 0 : i < fileList.length
   return count >= pageLoadCount && goon // 是否可以继续加载
 }
-let jumpToImage = async (page) => {
+const jumpToImage = async (page) => {
   if (!fileList.includes(page)) return
-  let index = fileList.indexOf(page)
-  let indexFirst = fileList.indexOf($('.content>div').attr('name'))
-  let reverse = index < indexFirst
+  const index = fileList.indexOf(page)
+  const indexFirst = fileList.indexOf($('.content>div').attr('name'))
+  const reverse = index < indexFirst
   let pageLeft = true
   while (true) {
-    let pageFind = $(`.content>div[name="${page}"]`)
+    const pageFind = $(`.content>div[name="${page}"]`)
     if (pageFind.length) {
       $('.content').attr('disable-scroll', 'true')
       scrollTop(pageFind.offset().top)
@@ -253,20 +244,20 @@ let jumpToImage = async (page) => {
     }
   }
 }
-let rememberPosition = async (noTooltip) => {
+const rememberPosition = async (noTooltip) => {
   if (!viewInfo.file || isNaN(viewTime) || new Date().getTime() - viewTime < viewTimeMin || fileList.indexOf(viewInfo.page) < viewPageMin) return
   await configChange((CONFIG) => {
     if (!('lastViewPosition' in CONFIG)) CONFIG.lastViewPosition = {}
     CONFIG.lastViewPosition[viewInfo.file] = viewInfo.page
 
     if (!('lastViewTime' in CONFIG)) CONFIG.lastViewTime = {}
-    let date = new Date()
+    const date = new Date()
     CONFIG.lastViewTime[viewInfo.file] = date.toLocaleString('zh-CN', { hour12: false })
 
     if (CONFIG.rememberHistory) {
       if (!('history' in CONFIG)) CONFIG.history = []
-      let params = new URLSearchParams()
-      for (let key in viewInfo) {
+      const params = new URLSearchParams()
+      for (const key in viewInfo) {
         if (viewInfo[key] && !(['page'].includes(key))) params.set(key, viewInfo[key])
       }
       CONFIG.history.unshift(`./src/viewer.html?${params.toString()}`)
@@ -275,37 +266,37 @@ let rememberPosition = async (noTooltip) => {
   })
   if (!noTooltip) await tooltip('记录已保存')
 }
-let showFile = async (option = {}) => {
+const showFile = async (option = {}) => {
   // option:
   //  page: string
   //  relativeBook: string 'prev','next'
   if (loading) return
-  let params = (new URL(document.location)).searchParams
+  const params = (new URL(document.location)).searchParams
   let file = params.get('file')
   if (!file) {
     await tooltip('缺少参数', null)
     onLoadError()
     return
   }
-  let CONFIG = ipcRenderer.sendSync('config')
+  const CONFIG = ipcRenderer.sendSync('config')
   let page = option.page
-  let condition = params.get('condition')
+  const condition = params.get('condition')
 
   let fullpath = path.resolve(CONFIG.libraryFolder, file)
 
   if (option.relativeBook) {
     let files
     if (condition) {
-      if (condition in window.localStorage) {
-        files = JSON.parse(window.localStorage.getItem(condition))
+      if ('list_' + condition in window.localStorage) {
+        files = JSON.parse(window.localStorage.getItem('list_' + condition))
       } else {
-        let conditionArr = JSON.parse(condition)
-        let [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr)
+        const conditionArr = JSON.parse(condition)
+        const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr)
         files = rows.map(i => i.path)
-        window.localStorage.setItem(condition, JSON.stringify(files))
+        window.localStorage.setItem('list_' + condition, JSON.stringify(files))
       }
     } else {
-      let dirname = path.dirname(file)
+      const dirname = path.dirname(file)
       files = fs.readdirSync(path.dirname(fullpath))
       files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i))
     }
@@ -360,8 +351,8 @@ let showFile = async (option = {}) => {
   zipContent = null
   fileList = null
 
-  let targetData = fs.readFileSync(fullpath)
-  let jszip = new JSZip()
+  const targetData = fs.readFileSync(fullpath)
+  const jszip = new JSZip()
   try {
     zipContent = await jszip.loadAsync(targetData)
   } catch (error) {
@@ -375,8 +366,8 @@ let showFile = async (option = {}) => {
   if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
     fileInfo = null
   } else {
-    let infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
-    let data = await zipContent.files[infoFile].async('text')
+    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
+    const data = await zipContent.files[infoFile].async('text')
     fileInfo = parseInfo(data)
   }
 
@@ -386,6 +377,10 @@ let showFile = async (option = {}) => {
   if (!page || !fileList.includes(page)) page = fileList[0]
 
   viewInfo = { file, page, condition }
+
+  if (condition) {
+    window.localStorage.setItem(condition, file)
+  }
   // updateTitleUrl()
 
   pageAnchor = fileList.includes(page) ? fileList.indexOf(page) : 0
@@ -395,9 +390,9 @@ let showFile = async (option = {}) => {
   document.title = path.basename(file) + '\\' + (page || '')
   onLoadEnd()
 }
-let openFile = async () => {
-  let CONFIG = ipcRenderer.sendSync('config')
-  let result = electron.remote.dialog.showOpenDialogSync({
+const openFile = async () => {
+  const CONFIG = ipcRenderer.sendSync('config')
+  const result = electron.remote.dialog.showOpenDialogSync({
     defaultPath: path.resolve(CONFIG.libraryFolder, viewInfo.file ? path.dirname(viewInfo.file) : ''),
     filters: [{
       name: '漫画压缩包',
@@ -409,17 +404,17 @@ let openFile = async () => {
     properties: ['openFile']
   })
   if (result && result.length) {
-    let fullpath = result[0]
-    let file = path.relative(CONFIG.libraryFolder, fullpath)
+    const fullpath = result[0]
+    const file = path.relative(CONFIG.libraryFolder, fullpath)
     viewInfo = { file }
     updateTitleUrl()
     await showFile()
   }
 }
-let onLoadEnd = () => {
+const onLoadEnd = () => {
   $('.titlebar').hide()
   if (viewInfo.file) {
-    let value = fileList.indexOf(viewInfo.page) + 1
+    const value = fileList.indexOf(viewInfo.page) + 1
     $('.statusbar>[name="range"]').attr('max', fileList.length).val(value)
     $('.statusbar>[name="current"]').text(value)
     $('.statusbar>[name="max"]').text(fileList.length)
@@ -431,18 +426,18 @@ let onLoadEnd = () => {
   loading = false
   updateTitleUrl()
 }
-let onLoadError = () => {
+const onLoadError = () => {
   // viewInfo.file = ''
   onLoadEnd()
 }
-let updateTitleUrl = () => {
+const updateTitleUrl = () => {
   let title = 'VIEWER'
   let url = null
   if (!viewInfo.file) {
     url = window.location.origin + window.location.pathname
   } else {
-    let params = new URLSearchParams()
-    for (let key in viewInfo) {
+    const params = new URLSearchParams()
+    for (const key in viewInfo) {
       if (viewInfo[key] && !(['page'].includes(key))) params.set(key, viewInfo[key])
     }
     url = '?' + params.toString()
@@ -451,27 +446,12 @@ let updateTitleUrl = () => {
   document.title = title
   window.history.pushState(null, title, url)
 }
-let removeOtherInfo = (text, reverse = false) => {
-  let infoGroup = ['[]', '()', '{}', '【】']
-  if (reverse) text = text.split('').reverse().join('')
-  let group = reverse ? infoGroup.map(i => i.split('').reverse().join('')) : infoGroup
-  group = group.map(i => i.split('').map(j => reEscape(j)))
-  let re = group.map(i => `${i[0]}.*?${i[1]}`).join('|')
-  re = new RegExp(`^(${re})`)
-  let matched = text.match(re)
-  while (matched) {
-    text = text.replace(re, '').trim()
-    matched = text.match(re)
-  }
-  if (reverse) text = text.split('').reverse().join('')
-  return text
-}
-let showFileList = (files, title) => {
-  let html = [
+const showFileList = (files, title) => {
+  const html = [
     '<div style="text-align:justify;">',
     '<ul>'
   ]
-  for (let file of files) {
+  for (const file of files) {
     html.push(`<li><span name="${file}" style="cursor:pointer;">${file}</span></li>`)
   }
   html.push('</ul>', '</div>')
@@ -482,12 +462,12 @@ let showFileList = (files, title) => {
     content: html.join(''),
     autoClose: null,
     onContentReady: function () {
-      let fileThis = $(this.$content).find(`li:has(span[name="${window.CSS.escape(viewInfo.file)}"])`)
+      const fileThis = $(this.$content).find(`li:has(span[name="${window.CSS.escape(viewInfo.file)}"])`)
       if (fileThis.length) fileThis.css('color', 'red').get(0).scrollIntoView()
       $(this.$content).find('li>span[name]').on('click', async (e) => {
         await rememberPosition(true)
         this.close()
-        let name = $(e.target).attr('name')
+        const name = $(e.target).attr('name')
         viewInfo.file = name
         updateTitleUrl()
         await showFile()
@@ -495,7 +475,7 @@ let showFileList = (files, title) => {
     }
   })
 }
-let scrollTop = (top, left = 0, speed, absolute = false) => {
+const scrollTop = (top, left = 0, speed, absolute = false) => {
   if (scorllMode === 'jquery') {
     $(scrollElement).css('scroll-behavior', 'unset')
     if (!speed) {
@@ -526,21 +506,21 @@ const main = async () => {
   $('.content').on('scroll', async (e) => {
     getCurrentPage()
     if ($('.content').attr('disable-scroll')) return
-    let thisScrollTop = scrollElement.scrollTop
+    const thisScrollTop = scrollElement.scrollTop
     if (thisScrollTop > lastScrollTop) {
-      let scrollHeight = scrollElement.scrollHeight
-      let height = $('.content').height() + thisScrollTop
+      const scrollHeight = scrollElement.scrollHeight
+      const height = $('.content').height() + thisScrollTop
       if (height + loadPageHeight >= scrollHeight) {
         await loadImage()
       }
     } else {
       if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
         lastScrollEnd = false
-        let page = viewInfo.page
+        const page = viewInfo.page
         await loadImage(true)
         await waitInMs(500)
         $('.content').attr('disable-scroll', 'true')
-        let preferTop = scrollElement.scrollTop + $(`.content>div[name="${page}"]`).offset().top
+        const preferTop = scrollElement.scrollTop + $(`.content>div[name="${page}"]`).offset().top
         scrollTop(preferTop, 0, 100, true)
         let scrollEnd
         scrollEnd = setInterval(() => {
@@ -564,8 +544,8 @@ const main = async () => {
       clearTimeout(mousemoveTimeoutId)
       mousemoveTimeoutId = null
     }
-    let leftPercent = Math.round(e.clientX / $('body').prop('clientWidth') * 100)
-    let topPercent = Math.round(e.clientY / $('body').prop('clientHeight') * 100)
+    const leftPercent = Math.round(e.clientX / $('body').prop('clientWidth') * 100)
+    const topPercent = Math.round(e.clientY / $('body').prop('clientHeight') * 100)
     if (leftPercent >= 80 && topPercent >= 80) {
       $('.preview').show()
     } else if (topPercent <= 10 && leftPercent >= 20 && leftPercent <= 80) {
@@ -573,7 +553,7 @@ const main = async () => {
       updateTitleUrl()
     } else if (topPercent >= 90 && leftPercent >= 20 && leftPercent <= 80) {
       $('.statusbar').show()
-      let value = fileList.indexOf(viewInfo.page) + 1
+      const value = fileList.indexOf(viewInfo.page) + 1
       $('.statusbar>[name="range"]').val(value)
       $('.statusbar>[name="current"]').text(value)
     } else if ((leftPercent <= 10 || leftPercent >= 90) && topPercent >= 20 && topPercent <= 80) {
@@ -588,34 +568,34 @@ const main = async () => {
     mousemoveLastTime = new Date().getTime()
   })
   $('.statusbar>[name="range"]').on('change', async e => {
-    let value = $(e.target).val()
+    const value = $(e.target).val()
     await jumpToImage(fileList[value - 1])
     $(e.target).val(value)
     $('.statusbar>[name="current"]').text(value)
   })
   $('.preview>div:nth-child(1)').on('mousemove', (e) => {
-    let target = $('.preview>div:nth-child(2)')
+    const target = $('.preview>div:nth-child(2)')
     $('.preview>.coverBox').css({
       top: e.pageY - target.offset().top + 20,
       left: e.pageX - target.offset().left
     }).show()
   })
   $('.preview>div:nth-child(2)').on('mousemove', (e) => {
-    let target = $(e.target)
-    let x = (e.pageX - target.offset().left) / target.width()
-    let y = (e.pageY - target.offset().top) / target.height()
+    const target = $(e.target)
+    const x = (e.pageX - target.offset().left) / target.width()
+    const y = (e.pageY - target.offset().top) / target.height()
     $('.preview>.coverBox').css({
       top: target.height() * y + 20,
       left: target.width() * x
     }).show()
   })
   $('.preview>div:nth-child(1)').on('click', async (e) => {
-    let target = $('.preview>div:nth-child(2)')
-    let x = (e.pageX - target.offset().left) / target.width()
-    let y = (e.pageY - target.offset().top) / target.height()
+    const target = $('.preview>div:nth-child(2)')
+    const x = (e.pageX - target.offset().left) / target.width()
+    const y = (e.pageY - target.offset().top) / target.height()
 
-    let name = $('.preview>div:nth-child(2)').attr('name')
-    let elem = $(`.content>div[name="${name}"]`)
+    const name = $('.preview>div:nth-child(2)').attr('name')
+    const elem = $(`.content>div[name="${name}"]`)
     $('.content').css('scroll-behavior', 'unset')
     scrollTop(elem.offset().top + elem.height() * y, elem.offset().left + elem.width() * x, 20)
     $('.content').css('scroll-behavior', 'smooth')
@@ -644,12 +624,12 @@ const main = async () => {
 
   // 右键菜单
   let rightClickPosition = null
-  let menuItem = [
+  const menuItem = [
     {
       label: '打开文件夹',
       click: () => {
-        let CONFIG = ipcRenderer.sendSync('config')
-        let fullpath = path.resolve(CONFIG.libraryFolder, viewInfo.file)
+        const CONFIG = ipcRenderer.sendSync('config')
+        const fullpath = path.resolve(CONFIG.libraryFolder, viewInfo.file)
         electron.remote.shell.showItemInFolder(fullpath)
       }
     }, {
@@ -666,7 +646,7 @@ const main = async () => {
       }
     }
   ]
-  let contextMenu = Menu.buildFromTemplate(menuItem)
+  const contextMenu = Menu.buildFromTemplate(menuItem)
   $('.content').on('contextmenu', (e) => {
     e.preventDefault()
     rightClickPosition = { x: e.x, y: e.y }
@@ -677,10 +657,10 @@ const main = async () => {
   $('body').on('click', 'a', async (e) => {
     e.preventDefault()
     $('.trHover').removeClass('trHover')
-    let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
+    const parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
     parent.addClass('trHover')
-    let href = $(e.target).attr('href')
-    let name = $(e.target).attr('name')
+    const href = $(e.target).attr('href')
+    const name = $(e.target).attr('name')
     // name: native, path, delete, null
     if (name === 'native') {
       ipcRenderer.send('open', href)
@@ -706,7 +686,7 @@ const main = async () => {
     $('.content').attr('disable-scroll', 'true').empty()
     $('.openfile').show()
 
-    let file = viewInfo.file
+    const file = viewInfo.file
     configChange((CONFIG) => {
       if (CONFIG.lastViewPosition && file in CONFIG.lastViewPosition) delete CONFIG.lastViewPosition[file]
       if (CONFIG.lastViewTime && file in CONFIG.lastViewTime) delete CONFIG.lastViewTime[file]
@@ -720,7 +700,7 @@ const main = async () => {
     scrollTop($(`.content>div[name="${viewInfo.page}"]`).offset().top)
   })
   Mousetrap.bind(keyMap.deletePage, async function (e, combo) { // 删除当前页
-    let confirm = await tooltip({
+    const confirm = await tooltip({
       title: '是否删除当前页',
       content: viewInfo.page,
       autoClose: null,
@@ -738,9 +718,9 @@ const main = async () => {
       }
     })
     if (confirm !== 'ok') return
-    let CONFIG = ipcRenderer.sendSync('config')
-    let fullpath = path.resolve(CONFIG.libraryFolder, viewInfo.file)
-    let result = cp.execFileSync(sevenZip, ['d', fullpath, viewInfo.page])
+    const CONFIG = ipcRenderer.sendSync('config')
+    const fullpath = path.resolve(CONFIG.libraryFolder, viewInfo.file)
+    const result = cp.execFileSync(sevenZip, ['d', fullpath, viewInfo.page])
     if (result.toString().match('Everything is Ok')) {
       await tooltip('页面已删除', viewInfo.file + '\\' + viewInfo.page)
       await configChange((CONFIG) => {
@@ -753,7 +733,7 @@ const main = async () => {
     }
   })
   Mousetrap.bind(keyMap.deleteFile, async function (e, combo) { // 删除当前文件
-    let confirm = await tooltip({
+    const confirm = await tooltip({
       title: '是否删除文件',
       content: viewInfo.file,
       autoClose: null,
@@ -809,7 +789,7 @@ const main = async () => {
     isTop = isTop && fileList.indexOf(viewInfo.page) === 0
     let isBottom = $('.content').height() + scrollElement.scrollTop + fixHeight >= scrollElement.scrollHeight
     isBottom = isBottom && (!fileList || pageAnchor >= fileList.length)
-    let step = scrollElement.clientHeight
+    const step = scrollElement.clientHeight
 
     if (keyMap.left.includes(combo) && !isTop) { // 向上滚动
       scrollTop(-step)
@@ -828,8 +808,8 @@ const main = async () => {
   Mousetrap.bind([].concat(keyMap.plus, keyMap.minus), async (e, combo) => { // 放大缩小
     zoomPercent += (keyMap.plus.includes(combo) ? zoomPercentStep : -zoomPercentStep)
     tooltip(`当前缩放: ${zoomPercent}%`)
-    for (let ele of $('.content>div').toArray()) {
-      let width = $(ele).find('img').prop('naturalWidth')
+    for (const ele of $('.content>div').toArray()) {
+      const width = $(ele).find('img').prop('naturalWidth')
       $(ele).css('width', width * zoomPercent / 100)
     }
     await jumpToImage(viewInfo.page)
@@ -840,8 +820,8 @@ const main = async () => {
     title = removeOtherInfo(title, true)
     let jTitle = removeOtherInfo(fileInfo.jTitle)
     jTitle = removeOtherInfo(jTitle, true)
-    let dirname = path.dirname(viewInfo.file)
-    let html = [
+    const dirname = path.dirname(viewInfo.file)
+    const html = [
       '<div style="text-align:justify;">',
       '<ul>',
       `<li>标题: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"title","LIKE","${title}",null]]`)}" style="margin:0 5px;">${title}</a></li>`,
@@ -851,13 +831,13 @@ const main = async () => {
       `<li>打开路径: <a name="path" href="${dirname}">${dirname}</a></li>`,
       `<li>web: <a href="${fileInfo.web}">${fileInfo.web}</a></li>`
     ]
-    for (let main of mainTag) {
+    for (const main of mainTag) {
       if (!(main in fileInfo)) continue
-      let mainChs = findData(main).cname
+      const mainChs = findData(main).cname
       let htmlLine = `<li>${mainChs}: `
-      for (let sub of fileInfo[main]) {
-        let subChs = findData(main, sub).cname || sub
-        let condition = encodeURIComponent(`[[false,"tags","tags:${main}","${sub}",null]]`)
+      for (const sub of fileInfo[main]) {
+        const subChs = findData(main, sub).cname || sub
+        const condition = encodeURIComponent(`[[false,"tags","tags:${main}","${sub}",null]]`)
         htmlLine += `<a name="native" href="./src/index.html?condition=${condition}" style="margin:0 5px;">${subChs}</a>`
       }
       html.push(htmlLine + '</li>')
@@ -872,15 +852,15 @@ const main = async () => {
     })
   })
   Mousetrap.bind(keyMap.help, function (e, combo) { // 显示所有快捷键
-    let html = [
+    const html = [
       '<div style="display:flex;">',
       '<table style="flex:1;"><tbody>'
     ]
-    let table2 = []
+    const table2 = []
     let nextTable = false
-    for (let key in keyHelp) {
+    for (const key in keyHelp) {
       if (key === 'separator') nextTable = true
-      let bindings = keyMap[key].map(i => `<span>${i}</span>`).join('')
+      const bindings = keyMap[key].map(i => `<span>${i}</span>`).join('')
         ; (nextTable ? table2 : html).push(`<tr><td class="keyBindings">${bindings}</td><td class="helpDescription">${keyHelp[key]}</td></tr>`)
     }
     html.push('</tbody></table>', '<table style="flex:1;"><tbody>', ...table2, '</tbody></table>', '</div>')
@@ -905,11 +885,11 @@ const main = async () => {
     tooltip('书籍已收藏')
   })
   Mousetrap.bind(keyMap.showFileList, function (e, combo) { // 显示文件列表并跳转
-    let html = [
+    const html = [
       '<div style="text-align:justify;">',
       '<ul>'
     ]
-    for (let file of fileList) {
+    for (const file of fileList) {
       html.push(`<li><span name="${file}" style="cursor:pointer;">${file}</span></li>`)
     }
     html.push('</ul>', '</div>')
@@ -929,23 +909,23 @@ const main = async () => {
     })
   })
   Mousetrap.bind(keyMap.readingList, async function (e, combo) { // 显示阅读列表
-    let CONFIG = ipcRenderer.sendSync('config')
-    let condition = viewInfo.condition
-    let file = viewInfo.file
-    let fullpath = path.resolve(CONFIG.libraryFolder, file)
+    const CONFIG = ipcRenderer.sendSync('config')
+    const condition = viewInfo.condition
+    const file = viewInfo.file
+    const fullpath = path.resolve(CONFIG.libraryFolder, file)
 
     let files
     if (condition) {
-      if (condition in window.localStorage) {
-        files = JSON.parse(window.localStorage.getItem(condition))
+      if ('list_' + condition in window.localStorage) {
+        files = JSON.parse(window.localStorage.getItem('list_' + condition))
       } else {
-        let conditionArr = JSON.parse(condition)
-        let [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr)
+        const conditionArr = JSON.parse(condition)
+        const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr)
         files = rows.map(i => i.path)
-        window.localStorage.setItem(condition, JSON.stringify(files))
+        window.localStorage.setItem('list_' + condition, JSON.stringify(files))
       }
     } else {
-      let dirname = path.dirname(file)
+      const dirname = path.dirname(file)
       files = fs.readdirSync(path.dirname(fullpath))
       files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i))
     }
@@ -953,13 +933,13 @@ const main = async () => {
     showFileList(files, 'Reading List:')
   })
   Mousetrap.bind(keyMap.starList, async function (e, combo) { // 显示星标列表
-    let CONFIG = ipcRenderer.sendSync('config')
-    let files = Object.keys(CONFIG.star)
+    const CONFIG = ipcRenderer.sendSync('config')
+    const files = Object.keys(CONFIG.star)
 
     showFileList(files, 'Star List:')
   })
   Mousetrap.bind(keyMap.historyList, async function (e, combo) { // 显示历史列表
-    let CONFIG = ipcRenderer.sendSync('config')
+    const CONFIG = ipcRenderer.sendSync('config')
     let files = Object.keys(CONFIG.lastViewTime).map(key => ({ key, value: CONFIG.lastViewTime[key] }))
     files = files.sort((a, b) => new Date(a.value).getTime() > new Date(b.value).getTime() ? -1 : 1).map(i => i.key)
 

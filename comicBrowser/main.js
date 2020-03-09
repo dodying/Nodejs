@@ -1,30 +1,54 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.692
+// @Version:            1.0.775
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-4 13:32:07
+// @Modified:           2020-3-9 16:48:29
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
 // ==/Headers==
 
 // 设置
-var debug = false
-var windowHistory = []
-var windows = {}
-var config = {}
-var connection = null
+const debug = false
+const windowHistory = []
+const windows = {}
+let config = {}
+let connection = null
+let connectionLastTime = null
+const connectionTimeout = 5 * 60 * 1000
 let tray = null
-var lastConnection = {
+const lastConnection = {
   info: {},
   result: []
 }
 let connecting = false
+const columns = {
+  path: 'text', // 路径
+  size: 'int unsigned', // 文件大小
+  artist: 'varchar(511)', // 作者
+  title: 'varchar(511)', // 英文标题
+  title_main: 'varchar(511)', // 英文标题的主要部分
+  title_number: 'varchar(511)', // 英文标题的数字部分
+  title_jpn: 'varchar(511)', // 日文标题
+  title_jpn_main: 'varchar(511)', // 日文标题的主要部分
+  title_jpn_number: 'varchar(511)', // 日文标题的数字部分
+  category: 'varchar(20)', // 类别
+  web: 'varchar(50)', // 网址
+  language: 'varchar(2)', // 语言
+  pages: 'int unsigned', // 页数
+  time_upload: 'timestamp', // 上传时间 '2020-01-02 21:14:16.000'
+  uploader: 'varchar(40)', // 上传者
+  rating: 'float unsigned', // 评分
+  favorited: 'int unsigned', // 收藏人数
+  time_download: 'timestamp', // 下载时间
+  tags: 'json' // 标签
+}
 
 // 导入原生模块
 const path = require('path')
+const cp = require('child_process')
 
 // 导入第三方模块
 const fse = require('fs-extra')
@@ -33,16 +57,15 @@ if (debug) require('electron-reload')(path.join(__dirname, 'src'))
 const mysql = require('mysql2/promise')
 const JSZip = require('jszip')
 
-const walk = require('./../comicSort/js/walk')
-const parseInfo = require('./../comicSort/js/parseInfo')
+const walk = require('./../_lib/walk')
+const waitInMs = require('./../_lib/waitInMs')
+const parseInfo = require('./js/parseInfo')
 const getTitleMain = require('./js/getTitleMain')
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, './../comicSort', 'EHT.json'), 'utf-8')).data
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc']
 
 // Function
-let openWindow = (url) => {
-  // let id = new Date().getTime()
-  // while (id in windows) id = new Date().getTime()
+const openWindow = (url) => {
   if (!url.match(/^https?:/)) url = path.resolve(__dirname, url)
   console.debug('open', url)
   let win, id
@@ -77,7 +100,7 @@ let openWindow = (url) => {
       win = null
 
       for (let i = 0; i < windowHistory.length;) {
-        let id = windowHistory[i]
+        const id = windowHistory[i]
         if (id in windows) {
           windows[id].show()
           break
@@ -97,7 +120,7 @@ let openWindow = (url) => {
     if (debug) windows[id].openDevTools()
   })
 }
-let createConnection = async (obj) => {
+const createConnection = async (obj) => {
   /* eslint-disable no-unmodified-loop-condition */
   while (connecting) {
     await waitInMs(200)
@@ -106,7 +129,7 @@ let createConnection = async (obj) => {
   let isInfoSame = lastConnection.info.host === obj.host
   isInfoSame = isInfoSame && lastConnection.info.user === obj.user
   isInfoSame = isInfoSame && lastConnection.info.password === obj.password
-  if (lastConnection.result[1] === 1 && isInfoSame) {
+  if (lastConnection.result[1] === 1 && isInfoSame && new Date().getTime() - connectionLastTime < connectionTimeout) {
     connecting = false
     return lastConnection.result
   }
@@ -125,13 +148,15 @@ let createConnection = async (obj) => {
       user: obj.user,
       password: obj.password
     })
+    connectionLastTime = new Date().getTime()
   } catch (error) {
     connection = null
     connecting = false
+    connectionLastTime = null
     return ['Connection Failed, please check info', -1]
   }
 
-  let [rows] = await connection.query('SHOW DATABASES')
+  const [rows] = await connection.query('SHOW DATABASES')
 
   if (rows.filter(i => i.Database === obj.database).length) {
     await connection.query(`USE ${obj.database}`)
@@ -139,11 +164,12 @@ let createConnection = async (obj) => {
     return ['Connection Success, and you can update', 1]
   } else {
     connecting = false
+    connectionLastTime = null
     return ['Connection Success, but you need to init', 0]
   }
 }
-let updateTableTags = async (obj) => {
-  let [rows] = await connection.query('SHOW TABLES')
+const updateTableTags = async (obj) => {
+  const [rows] = await connection.query('SHOW TABLES')
   if (rows.filter(i => i[`Tables_in_${obj.database}`] === 'tags').length) {
     await connection.query('DROP TABLE tags')
   }
@@ -151,11 +177,11 @@ let updateTableTags = async (obj) => {
   await connection.query('CREATE TABLE `tags` (`id` int unsigned not null auto_increment primary key, `tag` varchar(255), `main` varchar(255), `sub` varchar(255), `cname` varchar(255), `info` text)')
 
   console.time('EHT')
-  let queryString = `insert into tags (tag, main, sub, cname, info) values `
+  const queryString = 'insert into tags (tag, main, sub, cname, info) values '
   let arr = []
-  for (let mainObj of EHT) {
-    let main = mainObj.namespace
-    for (let sub in mainObj.data) {
+  for (const mainObj of EHT) {
+    const main = mainObj.namespace
+    for (const sub in mainObj.data) {
       arr.push([`${main}:${sub}`, main, sub, mainObj.data[sub].name, mainObj.data[sub].intro])
     }
   }
@@ -164,15 +190,15 @@ let updateTableTags = async (obj) => {
   await connection.query(queryString + arr)
   console.timeEnd('EHT')
 }
-let updateTableFiles = async (obj) => {
+const updateTableFiles = async (obj) => {
   console.time('walk')
   let files = walk(obj.libraryFolder)
   files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.relative(obj.libraryFolder, i))
   console.timeEnd('walk')
 
   console.time('query')
-  let [rows] = await connection.query(`select path from files`)
-  let existedInfo = rows.map(i => i.path).map(i => i.toUpperCase())
+  const [rows] = await connection.query('select path from files')
+  const existedInfo = rows.map(i => i.path).map(i => i.toUpperCase())
   console.timeEnd('query')
 
   console.debug('Total Files:\t', files.length)
@@ -180,39 +206,39 @@ let updateTableFiles = async (obj) => {
   console.debug('New Files\t', files.length, '\nExisted Files:\t', existedInfo.length)
 
   console.time('INSERT INTO')
-  let column = ['path', 'size', 'title', 'title_main', 'title_jpn', 'title_jpn_main', 'category', 'web', 'language', 'pages', 'time_upload', 'uploader', 'rating', 'favorited', 'time_download', 'tags', 'artist']
+  const column = Object.keys(columns)
   let queryString = `INSERT INTO files (${column.join(', ')}) values `
   let arr = []
-  for (let file of files) {
+  for (const file of files) {
     if (arr.length >= 100) {
-      let arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n')
+      const arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n')
       await connection.query(queryString + arr1)
       arr = []
     }
 
-    let fullpath = path.join(obj.libraryFolder, file)
-    let size = fse.statSync(fullpath).size
+    const fullpath = path.join(obj.libraryFolder, file)
+    const size = fse.statSync(fullpath).size
 
     // 读取数据
-    let targetData = fse.readFileSync(fullpath)
-    let jszip = new JSZip()
+    const targetData = fse.readFileSync(fullpath)
+    const jszip = new JSZip()
     let zip
     try {
       zip = await jszip.loadAsync(targetData)
     } catch (error) {
       // console.error(`Error:\t无法读取文件 "${file}"`)
-      let title = path.parse(fullpath).name
+      const title = path.parse(fullpath).name
       arr.push([
-        file, size,
-        title, getTitleMain(title),
-        title, getTitleMain(title),
-        ...'1'.repeat(column.length - 6).split('').map(i => 'NULL')
+        file, size, 'NULL',
+        title, ...getTitleMain(title),
+        title, ...getTitleMain(title),
+        ...'1'.repeat(column.length - 9).split('').map(i => 'NULL')
       ])
       continue
     }
 
     // 查看列表
-    let fileList = Object.keys(zip.files)
+    const fileList = Object.keys(zip.files)
 
     // 检测有无info.txt
     if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
@@ -221,28 +247,28 @@ let updateTableFiles = async (obj) => {
     }
 
     // 读取info.txt
-    let infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
-    let data = await zip.files[infoFile].async('text')
-    let info = parseInfo(data)
+    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
+    const data = await zip.files[infoFile].async('text')
+    const info = parseInfo(data)
 
     //
-    let tags = {}
-    for (let i of mainTag) {
+    const tags = {}
+    for (const i of mainTag) {
       if (i in info) tags[i] = info[i]
     }
-    let artist = tags.artist ? tags.artist.sort().slice(0, 3).join(', ') : tags.group ? tags.group.sort().slice(0, 3).join(', ') : ''
+    let artist = tags.artist ? tags.artist : tags.group ? tags.group : []
+    artist = artist.map(i => i.split('|')[0].trim()).sort().slice(0, 3).join(', ')
     arr.push([
-      file, size,
-      info.title, getTitleMain(info.title),
-      info.jTitle, getTitleMain(info.jTitle),
+      file, size, artist,
+      info.title, ...getTitleMain(info.title),
+      info.jTitle, ...getTitleMain(info.jTitle),
       info.Category, info.web, info.lang,
       isNaN(parseInt(info.length)) ? 0 : parseInt(info.length),
       info.Posted, info.Uploader,
       isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
       isNaN(parseInt(info.Favorited)) ? 0 : parseInt(info.Favorited),
       info.downloadTime,
-      JSON.stringify(tags),
-      artist
+      JSON.stringify(tags)
     ])
   }
   if (arr.length) {
@@ -252,30 +278,30 @@ let updateTableFiles = async (obj) => {
   console.timeEnd('INSERT INTO')
 
   console.time('DELETE INTO')
-  queryString = `DELETE FROM files WHERE `
+  queryString = 'DELETE FROM files WHERE '
   arr = []
-  for (let file of existedInfo) {
+  for (const file of existedInfo) {
     if (arr.length >= 100) {
-      let arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ')
+      const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ')
       await connection.query(queryString + arr1)
       arr = []
     }
 
-    let fullpath = path.join(obj.libraryFolder, file)
+    const fullpath = path.join(obj.libraryFolder, file)
     if (!fse.existsSync(fullpath)) arr.push(file)
   }
   if (arr.length) {
-    let arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ')
+    const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ')
     await connection.query(queryString + arr1)
   }
   console.timeEnd('DELETE INTO')
 }
-let rebuildTrayMenu = () => {
-  let menuItem = [
+const rebuildTrayMenu = () => {
+  const menuItem = [
     {
       label: '显示/隐藏最后窗口',
       click: (menuItem, browserWindow, event) => {
-        let win = windows[windowHistory[0]]
+        const win = windows[windowHistory[0]]
         if (win.isVisible()) {
           win.hide()
         } else {
@@ -286,7 +312,7 @@ let rebuildTrayMenu = () => {
     {
       label: '显示所有窗口',
       click: (menuItem, browserWindow, event) => {
-        for (let id in windows) {
+        for (const id in windows) {
           windows[id].show()
           rebuildTrayMenu()
         }
@@ -295,7 +321,7 @@ let rebuildTrayMenu = () => {
     { type: 'separator' }
   ]
 
-  for (let id in windows) {
+  for (const id in windows) {
     if (windows[id].isVisible()) continue
     menuItem.push({
       label: `${id}: ${windows[id].getTitle().substr(0, 40)}`,
@@ -312,40 +338,33 @@ let rebuildTrayMenu = () => {
       label: '保存并退出',
       click: (menuItem, browserWindow, event) => {
         saveLastTabs()
-        for (let id in windows) windows[id].close()
+        for (const id in windows) windows[id].close()
       }
     },
     {
       label: '退出',
       click: (menuItem, browserWindow, event) => {
-        for (let id in windows) windows[id].close()
+        for (const id in windows) windows[id].close()
       }
     }
   )
 
-  let contextMenu = Menu.buildFromTemplate(menuItem)
+  const contextMenu = Menu.buildFromTemplate(menuItem)
   tray.setContextMenu(contextMenu)
 }
-let saveLastTabs = () => {
-  let urls = []
-  for (let id in windows) {
-    let url = windows[id].webContents.getURL()
+const saveLastTabs = () => {
+  const urls = []
+  for (const id in windows) {
+    const url = windows[id].webContents.getURL()
     urls.push(url.replace('file:///E:/Desktop/_/GitHub/Nodejs/comicBrowser/', './'))
   }
   config.lastTabs = urls
   fse.writeJSONSync('./config.json', config, { spaces: 2 })
   console.log('last tabs wrote')
 }
-function waitInMs (time) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve()
-    }, time)
-  })
-}
 
 ipcMain.on('open', async (event, urls) => {
-  for (let url of [].concat(urls)) {
+  for (const url of [].concat(urls)) {
     await openWindow(url)
   }
   event.returnValue = true
@@ -353,15 +372,15 @@ ipcMain.on('open', async (event, urls) => {
 
 ipcMain.on('open-external', async (event, url, name) => {
   if (name === 'path') {
-    let fullpath = path.resolve(config.libraryFolder, url)
+    const fullpath = path.resolve(config.libraryFolder, url)
     await shell.openItem(fullpath)
   } else if (name === 'item') {
-    let fullpath = path.resolve(config.libraryFolder, url)
+    const fullpath = path.resolve(config.libraryFolder, url)
     await shell.showItemInFolder(fullpath)
   } else if (name === 'delete') {
-    let fullpath = path.resolve(config.libraryFolder, url)
+    const fullpath = path.resolve(config.libraryFolder, url)
     if (fse.existsSync(fullpath)) fse.unlinkSync(fullpath)
-    let cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg')
+    const cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg')
     if (fse.existsSync(cover)) fse.unlinkSync(cover)
 
     if (!('delete' in config)) config.delete = []
@@ -370,6 +389,8 @@ ipcMain.on('open-external', async (event, url, name) => {
     if (config.lastViewTime && url in config.lastViewTime) delete config.lastViewTime[url]
     if (config.history && config.history.includes(url)) config.history.splice(config.history.indexOf(url), 1)
     fse.writeJSONSync('./config.json', config, { spaces: 2 })
+  } else if (name === 'everything') {
+    if (config.everything && fse.existsSync(config.everything)) cp.execFileSync(config.everything, ['-search', url])
   } else if (!name) {
     await shell.openExternal(url)
   }
@@ -393,13 +414,14 @@ ipcMain.on('config', (event, todo = 'get', obj, value) => {
 ipcMain.on('clear', (event) => {
   delete config.history
   delete config.delete
-  for (let i of ['star', 'lastViewPosition', 'lastViewTime']) {
-    for (let file in config[i]) {
-      let fullpath = path.resolve(config.libraryFolder, file)
+  for (const i of ['star', 'lastViewPosition', 'lastViewTime']) {
+    for (const file in config[i]) {
+      const fullpath = path.resolve(config.libraryFolder, file)
       if (!fse.existsSync(fullpath)) delete config[i][file]
     }
   }
   fse.writeJSONSync('./config.json', config, { spaces: 2 })
+  event.returnValue = true
 })
 
 ipcMain.on('database-connect', async (event, obj, todo) => {
@@ -407,7 +429,7 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
 
   // todo: test,delete,init,update
   // code: -1,0,1
-  let [status, code] = await createConnection(obj)
+  const [status, code] = await createConnection(obj)
   lastConnection.result = [status, code]
   // console.debug({ status, code, obj, todo, connection })
   if (todo === 'test' || code === -1 || !todo) {
@@ -431,23 +453,7 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
 
     queryString = 'CREATE TABLE `files` (' + [
       'id int unsigned not null auto_increment',
-      'path text', // 路径
-      'size int unsigned', // 文件大小
-      'title varchar(511)', // 英文标题
-      'title_main varchar(511)', // 英文标题的主要内容
-      'title_jpn varchar(511)', // 日文标题
-      'title_jpn_main varchar(511)', // 日文标题的主要内容
-      'category varchar(20)', // 类别
-      'web varchar(50)', // 网址
-      'language varchar(2)', // 语言
-      'pages int unsigned', // 页数
-      'time_upload timestamp', // 上传时间 '2020-01-02 21:14:16.000'
-      'uploader varchar(40)', // 上传者
-      'rating float unsigned', // 评分
-      'favorited int unsigned', // 收藏人数
-      'time_download timestamp', // 下载时间
-      'tags json', // 标签
-      'artist varchar(511)', // 作者
+      ...Object.keys(columns).map(i => `${i} ${columns[i]}`),
       'PRIMARY KEY (id)'
       // 'INDEX index_path (path(255))'
     ].join(', ') + ')'
@@ -468,6 +474,7 @@ ipcMain.on('log', (event, ...args) => {
 })
 
 ipcMain.on('database-query', async (event, str) => {
+  if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config)
   console.debug('database-query', str)
   let result = [
     []
@@ -475,50 +482,35 @@ ipcMain.on('database-query', async (event, str) => {
   try {
     result = await connection.query(str)
   } catch (error) {
+    console.error('Error:', error.message)
   }
+  console.log('database-query-end', result[0].length)
   event.returnValue = result
 })
 
 ipcMain.on('query-by-condition', async (event, condition) => {
-  if (!connection) await createConnection(config)
-  console.log('query-by-condition', condition)
+  if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config)
+  // console.log('query-by-condition', condition)
   let query = 'SELECT * FROM files WHERE '
-  let typeLib = {
-    'tags': 'json',
-    'path': 'text',
-    'title': 'text',
-    'title_main': 'text',
-    'title_jpn': 'text',
-    'title_jpn_main': 'text',
-    'size': 'number',
-    'rating': 'number',
-    'category': 'text',
-    'web': 'text',
-    'language': 'text',
-    'pages': 'number',
-    'time_upload': 'datetime',
-    'uploader': 'text',
-    'favorited': 'number',
-    'time_download': 'datetime',
-    'artist': 'text'
-  }
-  let querySegment = []
+  const querySegment = []
   let order = ['path', 'time_upload', 'time_download']
-  for (let i of condition) {
+  for (const i of condition) {
     let [not, column, comparison, value, value1] = i
-    let type = typeLib[column]
+    const type = columns[column]
     let str
 
-    if (type === 'datetime') {
+    if (column === 'command') {
+      continue
+    } else if (type === 'timestamp') {
       value = value ? mysql.escape(value) : 'CURDATE()'
 
       if (['=', '!=', '>', '>=', '<', '<='].includes(comparison)) {
         str = `DATE(${column}) ${comparison} ${value}`
       } else if (['today', 'yesteday', 'the day before yesterday'].includes(comparison)) {
-        let sep = ['today', 'yesteday', 'the day before yesterday'].indexOf(comparison)
+        const sep = ['today', 'yesteday', 'the day before yesterday'].indexOf(comparison)
         str = `DATE(${column}) = DATE_SUB(${value}, INTERVAL ${sep} DAY)`
       } else if (['tomorrow', 'the day after tomorrow'].includes(comparison)) {
-        let sep = ['today', 'tomorrow', 'the day after tomorrow'].indexOf(comparison)
+        const sep = ['today', 'tomorrow', 'the day after tomorrow'].indexOf(comparison)
         str = `DATE(${column}) = DATE_ADD(${value}, INTERVAL ${sep} DAY)`
       } else if (['this_week'].includes(comparison)) {
         str = `YEARWEEK(${column}, 1) = YEARWEEK(${value}, 1)`
@@ -528,14 +520,10 @@ ipcMain.on('query-by-condition', async (event, condition) => {
         value1 = value1 ? mysql.escape(value1) : 'CURDATE()'
         str = `DATE(${column}) ${comparison === 'NOT BETWEEN AND' ? 'NOT ' : ''}BETWEEN ${value} AND ${value1}`
       }
-    } else if (type === 'boolean') {
-      comparison = comparison === '1' ? '=' : '!='
-      value = 1
-      str = `${column} ${comparison} ${value}`
     } else if (type === 'json') {
       // unused method:
       // equal: JSON_CONTAINS(tags, '"mind break"', '$.female')
-      let [column, path] = comparison.split(':')
+      const [column, path] = comparison.split(':')
 
       if (path === '*') {
         // WHERE tags like '%mind break%'
@@ -545,7 +533,7 @@ ipcMain.on('query-by-condition', async (event, condition) => {
         str = `JSON_EXTRACT(${column}, '$.${path}[*]') LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)}`
       }
     } else if (['=', '!=', '>', '>=', '<', '<='].includes(comparison)) {
-      if (type === 'text') value = mysql.escape(value)
+      if (type === 'text' || type.match('varchar')) value = mysql.escape(value)
       str = `${column} ${comparison} ${value}`
     } else if (['LIKE', 'NOT LIKE'].includes(comparison)) {
       // https://www.runoob.com/mysql/mysql-like-clause.html
@@ -558,7 +546,7 @@ ipcMain.on('query-by-condition', async (event, condition) => {
     } else if (['REGEXP', 'NOT REGEXP'].includes(comparison)) {
       str = `${column} ${comparison} ${mysql.escape(`${value}`)}`
     } else if (['Duplicate'].includes(comparison)) {
-      let str1 = `SELECT ${column} FROM files WHERE ${column} != "" GROUP BY ${column} HAVING COUNT(${column}) > 1`
+      const str1 = `SELECT ${column} FROM files WHERE ${column} != "" GROUP BY ${column} HAVING COUNT(${column}) > 1`
       str = `${column} IN (${str1})`
       order = [column, 'artist']
     }
@@ -567,13 +555,15 @@ ipcMain.on('query-by-condition', async (event, condition) => {
   }
   query += querySegment.join(' AND ')
   query += ' ORDER BY ' + order.join(', ')
+  if (condition.filter(i => !i[0] && i[1] === 'command').length) query = condition.filter(i => !i[0] && i[1] === 'command').map(i => i[3]).join('\n')
   console.log('database-query', query)
   let result = [[]]
   try {
     result = await connection.query(query)
   } catch (error) {
-    console.log(error)
+    console.error('Error:', error.message)
   }
+  console.log('database-query-end', result[0].length)
   event.returnValue = result
 })
 
@@ -587,12 +577,12 @@ ipcMain.on('hide-tab', (event, id) => {
 })
 
 ipcMain.on('hide-all-tabs', (event) => {
-  for (let id in windows) windows[id].hide()
+  for (const id in windows) windows[id].hide()
   rebuildTrayMenu()
 })
 
 ipcMain.on('close-all-tabs', (event, id) => {
-  for (let id in windows) windows[id].close()
+  for (const id in windows) windows[id].close()
 })
 
 app.on('window-all-closed', function () {
@@ -600,18 +590,18 @@ app.on('window-all-closed', function () {
 })
 
 app.on('ready', async function () {
-  let urls = ['./src/index.html']
+  const urls = ['./src/index.html']
 
   config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {}
 
-  for (let url of urls) {
+  for (const url of urls) {
     await openWindow(url)
   }
 
   tray = new Tray('./src/icon.png')
   rebuildTrayMenu()
   tray.on('click', () => {
-    let win = windows[windowHistory[0]]
+    const win = windows[windowHistory[0]]
     if (win.isVisible()) {
       win.hide()
     } else {

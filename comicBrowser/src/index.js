@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1006
+// @Version:            1.0.1443
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-5 10:23:44
+// @Modified:           2020-3-9 16:17:38
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            electron
+// @Require:            electron,mysql2
 // ==/Headers==
 /* global Mousetrap */
 
@@ -17,65 +17,42 @@
 // 全局变量
 let scrollElement = $('html').get(0)
 let lastTooltip = null
+let observer = null
 
 // 可自定义
-let keypressTimeout = 80
-let scrollHeight = 30
-let showInfo = { // 按key顺序显示
-  'category': true, // 类别
-  'language': false, // 语言
-  'time_upload': true,
-  'time_download': true, // 下载时间
-  'time_view': true, // (#)上次阅读事件
-  'pages': true, // 页数
-  'size': false, // 文件大小
-  'rating': true, // 评分
-  'favorited': false, // 收藏人数
-  'web': true, // 网址
-  'event': true, // (#)
-  'view': true, // (#)
-  'delete': true, // (#)
-  'artist': true, // 作者
-  'title_main': true, // 英文标题的主要内容
-  'title': true, // 英文标题
-  'title_jpn': true, // 日文标题
-  'title_jpn_main': false, // 日文标题的主要内容
-  'path': true, // 路径
-  'uploader': false, // 上传者
-  'tags': false, // 标签
-  'tag:parody': true, // (#)标签:原作
-  'tag:female': true, // (#)标签:女性
-  'tag:male': true, // (#)标签:男性
-  'tag:misc': true // (#)标签:杂项
+const keypressTimeout = 80
+const scrollHeight = 50
+const showInfo = {
+  // 按key顺序显示
+  // [是否显示， 中文标题]
+  category: [true, '类别'],
+  language: [false, '语言'],
+  time_upload: [true, '上传时间'],
+  time_download: [true, '下载时间'],
+  time_view: [true, '最近阅读'], // (#)上次阅读事件
+  pages: [true, '页数'],
+  size: [false, '文件大小'],
+  rating: [true, '评分'],
+  favorited: [false, '星标数'],
+  event: [true, '事件'], // (#)
+  uploader: [false, '上传者'],
+  'tag:artist': [true, '标签:作者'], // (#)标签:作者
+  artist: [false, '作者'],
+  title_main: [true, '标题(主)'], // 英文标题的主要部分
+  title_number: [true, '数字'], // 英文标题的数字部分
+  title: [true, '标题'], // 英文标题
+  title_jpn: [false, '标题(日文)'],
+  title_jpn_main: [false, '标题(日文)(主)'],
+  title_jpn_number: [false, '数字(日文)'],
+  path: [true, '路径'],
+  tags: [false, '标签'],
+  'tag:parody': [true, '标签:原作'], // (#)标签:原作
+  'tag:female': [true, '标签:女性'], // (#)标签:女性
+  'tag:male': [true, '标签:男性'], // (#)标签:男性
+  'tag:misc': [true, '标签:杂项'], // (#)标签:杂项
+  'tag:group': [false, '标签:组织'] // (#)标签:组织
 }
-let showInfoChs = {
-  'category': '类别',
-  'language': '语言',
-  'time_upload': '上传时间',
-  'time_download': '下载时间',
-  'time_view': '最近阅读',
-  'pages': '页数',
-  'size': '大小',
-  'rating': '评分',
-  'favorited': '星标数',
-  'web': '网址',
-  'event': '事件',
-  'view': '阅读',
-  'delete': '删除',
-  'artist': '作者',
-  'title': '标题',
-  'title_main': '标题(主)',
-  'title_jpn': '标题(日文)',
-  'title_jpn_main': '标题(日文)(主)',
-  'path': '路径',
-  'uploader': '上传者',
-  'tags': '标签',
-  'tag:parody': '标签:原作',
-  'tag:female': '标签:女性',
-  'tag:male': '标签:男性',
-  'tag:misc': '标签:杂项'
-}
-let keyMap = {
+const keyMap = {
   up: ['w', 'up', '8'],
   down: ['s', 'down', '5'],
   left: ['a', 'left', '4'],
@@ -85,8 +62,287 @@ let keyMap = {
   plus: ['+', '='],
   minus: ['-']
 }
+const showColumns = {
+  // 按key顺序显示
+  // [是否显示， 类型]
+  tags: [true, 'json'],
+  path: [true, 'text'],
+  artist: [true, 'text'],
+  title: [true, 'text'],
+  title_main: [true, 'text'],
+  title_number: [true, 'text'],
+  title_jpn: [true, 'text'],
+  title_jpn_main: [true, 'text'],
+  title_jpn_number: [true, 'text'],
+  size: [false, 'number'],
+  category: [true, 'text'],
+  rating: [true, 'number'],
+  web: [true, 'text'],
+  language: [true, 'text'],
+  pages: [true, 'number'],
+  time_upload: [true, 'datetime'],
+  uploader: [true, 'text'],
+  favorited: [true, 'number'],
+  time_download: [true, 'datetime'],
+  command: [true, 'text'] // (#)
+}
 keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`)
 keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`)
+const pagerOption = {
+  enable: true,
+  minCount: 300, // 结果数量超过则pager
+  size: 100
+}
+const autoCompleteOption = {
+  enbaleColumns: ['tags'].concat(Object.keys(showColumns).map(i => [i, showColumns[i]]).filter(i => i[1][0] && i[1][1] === 'text' && !(['command'].includes(i[0]))).map(i => i[0])), // 支持tags或类型为text
+  minLength: 3,
+  limit: 50
+}
+const tagsAlert = {
+  'female:rape': 'Alert',
+  'male:tomgirl': 'Alert',
+  'male:blood': 'Alert',
+  'male:tentacles': 'Alert',
+  'female:tentacles': 'Alert',
+  'female:yuri': 'Alert',
+  'male:urination': 'Alert',
+  'female:inflation': 'Alert',
+  'female:corruption': 'Alert',
+  'female:transformation': 'Alert',
+  'female:femdom': 'Alert',
+  'female:mind break': 'Alert',
+  'female:sex toys': 'Alert',
+  'female:collar': 'Alert',
+  'male:dilf': 'Alert',
+  'female:pregnant': 'Alert',
+  'female:huge breasts': 'Alert',
+  'female:skinsuit': 'Alert',
+  'male:gender bender': 'Alert',
+  'full censorship': 'Alert',
+  'male:bondage': 'Alert',
+  'male:alien': 'Alert',
+  'female:mind control': 'Alert',
+  'female:strap-on': 'Alert',
+  'female:slave': 'Alert',
+  'female:urination': 'Alert',
+  'female:diaper': 'Alert',
+  'female:farting': 'Alert',
+  'male:piss drinking': 'Alert',
+  'male:netorare': 'Alert',
+  'male:bald': 'Alert',
+  'male:bbm': 'Alert',
+  'female:bondage': 'Alert',
+  'female:vomit': 'Alert',
+  'female:human pet': 'Alert',
+  'female:asphyxiation': 'Alert',
+  'female:big areolae': 'Alert',
+  'female:drugs': 'Alert',
+  'female:gender bender': 'Alert',
+  'female:birth': 'Alert',
+  'female:wooden horse': 'Alert',
+  'female:horse girl': 'Alert',
+  'female:bdsm': 'Alert',
+  'female:muscle': 'Alert',
+  'female:bbw': 'Alert',
+  '3d': 'Alert',
+  'female:possession': 'Alert',
+  'male:possession': 'Alert',
+  'male:urethra insertion': 'Alert',
+  'female:cervix penetration': 'Alert',
+  incomplete: 'Alert',
+  'female:chloroform': 'Alert',
+  'male:big penis': 'Alert',
+  'female:stomach deformation': 'Alert',
+  'already uploaded': 'Alert',
+  anthology: 'Alert',
+  sample: 'Alert',
+  'female:netorare': 'Alert',
+  'male:miniguy': 'Unlike',
+  'male:shrinking': 'Unlike',
+  'male:unbirth': 'Unlike',
+  'male:males only': 'Unlike',
+  'male:yaoi': 'Unlike',
+  'male:shotacon': 'Alert',
+  'female:dick growth': 'Alert',
+  'body swap': 'Alert',
+  'female:big penis': 'Alert',
+  'female:autofellatio': 'Alert',
+  'male:dark skin': 'Alert',
+  'female:swinging': 'Alert',
+  'female:piercing': 'Alert',
+  'female:blackmail': 'Alert',
+  'female:tomboy': 'Alert',
+  'female:exhibitionism': 'Alert',
+  'language:english': 'Alert',
+  'female:full body tattoo': 'Alert',
+  'female:moral degeneration': 'Alert',
+  'female:double vaginal': 'Alert',
+  'female:smell': 'Alert',
+  'female:filming': 'Alert',
+  'male:dragon': 'Unlike',
+  'female:monster girl': 'Alert',
+  'female:fox girl': 'Alert',
+  'female:oni': 'Alert',
+  'female:mermaid': 'Alert',
+  'female:emotionless sex': 'Alert',
+  'female:plant girl': 'Like',
+  'female:wings': 'Alert',
+  'male:body painting': 'Alert',
+  'female:dark skin': 'Alert',
+  'female:dark nipples': 'Alert',
+  'female:bukkake': 'Alert',
+  'female:body painting': 'Alert',
+  'male:farting': 'Alert',
+  'parody:kemono friends': 'Alert',
+  'parody:zombie land saga': 'Alert',
+  'parody:one punch man': 'Alert',
+  'multi-work series': 'Like',
+  'female:maid': 'Like',
+  uncensored: 'Like',
+  'female:harem': 'Like',
+  'story arc': 'Like',
+  incest: 'Like',
+  'artist:ohtomo takuji': 'Like',
+  'artist:kamisiro ryu': 'Like',
+  'female:oyakodon': 'Like',
+  'female:lingerie': 'Like',
+  'female:incest': 'Like',
+  'female:garter belt': 'Like',
+  'female:bride': 'Like',
+  'male:maid': 'Like',
+  'full color': 'Like',
+  tankoubon: 'Like',
+  'male:crossdressing': 'Like',
+  'female:oppai loli': 'Like',
+  'female:twintails': 'Like',
+  'female:beauty mark': 'Like',
+  'male:bride': 'Like',
+  'female:mother': 'Like',
+  inseki: 'Like',
+  'female:crotch tattoo': 'Like',
+  'female:twins': 'Like',
+  'female:amputee': 'Unlike',
+  'female:bestiality': 'Unlike',
+  'female:females only': 'Unlike',
+  'female:dickgirl on dickgirl': 'Unlike',
+  'female:dickgirls only': 'Unlike',
+  animated: 'Unlike',
+  novel: 'Unlike',
+  'female:guro': 'Unlike',
+  'female:snuff': 'Unlike',
+  'female:torture': 'Unlike',
+  'female:nose hook': 'Unlike',
+  'female:ryona': 'Unlike',
+  'female:blood': 'Unlike',
+  'female:necrophilia': 'Unlike',
+  'female:catfight': 'Unlike',
+  'male:bisexual': 'Unlike',
+  'male:snuff': 'Unlike',
+  'female:giantess': 'Unlike',
+  'female:growth': 'Unlike',
+  'male:guro': 'Unlike',
+  'male:vore': 'Unlike',
+  'female:brain fuck': 'Unlike',
+  'female:insect': 'Unlike',
+  'male:asphyxiation': 'Unlike',
+  'female:cannibalism': 'Unlike',
+  'female:human cattle': 'Unlike',
+  'male:necrophilia': 'Unlike',
+  'female:body modification': 'Unlike',
+  'female:machine': 'Unlike',
+  'female:slime': 'Unlike',
+  'female:spider': 'Unlike',
+  'female:double anal': 'Unlike',
+  'female:eggs': 'Unlike',
+  'female:multiple penises': 'Unlike',
+  'female:petrification': 'Unlike',
+  'female:shemale': 'Unlike',
+  'female:vore': 'Unlike',
+  'male:bear boy': 'Unlike',
+  'female:horse': 'Unlike',
+  'female:zebra': 'Unlike',
+  'male:human on furry': 'Unlike',
+  'male:horse': 'Unlike',
+  'male:dog': 'Unlike',
+  'male:monkey': 'Unlike',
+  'male:monster': 'Unlike',
+  'male:pig': 'Unlike',
+  'female:prolapse': 'Unlike',
+  'female:nipple fuck': 'Unlike',
+  'female:urethra insertion': 'Unlike',
+  'male:orc': 'Unlike',
+  'female:low bestiality': 'Unlike',
+  'male:goblin': 'Unlike',
+  'female:maggot': 'Unlike',
+  'male:gorilla': 'Unlike',
+  'female:cat': 'Unlike',
+  'male:ryona': 'Unlike',
+  'male:pegging': 'Unlike',
+  'female:sole dickgirl': 'Unlike',
+  'female:muscle growth': 'Unlike',
+  'female:dicknipples': 'Unlike',
+  'male:bestiality': 'Unlike',
+  'male:dicknipples': 'Unlike',
+  'male:eggs': 'Unlike',
+  'male:nipple fuck': 'Unlike',
+  'male:penis birth': 'Unlike',
+  'male:double anal': 'Unlike',
+  'character:kenichi saruyama': 'Unlike',
+  'male:amputee': 'Unlike',
+  'female:fisting': 'Unlike',
+  'female:triple anal': 'Unlike',
+  'time stop': 'Unlike',
+  'character:kallen stadtfeld': 'Unlike',
+  'parody:toaru majutsu no index': 'Unlike',
+  'male:furry': 'Unlike',
+  'female:furry': 'Unlike',
+  'parody:toaru kagaku no railgun': 'Unlike',
+  'female:living clothes': 'Unlike',
+  'character:shino asada': 'Unlike',
+  'parody:highschool of the dead': 'Unlike',
+  webtoon: 'Unlike',
+  'male:multiple penises': 'Unlike',
+  'male:dickgirl on male': 'Unlike',
+  'male:pig man': 'Unlike',
+  'parody:shingeki no kyojin': 'Unlike',
+  'female:harpy': 'Unlike',
+  'male:catboy': 'Unlike',
+  'female:snake girl': 'Unlike',
+  'male:fox boy': 'Unlike',
+  'parody:naruto': 'Unlike',
+  'female:centaur': 'Unlike',
+  'male:old man': 'Unlike',
+  'parody:onmyoji': 'Unlike',
+  'female:tickling': 'Unlike',
+  'female:futanari': 'Unlike',
+  'female:parasite': 'Unlike',
+  'character:archer': 'Unlike',
+  'group:atelier hachifukuan': 'Unlike',
+  'male:giant': 'Unlike',
+  'female:kappa': 'Unlike',
+  'female:human on furry': 'Unlike',
+  'parody:its not my fault that im not popular': 'Unlike',
+  'group:purple haze': 'Unlike',
+  'female:selfcest': 'Unlike',
+  'parody:boruto': 'Unlike',
+  'parody:my hero academia': 'Unlike',
+  'female:scat': 'Unlike',
+  'parody:league of legends': 'Unlike',
+  'parody:nano core': 'Unlike',
+  'group:zenmai kourogi': 'Unlike',
+  'female:stuck in wall': 'Alert',
+  'female:pillory': 'Alert',
+  'parody:pokemon': 'Unlike',
+  'artist:sumomo ex': 'Unlike',
+  'male:facial hair': 'Unlike',
+  'male:muscle': 'Alert'
+}
+const tagsAlertStyle = {
+  Alert: 'color:#FF0;background-color:#080;',
+  // 'Unlike': 'color:#F00!important;background-color:#000;',
+  Unlike: 'color:#F00;background-color:#00F;',
+  Like: 'color:#000;background-color:#0FF;'
+}
 
 // 导入原生模块
 const fs = require('fs')
@@ -94,16 +350,18 @@ const path = require('path')
 
 // 导入第三方模块
 const electron = require('electron')
+const mysql = require('mysql2/promise')
 
-const findData = require('./../../comicSort/js/findData')
+const waitInMs = require('./../../_lib/waitInMs')
+const findData = require('./../js/findData')
 const ipcRenderer = electron.ipcRenderer
 const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data
 findData.init(EHT)
 
 // Function
 async function configChange (func) {
-  let CONFIG = ipcRenderer.sendSync('config')
-  let noSave = await func(CONFIG)
+  const CONFIG = ipcRenderer.sendSync('config')
+  const noSave = await func(CONFIG)
   if (!noSave) ipcRenderer.sendSync('config', 'set', CONFIG)
 }
 function tooltip (option, content) {
@@ -138,61 +396,72 @@ function tooltip (option, content) {
     }, option))
   })
 }
-let showResult = (rows = []) => {
-  let CONFIG = ipcRenderer.sendSync('config')
+const showResult = (rows = []) => {
+  const CONFIG = ipcRenderer.sendSync('config')
+  const condition = encodeURIComponent(JSON.stringify(getCondition()))
 
-  let html = [ '<table>', '<thead>', '<th></th>' ]
-  for (let i in showInfo) {
-    if (showInfo[i]) html.push(`<th>${showInfoChs[i] || i}</th>`)
+  const html = ['<table>', '<thead>', '<th></th>']
+  for (const i in showInfo) {
+    if (showInfo[i][0]) html.push(`<th>${showInfo[i][1] || i}</th>`)
   }
-  html.push('</thead>', '<tbody>')
-  let condition = encodeURIComponent(JSON.stringify(getCondition()))
+  html.push('</thead>')
 
+  html.push('<tbody>')
   let order = 1
-  for (let row of rows) {
+  for (const row of rows) {
     // tr
-    let tagString = encodeURIComponent(JSON.stringify(row.tags))
-    let star = CONFIG.star && CONFIG.star[row.path] ? CONFIG.star[row.path] : 0
-    let tr = `<tr path="${row.path}" star="${star}" tags="${tagString}">` // path 用于定位
+    const tagString = encodeURIComponent(JSON.stringify(row.tags))
+    const star = CONFIG.star && CONFIG.star[row.path] ? CONFIG.star[row.path] : 0
+    const invisible = CONFIG.invisible && CONFIG.invisible.includes(row.path) ? 1 : 0
+    let tr = `<tr path="${row.path}" star="${star}" tags="${tagString}" invisible="${invisible}">` // path 用于定位
 
     // td order
     tr += `<td>${order++}</td>`
 
-    for (let i in showInfo) {
-      if (showInfo[i]) {
-        let attr = [ `name="${i}"` ]
+    for (const i in showInfo) {
+      if (showInfo[i][0]) {
+        const attr = [`name="${i}"`]
         let text = ''
         if (['time_upload', 'time_download', 'time_view'].includes(i)) {
-          let time = ['time_view'].includes(i) ? (CONFIG.lastViewTime && CONFIG.lastViewTime[row.path] ? CONFIG.lastViewTime[row.path] : null) : row[i]
+          const time = ['time_view'].includes(i) ? (CONFIG.lastViewTime && CONFIG.lastViewTime[row.path] ? CONFIG.lastViewTime[row.path] : null) : row[i]
 
-          attr.push(`datetime="${time}"`, `sort-value="${new Date(time).getTime()}"`)
+          const data = new Date(time)
+          attr.push(`datetime="${time}"`, `sort-value="${data.getTime()}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`)
         } else if (['rating'].includes(i)) {
-          let precent = row.rating / 5 * 100
-          let color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00'
+          const precent = row.rating / 5 * 100
+          const color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00'
 
-          attr.push(`style="background:-webkit-linear-gradient(left, ${color} ${precent}%, white ${100 - precent}%);"`)
+          attr.push(`style="background-image:-webkit-linear-gradient(left, ${color} ${precent}%, white ${100 - precent}%);"`)
           text = row.rating
         } else if (['size'].includes(i)) {
           text = `${(row.size / 1024 / 1024).toFixed(2)} MB`
         } else if (['event'].includes(i)) {
           text = [
+            `<a href="${row.web}">Web</a>`,
+            '<br>',
             '<button name="star"></button>',
-            '<button name="clear">Clear</button>'
-          ].join('')
-        } else if (['path'].includes(i)) {
-          text = `<a href="${row.path}" name="item">${path.dirname(row[i])}</a>`
-        } else if (['web'].includes(i)) {
-          text = `<a href="${row.web}">Web</a>`
-        } else if (['view'].includes(i)) {
-          text = [
+            '<button name="clear"></button>',
+            `<a href="${row.path}" name="delete"></a>`,
+            '<button name="invisible"></button>',
+            '<br>',
             `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}">View</a>`,
             `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`
           ].join('')
-        } else if (['delete'].includes(i)) {
-          text = `<a href="${row.path}" name="delete">Delete</a>`
+        } else if (['path'].includes(i)) {
+          text = `<a href="${row.path}" name="item">${path.dirname(row[i])}</a>`
+        } else if (['title', 'title_main'].includes(i)) {
+          text = `${row[i]}<a href="${row[i]}" name="everything"></a>`
         } else if (i.match(/^tag:(.*)$/)) {
-          let main = i.match(/^tag:(.*)$/)[1]
-          if (row.tags && main in row.tags) text = row.tags[main].map(i => findData(main, i).cname || i).sort().join(', ')
+          const main = i.match(/^tag:(.*)$/)[1]
+          if (row.tags && main in row.tags) {
+            text = row.tags[main].map((sub) => {
+              const condition = [[false, 'tags', `tags:${main}`, sub.split(' | ')[0], undefined]]
+              let color = ''
+              const full = main === 'misc' ? sub : `${main}:${sub}`
+              if (full in tagsAlert) color = tagsAlert[full]
+              return `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify(condition))}" color="${color}">${findData(main, sub).cname || sub}</a>`
+            }).sort().join(', ')
+          }
         } else {
           text = row[i] instanceof Object ? JSON.stringify(row[i]) : row[i]
         }
@@ -204,79 +473,117 @@ let showResult = (rows = []) => {
     html.push(tr)
   }
   html.push('</tbody>', '</table>')
+
   $('.result').html(html.join(''))
-  updateRelativeTime()
-  $('.result>table').tablesorter({
+
+  const table = $('.result>table').tablesorter({
     theme: 'blackice',
 
     widthFixed: true,
 
     textAttribute: 'sort-value',
-    widgets: ['zebra', 'filter'],
-    widgetOption: {
+    widgets: ['zebra', 'filter', 'scroller'],
+    widgetOptions: {
       filter_defaultAttrib: 'sort-value',
-      filter_saveFilters: false
+      filter_saveFilters: false,
+
+      scroller_height: document.documentElement.clientHeight - 150, // - (25 + 25 * getCondition().length)
+      scroller_upAfterSort: true,
+      scroller_jumpToHeader: true
     }
   }).on('sortEnd', function (e, t) {
-    let condition = getCondition()
-    let arr = $('.result tbody>tr').toArray().map(i => $(i).attr('path'))
-    window.localStorage.setItem(JSON.stringify(condition), JSON.stringify(arr))
+    const condition = getCondition()
+    const arr = $('.result tbody>tr').toArray().map(i => $(i).attr('path'))
+    window.localStorage.setItem('list_' + JSON.stringify(condition), JSON.stringify(arr))
   })
+  if (pagerOption.enable && rows.length > pagerOption.minCount) {
+    let page = 0
+    const condition = getCondition()
+    if (JSON.stringify(condition) in window.localStorage) {
+      const file = window.localStorage.getItem(JSON.stringify(condition))
+      const item = $('.result tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`)
+      if (item.length) {
+        const index = item.index()
+        page = Math.floor(index / pagerOption.size)
+      }
+    }
+    table.tablesorterPager({
+      container: $('.pager'),
+      savePages: false,
+      page: page,
+      size: pagerOption.size,
+      pageReset: 0,
+
+      cssNext: '.next',
+      cssPrev: '.prev',
+      cssFirst: '.first',
+      cssLast: '.last',
+      output: '{page:input} / {totalPages}',
+      cssDisabled: 'disabled'
+    })
+    $('.pager').show().get(0).scrollIntoView()
+  }
 
   setTimeout(() => {
-    let times = $('.result tbody>tr>td[name="time_view"]').toArray().map(i => $(i).attr('sort-value')).sort().reverse()
-    if (times.length && times[0] !== '0') $(`.result tbody>tr:has(td[name="time_view"][sort-value="${times[0]}"])`).get(0).scrollIntoView()
+    if (observer) observer.disconnect()
+
+    scrollElement = $('.result .tablesorter-scroller-table').get(0)
+    scrollToLast()
+    updateRelativeTime()
+
+    observer = new window.MutationObserver(scrollToLast)
+    observer.observe(scrollElement, {
+      childList: true,
+      subtree: true
+    })
   })
 }
-let showBookmarks = () => {
-  let CONFIG = ipcRenderer.sendSync('config')
+const showBookmarks = () => {
+  const CONFIG = ipcRenderer.sendSync('config')
   if (!CONFIG.bookmarkCondition) return
-  let conditions = CONFIG.bookmarkCondition
-  let html = [
-    '<ul>'
-  ]
-  for (let name in conditions) {
-    let condition = JSON.stringify(conditions[name])
-    condition = encodeURIComponent(condition)
+  const conditions = CONFIG.bookmarkCondition
+  const html = ['<ul>']
+  for (const name in conditions) {
+    const condition = encodeURIComponent(conditions[name])
     html.push(`<li><a name="native" href="./src/index.html?condition=${condition}">${name}</a></li>`)
   }
   html.push('</ul>')
   $('.bookmarks').html(html.join(''))
 }
-let showHistory = () => {
-  let CONFIG = ipcRenderer.sendSync('config')
+const showHistory = () => {
+  const CONFIG = ipcRenderer.sendSync('config')
   if (!CONFIG.history) return
-  let history = CONFIG.history
-  let html = [
+  const history = CONFIG.history
+  const html = [
     '<ul>'
   ]
-  for (let href of history) {
-    let name = href.match(/^.\/src\//) ? 'native' : 'path'
-    let text = decodeURIComponent(href.replace('./src/', ''))
+  for (const href of history) {
+    const name = href.match(/^.\/src\//) ? 'native' : 'path'
+    const text = decodeURIComponent(href.replace('./src/', ''))
     html.push(`<li><a name="${name}" href="${href}">${text}</a></li>`)
   }
   html.push('</ul>')
   $('.history').html(html.join(''))
 }
-let getCondition = () => {
-  let condition = []
-  let elems = $('.filter>.condition')
+const getCondition = () => {
+  const condition = []
+  const elems = $('.filter>.condition')
 
   for (let i = 0; i < elems.length; i++) {
-    let parent = elems.eq(i)
+    const parent = elems.eq(i)
 
-    let not = parent.find('[name="not-condition"]').prop('checked')
-    let column = parent.find('[name="column"]').val()
-    let comparison = parent.find('.comparison:visible').val()
-    let value = parent.find('.value:visible').val()
-    let value1 = parent.find('.value:visible').eq(1).val()
+    const not = parent.find('[name="not-condition"]').prop('checked')
+    const column = parent.find('[name="column"]').val()
+    const comparison = parent.find('.comparison:visible').val()
+    const value = parent.find('.value:visible').val()
+    const value1 = parent.find('.value:visible').eq(1).val()
     condition.push([not, column, comparison, value, value1])
   }
   return condition
 }
-let getConditionReadable = () => {
-  let condition = getCondition()
-  let text = condition.map(i => {
+const getConditionReadable = () => {
+  const condition = getCondition()
+  const text = condition.map(i => {
     let text = i[0] ? '!' : ''
     if (i[1] === 'tags') {
       let main = i[2].split(':')[1]
@@ -296,25 +603,25 @@ let getConditionReadable = () => {
       text += i[3]
     }
     return text
-  }).join('||')
+  }).join('&&')
   return text
 }
-let rememberLastCondition = () => {
+const rememberLastCondition = () => {
   configChange((CONFIG) => {
-    let condition = getCondition()
+    const condition = getCondition()
     if (CONFIG.rememberLastCondition) {
-      CONFIG.lastCondition = condition
+      CONFIG.lastCondition = JSON.stringify(condition)
     } else {
       return true
     }
   })
 }
-let showCondition = (conditions) => {
-  let CONFIG = ipcRenderer.sendSync('config')
+const showCondition = (conditions) => {
+  const CONFIG = ipcRenderer.sendSync('config')
   for (let i = 0; i < conditions.length; i++) {
-    let [not, column, comparison, value, value1] = conditions[i]
+    const [not, column, comparison, value, value1] = conditions[i]
     if (i !== 0) $('.filter').find('.condition>[name="new-condition"]').eq(-1).click()
-    let parent = $('.filter').find('.condition').eq(-1)
+    const parent = $('.filter').find('.condition').eq(-1)
 
     parent.find('[name="not-condition"]').prop('checked', not)
     parent.find('[name="column"]').val(column).trigger('change')
@@ -324,11 +631,11 @@ let showCondition = (conditions) => {
   }
   if (CONFIG.fastQuery) $('.filter').find('[name="query"]').trigger('click')
 }
-let calcRelativeTime = (time) => {
-  let lasttime = new Date(time).getTime()
+const calcRelativeTime = (time) => {
+  const lasttime = new Date(time).getTime()
   if (isNaN(lasttime)) return ''
-  let delta = new Date().getTime() - lasttime
-  let info = {
+  const delta = new Date().getTime() - lasttime
+  const info = {
     ms: 1,
     s: 1000,
     m: 60,
@@ -339,9 +646,9 @@ let calcRelativeTime = (time) => {
   }
   let suf
   let t = delta
-  for (let i in info) {
-    let m = t / info[i] // 倍数
-    let r = t % info[i] // 余数
+  for (const i in info) {
+    const m = t / info[i] // 倍数
+    const r = t % info[i] // 余数
     if (m >= 1 || info[i] - r <= 2) { // 进阶
       t = m
       suf = i
@@ -350,36 +657,45 @@ let calcRelativeTime = (time) => {
     }
   }
   t = Math.round(t)
-  let double = '' // t > 1 ? 's' : ''
+  const double = '' // t > 1 ? 's' : ''
   let text = `${t}${suf}${double}`
   if (delta <= 1000 * 60 * 60 * 24 * 7 * 2) text = '<span class="highlight">' + text + '</span>'
   return text
 }
-let updateRelativeTime = () => {
+const updateRelativeTime = () => {
   $('[datetime]').toArray().forEach(ele => {
     $(ele).html(calcRelativeTime($(ele).attr('datetime')))
   })
 }
-function waitInMs (time) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve()
-    }, time)
-  })
-}
-let updateTitleUrl = () => {
-  let condition = getCondition()
+const updateTitleUrl = () => {
+  const condition = getCondition()
   document.title = getConditionReadable()
 
-  let params = new URLSearchParams()
+  const params = new URLSearchParams()
   params.set('condition', JSON.stringify(condition))
   window.history.pushState(null, 'INDEX', '?' + params.toString())
+}
+const scrollToLast = () => {
+  let scrollTop = 0
+
+  const condition = getCondition()
+  if (JSON.stringify(condition) in window.localStorage) {
+    const file = window.localStorage.getItem(JSON.stringify(condition))
+    const item = $('.result tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`)
+    if (item.length) {
+      item.addClass('trHover')
+      scrollTop = item.get(0).offsetTop
+    }
+  }
+
+  scrollElement.scrollTop = scrollTop
+  $('.result').get(0).scrollIntoView()
 }
 
 // Main
 const main = async () => {
   if (electron.remote.getCurrentWindow().id === 1 && ipcRenderer.sendSync('config', 'get', 'rememberLastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs').length) {
-    let confirm = await tooltip({
+    const confirm = await tooltip({
       title: '是否打开上次保存的网页',
       autoClose: 'cancel|10000',
       backgroundDismiss: 'cancel',
@@ -404,25 +720,32 @@ const main = async () => {
     }
   }
 
+  // 生成option-column
+  for (const i in showColumns) {
+    if (showColumns[i][0]) {
+      $(`<option type="${showColumns[i][1]}" value="${i}">${i}</option>`).appendTo('.filter [name="column"]')
+    }
+  }
+
   let lastActiveElement = null
 
   // 条件
   $('.filter').on('click', '[name="toggle-not-condition"]', (e) => {
-    let parent = $(e.target).parent()
-    let checked = parent.find('[name="not-condition"]').prop('checked')
+    const parent = $(e.target).parent()
+    const checked = parent.find('[name="not-condition"]').prop('checked')
     parent.find('[name="not-condition"]').prop('checked', !checked)
   })
   $('.filter').on('change', '[name="column"]', (e) => {
-    let parent = $(e.target).parent()
-    let column = parent.find('[name="column"]').val()
-    let type = parent.find('[name="column"]').find(`[value="${column}"]`).attr('type')
+    const parent = $(e.target).parent()
+    const column = parent.find('[name="column"]').val()
+    const type = parent.find('[name="column"]').find(`[value="${column}"]`).attr('type')
     parent.find('.comparison').addClass('hide')
     parent.find(`.comparison[name="comp-${type}"]`).removeClass('hide')
     parent.find('.value').addClass('hide')
     parent.find(type === 'datetime' ? '.value[name^="value-time"]' : '.value[name="value-common"]').removeClass('hide')
   })
   $('.filter').on('change', '.comparison', (e) => {
-    let parent = $(e.target).parent()
+    const parent = $(e.target).parent()
     parent.find('.value:visible').trigger('input')
   })
 
@@ -437,7 +760,7 @@ const main = async () => {
   })
   $('.filter').on('keydown', '.value[name="value-common"]', async (e) => {
     lastActiveElement = e.target
-    let hasItem = $('.datalist li').length
+    const hasItem = $('.datalist li').length
     let onItem = $('.datalistHover').index()
     if ((e.ctrlKey && e.key === 's')) {
       rememberLastCondition()
@@ -469,22 +792,15 @@ const main = async () => {
     }
     // console.log(e.key)
   })
-  $('.filter').on('input', '.value[name="value-common"]', async (e) => { // TODO
-    let value = $(e.target).val()
-    let parent = $(e.target).parent()
-    let column = parent.find('[name="column"]').val()
-    let comparison = parent.find('.comparison:visible').val()
+  $('.filter').on('input', '.value[name="value-common"]', async (e) => {
+    const value = $(e.target).val()
+    const parent = $(e.target).parent()
+    const column = parent.find('[name="column"]').val()
+    const comparison = parent.find('.comparison:visible').val()
     $('.datalist>ol').empty()
-    if (!['path', 'tags'].includes(column) || (value.length < 3 && !value.match(/[\u4e00-\u9fa5]/)) || typing) return
-    if (column === 'path') {
-      return
-      // let query = `SELECT path FROM files WHERE path LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)} LIMIT 50`
-      // let [rows] = await ipcRenderer.sendSync('database-query', query)
-      // let html = []
-      // rows.forEach(i => html.push(`<li>${i.path}</li>`))
-      // $('.datalist>ol').html(html)
-    } else if (column === 'tags') {
-      let main = comparison.replace('tags:', '')
+    if (!autoCompleteOption.enbaleColumns.includes(column) || (value.length < autoCompleteOption.minLength && !value.match(/[\u4e00-\u9fa5]/)) || typing) return
+    if (column === 'tags') {
+      const main = comparison.replace('tags:', '')
       let html = []
       let tags
       if (main === '*') {
@@ -494,7 +810,7 @@ const main = async () => {
       }
 
       tags.forEach(i => {
-        for (let key in i.data) {
+        for (const key in i.data) {
           if (key.match(value) || i.data[key].name.match(value)) {
             html.push(`<li cname="${i.data[key].name}">${key}</li>`)
           }
@@ -503,11 +819,24 @@ const main = async () => {
 
       html = [...(new Set(html))]
       $('.datalist>ol').html(html.join(''))
+    } else if (showColumns[column][1] === 'text') {
+      const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)} LIMIT ${autoCompleteOption.limit}`
+      const [rows] = await ipcRenderer.sendSync('database-query', query)
+      const html = []
+      ;[...new Set(rows.map(i => i[column]))].forEach(i => html.push(`<li>${i}</li>`))
+      $('.datalist>ol').html(html)
     }
     $('.datalist').show()
   })
   $('.filter').on('focusin', '.value[name="value-common"]', async (e) => {
-    $('.datalist').show()
+    const value = $(e.target).val()
+    const parent = $(e.target).parent()
+    const column = parent.find('[name="column"]').val()
+    if (!autoCompleteOption.enbaleColumns.includes(column) || (value.length < autoCompleteOption.minLength && !value.match(/[\u4e00-\u9fa5]/)) || typing) {
+      $('.datalist').hide()
+    } else {
+      $('.datalist').show()
+    }
   })
   $('.filter').on('focusout', '.value[name="value-common"]', async (e) => {
     await waitInMs(200)
@@ -515,13 +844,13 @@ const main = async () => {
   })
 
   // 按钮-增删条件
-  let cloned = $('.filter>.condition').clone()
+  const cloned = $('.filter>.condition').clone()
   $('.filter').on('click', '[name="new-condition"]', (e) => {
-    let parent = $(e.target).parent()
+    const parent = $(e.target).parent()
     cloned.clone().insertAfter(parent)
   })
   $('.filter').on('click', '[name="delete-condition"]', (e) => {
-    let parent = $(e.target).parent()
+    const parent = $(e.target).parent()
     if ($('.filter>.condition').length <= 1) cloned.clone().insertBefore(parent)
     parent.remove()
   })
@@ -530,11 +859,10 @@ const main = async () => {
   $('.filter').find('[name="query"]').on('click', async (e) => {
     rememberLastCondition()
 
-    let condition = getCondition()
+    const condition = getCondition()
 
-    let [rows] = ipcRenderer.sendSync('query-by-condition', condition)
-    console.log(rows)
-    window.localStorage.setItem(JSON.stringify(condition), JSON.stringify(rows.map(i => i.path)))
+    const [rows] = ipcRenderer.sendSync('query-by-condition', condition)
+    window.localStorage.setItem('list_' + JSON.stringify(condition), JSON.stringify(rows.map(i => i.path)))
     showResult(rows)
     updateTitleUrl()
   })
@@ -544,15 +872,23 @@ const main = async () => {
     rememberLastCondition()
   })
   $('.filter').find('[name="bookmark-condition"]').on('click', async (e) => {
-    let condition = getCondition()
-    let name = await new Promise((resolve, reject) => {
+    const condition = getCondition()
+    let nameBefore = null
+    const CONFIG = ipcRenderer.sendSync('config')
+    const conditionStr = JSON.stringify(condition)
+    if (CONFIG.bookmarkCondition && Object.values(CONFIG.bookmarkCondition).includes(conditionStr)) {
+      const index = Object.values(CONFIG.bookmarkCondition).indexOf(conditionStr)
+      nameBefore = Object.keys(CONFIG.bookmarkCondition)[index]
+    }
+
+    const name = await new Promise((resolve, reject) => {
       $.confirm({
         theme: 'supervan',
         boxWidth: '30%',
         useBootstrap: false,
         title: 'Please put in NAME:',
-        content: `<input name="name" style="width:95%;border:none;">`,
-        autoClose: 'cancel|20000',
+        content: '<input name="name" style="width:95%;border:none;">',
+        autoClose: null,
         backgroundDismiss: 'cancel',
         buttons: {
           submit: {
@@ -560,7 +896,7 @@ const main = async () => {
             btnClass: 'btn-blue',
             keys: ['enter'],
             action: function () {
-              var name = this.$content.find('[name="name"]').val()
+              const name = this.$content.find('[name="name"]').val()
               resolve(name)
             }
           },
@@ -569,16 +905,17 @@ const main = async () => {
           }
         },
         onContentReady: function () {
-          this.$content.find('[name="name"]').focus().val(getConditionReadable())
+          this.$content.find('[name="name"]').focus().val(nameBefore || getConditionReadable())
         }
       })
     })
     if (!name) return
     configChange((CONFIG) => {
       if (!('bookmarkCondition' in CONFIG)) CONFIG.bookmarkCondition = {}
-      CONFIG.bookmarkCondition[name.trim()] = condition
+      if (nameBefore) delete CONFIG.bookmarkCondition[nameBefore]
+      CONFIG.bookmarkCondition[name.trim()] = conditionStr
     })
-    tooltip(`保存完成`, name)
+    tooltip('保存完成', name)
   })
 
   // 按钮-打开新窗口
@@ -600,22 +937,22 @@ const main = async () => {
   // 按钮-移动结果
   $('.filter').find('[name="move-files"]').on('click', async (e) => {
     if (!$('.query>.result tr[path]').length) return
-    let result = electron.remote.dialog.showOpenDialogSync({
+    const result = electron.remote.dialog.showOpenDialogSync({
       properties: ['openDirectory']
     })
     if (result && result.length) {
-      let dir = result[0]
-      let libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder')
-      let files = $('.query>.result tr[path]').toArray().map(i => path.resolve(libraryFolder, $(i).attr('path')))
-      let moveMode = path.parse(libraryFolder).root === path.parse(dir).root
-      for (let file of files) {
+      const dir = result[0]
+      const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder')
+      const files = $('.query>.result tr[path]').toArray().map(i => path.resolve(libraryFolder, $(i).attr('path')))
+      const moveMode = path.parse(libraryFolder).root === path.parse(dir).root
+      for (const file of files) {
         if (!fs.existsSync(file)) continue
-        let fileNew = path.resolve(dir, path.basename(file))
+        const fileNew = path.resolve(dir, path.basename(file))
         try {
           if (moveMode) {
             fs.renameSync(file, fileNew)
           } else {
-            let info = fs.statSync(file)
+            const info = fs.statSync(file)
             fs.writeFileSync(fileNew, fs.readFileSync(file))
             fs.utimesSync(fileNew, info.atime, info.mtime)
             ipcRenderer.send('open-external', file, 'delete')
@@ -628,13 +965,26 @@ const main = async () => {
           }
         }
       }
+      tooltip('移动完成')
     }
-    tooltip('移动完成')
   })
 
-  // 按钮-移动结果
+  // 按钮-清理
   $('.filter').find('[name="clear"]').on('click', async (e) => {
-    ipcRenderer.send('clear')
+    ipcRenderer.sendSync('clear')
+    // window.localStorage.clear()
+  })
+
+  // 按钮-切换hide
+  let invisible = true
+  $('.filter').find('[name="toggle-invisible"]').on('click', async (e) => {
+    if (invisible) {
+      $('.query>.result tr[invisible="1"]').attr('raw-invisible', '1').attr('invisible', null)
+    } else {
+      $('.query>.result tr[raw-invisible="1"]').attr('invisible', '1').attr('raw-invisible', null)
+    }
+    invisible = !invisible
+    scrollToLast()
   })
 
   // 自动填充-选择项点击
@@ -648,28 +998,40 @@ const main = async () => {
   $('.result').on('mouseover', 'tr>[name^="title"]', (e) => {
     if (loading) return
     loading = true
-    let CONFIG = ipcRenderer.sendSync('config')
-    let target = e.currentTarget.parentElement
-    let file = $(target).attr('path')
-    if (!file || !fs.existsSync(path.resolve(CONFIG.libraryFolder, file))) {
-      if (file) $(target).attr('path', null)
+    const CONFIG = ipcRenderer.sendSync('config')
+    const target = e.currentTarget.parentElement
+    const file = $(target).attr('path')
+    if (!file) {
       $('.preview').hide()
       loading = false
       return
     }
 
-    let { dir, name } = path.parse(file)
-    let src = path.resolve(CONFIG.libraryFolder, dir, name + '.jpg')
-    let cover = $(target).attr('cover')
-    if (!cover && fs.existsSync(src)) {
-      let buffer = fs.readFileSync(src)
-      let blob = new window.Blob([new Uint8Array(buffer)])
-      cover = URL.createObjectURL(blob)
-      $(target).attr('cover', cover)
-    }
-    if (cover) $('.preview[name="cover"]').html(`<img src="${cover}" />`).show()
+    const fullpath = path.resolve(CONFIG.libraryFolder, file)
+    $(target).attr('exists', fs.existsSync(fullpath))
 
-    let html = []
+    const { dir, name } = path.parse(file)
+    const src = path.resolve(CONFIG.libraryFolder, dir, name + '.jpg')
+    let cover = $(target).attr('cover')
+    if (!cover && !$(target).prop('image_loading') && fs.existsSync(src)) {
+      $(target).prop('image_loading', true)
+      $('.preview[name="cover"]>img').attr('src', null)
+      fs.readFile(src, (err, buffer) => {
+        $(target).prop('image_loading', null)
+        if (err) {
+
+        } else {
+          const blob = new window.Blob([new Uint8Array(buffer)])
+          cover = URL.createObjectURL(blob)
+          $(target).attr('cover', cover)
+          $('.preview[name="cover"]>img').attr('src', cover)
+        }
+      })
+    } else {
+      $('.preview[name="cover"]>img').attr('src', cover || null)
+    }
+
+    const html = []
     let tagsChs = $(target).prop('tagsChs')
     if (!tagsChs) {
       let tags = $(target).attr('tags')
@@ -678,11 +1040,15 @@ const main = async () => {
       } else {
         tags = JSON.parse(decodeURIComponent(tags))
         tagsChs = []
-        for (let main in tags) {
-          let chs = findData(main).cname + ': '
-          let subChs = []
-          for (let sub of tags[main]) {
-            subChs.push(findData(main, sub).cname || sub)
+        for (const main in tags) {
+          const chs = findData(main).cname + ': '
+          const subChs = []
+          for (const sub of tags[main]) {
+            let color = ''
+            const full = main === 'misc' ? sub : `${main}:${sub}`
+            if (full in tagsAlert) color = tagsAlert[full]
+            const html = `<span color="${color}">${findData(main, sub).cname || sub}</span>`
+            subChs.push(html)
           }
           tagsChs.push(chs + subChs.join(', '))
         }
@@ -692,12 +1058,13 @@ const main = async () => {
     }
     html.push(tagsChs)
 
-    $('.preview[name="tags"]').html(html.join('<br>')).show()
+    $('.preview[name="tags"]').html(html.join('<br>'))
+    $('.preview').show()
     loading = false
   })
   $('.result').on('mousemove', 'tr>[name^="title"]', (e) => {
-    let _width = $('.preview[name="tags"]').outerWidth()
-    let _height = $('.preview[name="tags"]').outerHeight()
+    const _width = $('.preview[name="tags"]').outerWidth()
+    const _height = $('.preview[name="tags"]').outerHeight()
     let left = _width + e.clientX + 10 < window.innerWidth ? e.clientX + 5 : e.clientX - _width - 5
     let top = _height + e.clientY + 10 < window.innerHeight ? e.clientY + 5 : e.clientY - _height - 5
     if (left < 0) left = 0
@@ -713,13 +1080,13 @@ const main = async () => {
   // 结果-点击事件
   $('.result').on('click', 'tr', (e) => {
     $('.trHover').removeClass('trHover')
-    let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
+    const parent = $(e.target).parentsUntil('tbody').eq(-1)
     parent.addClass('trHover')
   })
   $('.result').on('click', 'tr[path]>td>button[name="star"]', async (e) => {
     e.preventDefault()
-    let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
-    let file = parent.attr('path')
+    const parent = $(e.target).parentsUntil('tbody').eq(-1)
+    const file = parent.attr('path')
     let star = parent.attr('star')
     star = star === '1' ? 0 : 1
     configChange((CONFIG) => {
@@ -734,8 +1101,8 @@ const main = async () => {
   })
   $('.result').on('click', 'tr[path]>td>button[name="clear"]', async (e) => {
     e.preventDefault()
-    let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
-    let file = parent.attr('path')
+    const parent = $(e.target).parentsUntil('tbody').eq(-1)
+    const file = parent.attr('path')
     parent.find('[name="time_view"]').attr('datetime', 'null').attr('sort-value', 0)
     configChange((CONFIG) => {
       if (CONFIG.lastViewPosition && file in CONFIG.lastViewPosition) delete CONFIG.lastViewPosition[file]
@@ -744,11 +1111,28 @@ const main = async () => {
     })
     updateRelativeTime()
   })
+  $('.result').on('click', 'tr[path]>td>button[name="invisible"]', async (e) => {
+    e.preventDefault()
+    const parent = $(e.target).parentsUntil('tbody').eq(-1)
+    const file = parent.attr('path')
+    const invisible = (parent.attr('invisible') || parent.attr('raw-invisible')) === '1' ? 0 : 1
+    console.log(invisible)
+    configChange((CONFIG) => {
+      if (!('invisible' in CONFIG)) CONFIG.invisible = []
+      if (invisible) {
+        CONFIG.invisible.push(file)
+      } else {
+        if (CONFIG.invisible.includes(file)) CONFIG.invisible.splice(CONFIG.invisible.indexOf(file), 1)
+      }
+    })
+    parent.attr('invisible', invisible)
+    parent.attr('raw-invisible', invisible)
+  })
 
   // 侧边栏
   $('.btnBox>button').on('click', (e) => {
-    let name = $(e.target).attr('name')
-    let visible = $('.sidebar').filter(`.${name}`).is(':visible')
+    const name = $(e.target).attr('name')
+    const visible = $('.sidebar').filter(`.${name}`).is(':visible')
     $('.sidebar').hide()
     if (visible) {
       $('.btnBox').addClass('btnBox-hide')
@@ -766,17 +1150,17 @@ const main = async () => {
   // 全局事件
   $('body').on('click', 'a', async (e) => {
     e.preventDefault()
-    let parent = $(e.target).parentsUntil('.result>table>tbody').eq(-1)
-    let href = $(e.target).attr('href')
-    let name = $(e.target).attr('name')
-    let file = parent.attr('path')
+    const parent = $(e.target).parentsUntil('tbody').eq(-1)
+    const href = $(e.target).attr('href')
+    const name = $(e.target).attr('name')
+    const file = parent.attr('path')
     // name: native, path, delete, null
     if (name === 'native') {
       ipcRenderer.send('open', href)
     } else {
       ipcRenderer.send('open-external', href, name)
       if (name === 'path') {
-        let date = new Date()
+        const date = new Date()
         configChange((CONFIG) => {
           if (!('lastViewTime' in CONFIG)) CONFIG.lastViewTime = {}
           CONFIG.lastViewTime[file] = date.toLocaleString('zh-CN', { hour12: false })
@@ -787,12 +1171,17 @@ const main = async () => {
         })
       }
     }
-    configChange((CONFIG) => {
-      if (!name || !CONFIG.rememberHistory) return true
-      if (!('history' in CONFIG)) CONFIG.history = []
-      CONFIG.history.unshift(href)
-      CONFIG.history = [...(new Set(CONFIG.history))]
-    })
+    if (!['delete', 'everything'].includes(name)) {
+      configChange((CONFIG) => {
+        if (!name || !CONFIG.rememberHistory) return true
+        if (!('history' in CONFIG)) CONFIG.history = []
+        CONFIG.history.unshift(href)
+        CONFIG.history = [...(new Set(CONFIG.history))]
+      })
+    }
+
+    const condition = getCondition()
+    if (file) window.localStorage.setItem(JSON.stringify(condition), file)
   })
 
   // 全局快捷键
@@ -821,21 +1210,27 @@ const main = async () => {
     scrollElement.scrollTop = keyMap.shiftAndUp.includes(combo) ? 0 : scrollElement.scrollHeight
     return false
   })
+  Mousetrap.bind([].concat(keyMap.upLeft, keyMap.upRight), async (e, combo) => { // 打开上/下一本书籍
+    $('.pager').find(keyMap.upLeft.includes(combo) ? '.prev' : '.next').click()
+    return false
+  }, 'keyup')
 
   // 连接数据库
-  let result = ipcRenderer.sendSync('database-connect')
+  const result = ipcRenderer.sendSync('database-connect')
   if (result[1] !== 1) {
     ipcRenderer.send('open', './src/config.html')
     electron.remote.getCurrentWindow().close()
   }
 
   // 还原上次或链接里的条件
-  let params = (new URL(document.location)).searchParams
+  const params = (new URL(document.location)).searchParams
   if (params.get('condition')) {
     showCondition(JSON.parse(params.get('condition')))
   } else if (ipcRenderer.sendSync('config', 'get', 'rememberLastCondition')) {
-    showCondition(ipcRenderer.sendSync('config', 'get', 'lastCondition') || [])
+    showCondition(JSON.parse(ipcRenderer.sendSync('config', 'get', 'lastCondition', '[]')))
   }
+
+  $('<style>').text(Object.keys(tagsAlertStyle).map(i => `[color="${i}"]{${tagsAlertStyle[i]}}`).join('\n')).appendTo('head')
 }
 
 main().then(async () => {

@@ -4,7 +4,6 @@ html, body {
   padding: 0;
   background-color: #34353b;
   color: #dddddd;
-  scroll-behavior: smooth;
 }
 
 .hide {

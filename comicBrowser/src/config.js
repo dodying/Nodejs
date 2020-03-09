@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               config
 // @Description:        config
-// @Version:            1.0.78
+// @Version:            1.0.80
 // @Author:             dodying
 // @Created:            2020-02-05 13:44:47
-// @Modified:           2020-2-9 16:13:08
+// @Modified:           2020-3-9 16:52:20
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron
@@ -20,14 +20,13 @@ const ipcRenderer = electron.ipcRenderer
 
 // Function
 const funcConfig = () => {
-  let CONFIG = ipcRenderer.sendSync('config')
-  let elems = $('div[name="config"]').find('input:not([type="button"]):not([type="file"]),select,textarea').toArray()
+  const CONFIG = ipcRenderer.sendSync('config')
+  const elems = $('div[name="config"]').find('input:not([type="button"]):not([type="file"]),select,textarea').toArray()
 
   elems.forEach(i => {
-    let key = i.getAttribute('id').replace('config-', '')
-    let value
+    const key = i.getAttribute('id').replace('config-', '')
     if (!(key in CONFIG)) return
-    value = CONFIG[key]
+    const value = CONFIG[key]
     if (i.type === 'text' || i.type === 'hidden' || i.type === 'select-one' || i.type === 'number' || i.type === 'textarea') {
       i.value = value
     } else if (i.type === 'checkbox') {
@@ -38,9 +37,9 @@ const funcConfig = () => {
   })
 
   $('#config-btnSave').on('click', () => {
-    let config = {}
+    const config = {}
     elems.forEach(i => {
-      let key = i.getAttribute('id').replace('config-', '')
+      const key = i.getAttribute('id').replace('config-', '')
       let value
       if (i.type === 'number') {
         value = (i.value || i.placeholder) * 1
@@ -70,8 +69,8 @@ const main = async () => {
     $('div[name="config"]').find('[name="database"]>input[type="button"][name^="database-"]').attr('disabled', 'disabled')
     $('div[name="config"]').find('[name="database"]>[name="database-result"]').text('请求进行中')
 
-    let name = $(e.target).attr('name').replace('database-', '')
-    let obj = {
+    const name = $(e.target).attr('name').replace('database-', '')
+    const obj = {
       host: $('#config-host').val(),
       user: $('#config-user').val(),
       password: $('#config-password').val(),
@@ -79,7 +78,7 @@ const main = async () => {
       libraryFolder: $('#config-libraryFolder').val()
     }
 
-    let result = ipcRenderer.sendSync('database-connect', obj, name)
+    const result = ipcRenderer.sendSync('database-connect', obj, name)
     $('div[name="config"]').find('[name="database"]>[name="database-result"]').text(result[0])
     $('div[name="config"]').find('[name="database"]>input[type="button"][name^="database-"]').removeAttr('disabled')
   })

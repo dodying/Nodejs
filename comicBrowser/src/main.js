@@ -13,8 +13,8 @@
 
 (async () => {
   $('body').on('mousemove', (e) => {
-    let leftPercent = Math.round(e.clientX / $('body').prop('clientWidth') * 100)
-    let topPercent = Math.round(e.clientY / $('body').prop('clientHeight') * 100)
+    const leftPercent = Math.round(e.clientX / $('body').prop('clientWidth') * 100)
+    const topPercent = Math.round(e.clientY / $('body').prop('clientHeight') * 100)
     if (leftPercent >= 90 && topPercent <= 10) {
       if ($('.title-bar-btns').length) {
         $('.title-bar-btns:hidden').show()
@@ -24,15 +24,15 @@
           '<button name="max">□</button>',
           '<button name="close">×</button>'
         ].join('')).css({
-          'position': 'fixed',
-          'top': '0px',
-          'right': '0px'
+          position: 'fixed',
+          top: '0px',
+          right: '0px'
         }).appendTo('body')
         $('.title-bar-btns:visible').on('mouseup', 'button', (e) => {
           e.preventDefault()
 
-          let name = $(e.target).attr('name')
-          let button = e.button
+          const name = $(e.target).attr('name')
+          const button = e.button
           if (name === 'min' && button === 0) {
             electron.remote.getCurrentWindow().minimize()
           } else if (name === 'min' && button === 2) {
