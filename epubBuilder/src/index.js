@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.958
+// @Version:            1.0.985
 // @Author:             dodying
 // @Created:            2020-01-11 13:06:39
-// @Modified:           2020-3-1 20:16:35
+// @Modified:           2020-3-3 21:17:59
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            archiver,chardet,iconv-lite
@@ -25,15 +25,15 @@ var THIS = {
 const numberLib = {
   '1': '\\.0-9',
   '１': '\\.０-９',
-  '一': '点零一二三四五六七八九十卅百千万廿卅',
-  '壹': '点點零壹贰参肆伍陆柒捌玖拾佰仟萬'
+  '一': '点零一二三四五六七八九十卅百千万廿卅上中下',
+  '壹': '点點零壹贰叁参肆伍陆柒捌玖拾佰仟萬上中下'
 }
 numberLib['1１'] = numberLib['1'] + numberLib['１']
-numberLib['一壹'] = numberLib['一'] + numberLib['一']
+numberLib['一壹'] = numberLib['一'] + numberLib['壹']
 numberLib['-1'] = numberLib['1１'] + numberLib['一壹']
 
 const suffixLib = {
-  '-1': '章回节集卷部话篇'
+  '-1': '章回节集卷部话篇季'
 }
 
 const prefixLib = {}
@@ -208,7 +208,7 @@ const funcStart = () => {
 
     if (THIS.title.match(/^《(.*?)》/)) THIS.title = THIS.title.match(/^《(.*?)》/)[1]
     if (THIS.title.match(/^【(.*?)】/)) THIS.title = THIS.title.match(/^【(.*?)】/)[1]
-    THIS.title = THIS.title.replace(/作者：.*|(全本|全集|完本)|\(.*?\)|（.*?）|【.*?】/g, '')
+    THIS.title = THIS.title.replace(/作者：.*|(全本|全集|完本)|\(.*?\)|（.*?）|【.*?】/g, '').trim()
 
     THIS.content = THIS.content.replace(/^\s*(\*+|\*\s+.*?(更多好书请访问|shuchong8).*?\s*\*)\s*$/mg, '\r\n').replace(/([^\S\r\n]|[*]){10,}/g, '\r\n').replace(//g, '').replace(/<\/?br>/gi, '\r\n').replace(/<\/?font>/gi, '').replace(/^.*(书虫包小说网).*$/mig, '').trim()
     if (THIS.list) {
@@ -328,14 +328,14 @@ const funcChapter = () => {
     '<span></span>',
     '<span count="{length}">{length}</span>',
     '<span>{title}</span>',
-    '<input type="button" key="/" title="向上移动" name="moveup" value="▲">',
-    '<input type="button" key="z" title="按标记分割章节" name="split" value="拆">',
-    '<input type="button" key="x" title="按字数分割章节" name="cut" value="分">',
-    '<input type="button" key="c" title="按章节字数分割章节" name="chapter" value="章">',
-    '<input type="button" key="v" title="合并到上一章节" name="combine" value="合">',
-    '<input type="button" key="b" title="新增章节" name="add" value="增">',
-    '<input type="button" key="n" title="插入章节" name="insert" value="插">',
-    '<input type="button" key="m" title="移除章节" name="delete" value="减">',
+    '<input type="button" key="a" title="向上移动" name="moveup" value="▲">',
+    '<input type="button" key="s" title="按标记分割章节" name="split" value="拆">',
+    '<input type="button" key="d" title="按字数分割章节" name="cut" value="分">',
+    '<input type="button" key="f" title="按章节字数分割章节" name="chapter" value="章">',
+    '<input type="button" key="g" title="合并到上一章节" name="combine" value="合">',
+    '<input type="button" key="h" title="新增章节" name="add" value="增">',
+    '<input type="button" key="j" title="插入章节" name="insert" value="插">',
+    '<input type="button" key="k" title="移除章节" name="delete" value="减">',
     '</div>'
   ].join('')
   let elemGen = chapter => {
@@ -462,16 +462,10 @@ const funcChapter = () => {
     regenChapterElements()
   })
 
-  $('.tabContent[name="chapter"]').find('[name="sectionLineByEnd"]').off('click').on('click', (e) => {
+  $('.tabContent[name="chapter"]').find('[name="sectionLine"]').off('click').on('click', (e) => {
+    let action = $(e.target).attr('action')
     for (let i = 0; i < THIS.chapters.length; i++) {
-      THIS.chapters[i].content = wordSection(['end'], THIS.chapters[i].content)
-    }
-    regenChapterElements()
-  })
-
-  $('.tabContent[name="chapter"]').find('[name="sectionLineByLong"]').off('click').on('click', (e) => {
-    for (let i = 0; i < THIS.chapters.length; i++) {
-      THIS.chapters[i].content = wordSection(['long'], THIS.chapters[i].content)
+      THIS.chapters[i].content = wordSection([action], THIS.chapters[i].content)
     }
     regenChapterElements()
   })
@@ -485,13 +479,10 @@ const funcChapter = () => {
     regenChapterElements()
   })
 
-  $('.tabContent[name="chapter"]').find('[name="cutLongChapter"]').off('click').on('click', (e) => {
+  $('.tabContent[name="chapter"]').find('[name="dealLongChapter"]').off('click').on('click', (e) => {
+    let action = $(e.target).attr('action')
     let wordCount = $('.tabContent[name="chapter"]').find('[name="wordCount"]').val() * 1
-    let elem = $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter((i, e) => $(e).find('[count]').attr('count') * 1 >= wordCount * 2)
-    while (elem.length) {
-      elem.eq(0).find('[type="button"][name="cut"]').click()
-      elem = $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter((i, e) => $(e).find('[count]').attr('count') * 1 >= wordCount * 2)
-    }
+    $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter((i, e) => $(e).find('[count]').attr('count') * 1 >= wordCount * 2).find(`[type="button"][name="${action}"]`).click()
     regenChapterElements()
   })
 
@@ -507,7 +498,7 @@ const funcChapter = () => {
     if (THIS.chapters[index].content.length < wordCount * 4) {
       $('.tabContent[name="chapter"]').find('[name="content"]').attr('contenteditable', 'true').text(THIS.chapters[index].content)
     } else {
-      $('.tabContent[name="chapter"]').find('[name="content"]').attr('contenteditable', 'false').text(THIS.chapters[index].content.substr(0, wordCount * 4))
+      $('.tabContent[name="chapter"]').find('[name="content"]').attr('contenteditable', 'false').text(THIS.chapters[index].content.substr(0, wordCount * 10))
     }
     $('.tabContent[name="chapter"]').find('[name="content"]')[0].scrollTop = 0
   })
@@ -712,7 +703,7 @@ const funcChapter = () => {
   //   $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').eq(index).replaceWith(elemGen(THIS.chapters[index]))
   // })
 
-  if ($('.tabContent[name="chapter"]').find('[name="chapterList"]>div').length === 1) $('.tabContent[name="chapter"]').find('[name="chapterList"]>div>input[type="button"][name="split"]').eq(0).click()
+  // if ($('.tabContent[name="chapter"]').find('[name="chapterList"]>div').length === 1) $('.tabContent[name="chapter"]').find('[name="chapterList"]>div>input[type="button"][name="split"]').eq(0).click()
   $('.tabContent[name="chapter"]').find('[name="chapterList"]>div>span:nth-child(3)').eq(0).click()
 }
 

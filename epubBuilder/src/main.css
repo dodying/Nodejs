@@ -171,6 +171,7 @@ body {
 .tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(1)::before {
   content: counter(chapterOrder);
   counter-increment: chapterOrder;
+  font-size: small;
 }
 
 .tabContent[name="chapter"]>div>div[name="chapterList"]>div>span:nth-child(2) {

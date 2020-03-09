@@ -99,6 +99,8 @@
           <option value="部">部</option>
           <option value="话">话</option>
           <option value="篇">篇</option>
+          <option value="季">季</option>
+          <option value="、">、</option>
         </datalist>
         <span>样式组合: </span>
         <input type="text" name="patternGroup" list="patternGroupList" value="">
@@ -114,7 +116,7 @@
           <option value="^\s*|-1|">仅数字开头</option>
           <option value="|-1|\s*$">仅数字末尾</option>
           <option value="^\s*正文||">正文</option>
-          <option value="|-1|、">、</option>
+          <option value="|-1|、">点</option>
           <option value="外传||">外传</option>
           <option value="番外||">番外</option>
           <option value="后记||">后记</option>
@@ -125,27 +127,29 @@
         <span>匹配</span>
         <input type="text" name="titlePattern" list="titlePatternList" value="第.*[章回节集卷部话篇]">
         <datalist id="titlePatternList">
-          <option value="第.*[章回节集卷部话篇]">第.*章</option>
+          <option value="第.*[章回节集卷部话篇季]">第.*章</option>
           <option value="正文">正文</option>
           <option value="[（【\(].*?[）】\)]">括号</option>
           <option value="^\s*\d+">数字开头</option>
           <option value="^\s*[\.0-9０-９零一二三四五六七八九十百千万零壹贰参肆伍陆柒捌玖拾佰仟萬]+">数字开头</option>
         </datalist>
-        <br>
-        <input type="button" key="1" name="filterChapter" value="1过滤章节">
-        <input type="button" key="0" name="resetChapter" value="0重置章节">
         <span>分割字数: </span>
         <input type="number" name="wordCount" value="5000" step="500" min="1000" max="20000">
         <span>章节字数: </span>
         <input type="number" name="chapterCount" value="10" step="1" min="1" max="100">
-        <input type="button" key="2" name="changeChineseST" value="2简繁转换">
         <br>
-        <input type="button" key="q" name="removeEmptyChapter" value="Q移除 空章">
-        <input type="button" key="w" name="combineEmptyChapter" value="W合并 空章">
-        <input type="button" key="e" name="removeEmptyLine" value="E移除 空行">
-        <input type="button" key="r" name="sectionLineByEnd" value="R处理行(末)">
-        <input type="button" key="t" name="sectionLineByLong" value="T处理行(长)">
-        <input type="button" key="y" name="cutLongChapter" value="Y分节 长章">
+        <input type="button" key="1" name="filterChapter" value="1过滤章节">
+        <input type="button" key="0" name="resetChapter" value="0重置章节">
+        <input type="button" key="2" name="changeChineseST" value="2简繁转换">
+        <input type="button" key="3" name="removeEmptyChapter" value="3移除空章">
+        <input type="button" key="4" name="combineEmptyChapter" value="4合并空章">
+        <br>
+        <input type="button" key="q" name="removeEmptyLine" value="Q移除空行">
+        <input type="button" key="w" name="sectionLine" action="end" value="W处理行(末)">
+        <input type="button" key="e" name="sectionLine" action="long" value="E处理行(长)">
+        <input type="button" key="r" name="dealLongChapter" action="split" value="R拆 长章">
+        <input type="button" key="t" name="dealLongChapter" action="cut" value="T节 长章">
+        <input type="button" key="y" name="dealLongChapter" action="chapter" value="T章 长章">
       </div>
       <div name="chapterList">
 
