@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               watch
 // @Description:        监控libraryFolder变化
-// @Version:            1.0.187
+// @Version:            1.0.189
 // @Author:             dodying
-// @Modified:           2020-1-21 09:28:29
+// @Modified:           2020-3-6 14:02:03
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            g2-bracket-parser,readline-sync
@@ -24,8 +24,9 @@ const path = require('path')
 const readlineSync = require('readline-sync')
 const brackets = require('g2-bracket-parser')
 
+const walk = require('./../../_lib/walk')
+
 // Function
-let walk = require('./../js/walk')
 let nameParsed = name => {
   name = path.parse(name).name
   let parsed = brackets(name, {

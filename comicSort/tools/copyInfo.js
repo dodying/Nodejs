@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               copyInfo
 // @Description:        copyInfo
-// @Version:            1.0.346
+// @Version:            1.0.354
 // @Author:             dodying
 // @Created:            2020-01-18 15:55:20
-// @Modified:           2020-3-4 12:15:00
+// @Modified:           2020-3-8 17:15:05
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,fs-extra,jszip,readline-sync
@@ -16,13 +16,15 @@
 const _ = require('./../config')
 
 // 导入原生模块
-const path = require('path')
+// const path = require('path')
 
 // 导入第三方模块
 const JSZip = require('jszip')
 const fse = require('fs-extra')
 const readlineSync = require('readline-sync')
 const clipboardy = require('clipboardy')
+
+const getTitleMain = require('./../js/getTitleMain')
 const parseInfo = require('./../js/parseInfo')
 const findData = require('./../js/findData')
 
@@ -80,8 +82,8 @@ const main = async () => {
     'Series-Parody-NoTitle': `\n[ ['folder', './../0.Series/【#同人-\${parody:chs}】\${artist:chs}'], ['mode', 1], ['parody', '\${parody}'], ['\${artist}'] ],`,
     '[Group]Series-Parody-NoTitle': `\n[ ['folder', './../0.Series/【#同人-\${parody:chs}】\${group:chs}'], ['mode', 1], ['parody', '\${parody}'], ['group', '\${group}'] ],`,
 
-    'Artist': `\n[ ['folder', '#Artist/\${artist:chs}'], ['\${artist}'] ],`,
-    '[Group]Artist': `\n[ ['folder', '#Artist/\${group:chs}'], ['group', '\${group}'] ],`
+    'Artist': `\n[ ['folder', '[#Artist]/\${artist:chs}'], ['\${artist}'] ],`,
+    '[Group]Artist': `\n[ ['folder', '[#Artist]/\${group:chs}'], ['group', '\${group}'] ],`
   }
 
   let parodyAlias = [
@@ -116,10 +118,6 @@ const main = async () => {
 
   let varsRe = /\${(.*?)}/
   let kanaRe = /^[あアいイうウえエおオかカきキくクけケこコさサしシすスせセそソたタちチつツてテとトなナにニぬヌねネのノはハひヒふフへヘほホまマみミむムめメもモやヤゆユよヨらラりリるルれレろロわワをヲんンがガぎギぐグげゲごゴざザじジずズぜゼぞゾだダぢヂづヅでデどドばバびビぶブべベぼボぱパぴピぷプぺペぽポゃャゅュょョ]/
-  let ignoreInfoRe = /\[.*?\]|\(.*?\)|\{.*?\}|【.*?】/g
-  let numberEndRe = /((vol|ch)\.?\s*|第|)(\d+|\d+-\d+)(話|)$/i
-  let symbolRe = /[[\]{};:'",.<>/?`~!@#$%^&*()\-_=+]+$/
-  let emojiRe = _.emojiRegExp
 
   let mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc']
   let toDeleteInfo = ['page']
@@ -154,6 +152,8 @@ const main = async () => {
     let infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
     let data = await zip.files[infoFile].async('text')
     let info = parseInfo(data)
+    if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1)
+    if (info.parody && info.parody.length === 0) delete info.parody
 
     toDeleteInfo.forEach(i => delete info[i])
 
@@ -189,20 +189,11 @@ const main = async () => {
       }
     })
 
-    info['title:main'] = info.title
-    while ([ignoreInfoRe, numberEndRe, symbolRe].some(re => info['title:main'].match(re))) {
-      info['title:main'] = info['title:main'].replace(ignoreInfoRe, '').trim().replace(numberEndRe, '').trim().replace(symbolRe, '').trim()
-    }
+    info['title:main'] = getTitleMain(info.title)[0]
     info['title:main'] = escape(info['title:main'])
 
-    info['jTitle:main'] = info.title
-    while ([ignoreInfoRe, numberEndRe, symbolRe].some(re => info['jTitle:main'].match(re))) {
-      info['jTitle:main'] = info['jTitle:main'].replace(ignoreInfoRe, '').trim().replace(numberEndRe, '').trim().replace(symbolRe, '').trim()
-    }
+    info['jTitle:main'] = getTitleMain(info.jTitle)[0]
     info['jTitle:main'] = escape(info['jTitle:main'])
-
-    // info['title:main'] = escape(info.title.replace(ignoreInfoRe, '').trim().replace(numberEndRe, '').trim().replace(symbolRe, '').trim())
-    // info['jTitle:main'] = escape(info.jTitle.replace(ignoreInfoRe, '').trim().replace(numberEndRe, '').trim().replace(symbolRe, '').replace(emojiRe, '').trim())
 
     if (info['jTitle:main'].match(kanaRe)) info['jTitle:main'] = info['title:main']
 

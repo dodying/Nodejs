@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               changeTime
 // @Description:        changeTime
-// @Version:            1.0.384
+// @Version:            1.0.386
 // @Author:             dodying
 // @Created:            2020-01-21 09:57:28
-// @Modified:           2020-1-27 14:01:18
+// @Modified:           2020-3-6 14:07:30
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,jszip,readline-sync
@@ -30,8 +30,9 @@ const cp = require('child_process')
 // 导入第三方模块
 const fse = require('fs-extra')
 const JSZip = require('jszip')
-const walk = require('./../js/walk')
-const readlineSync = require('readline-sync')
+// const readlineSync = require('readline-sync')
+
+const walk = require('./../../_lib/walk')
 const parseInfo = require('./../js/parseInfo')
 
 // Function
@@ -83,13 +84,6 @@ const timeFormat = (time, format = 'yyyy-MM-dd HH:mm:ss') => {
   }
   let re = new RegExp(`(${Object.keys(obj).join('|')})`, 'g')
   return format.replace(re, (matched, p1) => obj[p1])
-}
-function waitInMs (time) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve()
-    }, time)
-  })
 }
 const changeTime = async (file, btime, mtime) => {
   try {

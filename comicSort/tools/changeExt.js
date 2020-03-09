@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               changeExt
 // @Description:        修改本子后缀名
-// @Version:            1.0.65
+// @Version:            1.0.67
 // @Author:             dodying
-// @Modified:           2020-1-21 12:23:28
+// @Modified:           2020-3-6 14:00:53
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            readline-sync
@@ -21,8 +21,7 @@ const path = require('path')
 // 导入第三方模块
 const readlineSync = require('readline-sync')
 
-// Function
-let walk = require('./../js/walk')
+const walk = require('./../../_lib/walk')
 
 // Main
 const main = async () => {

@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               info.txt
 // @Description:        info.txt
-// @Version:            1.0.396
+// @Version:            1.0.413
 // @Author:             dodying
 // @Created:            2020-01-21 12:15:39
-// @Modified:           2020-3-2 15:22:20
+// @Modified:           2020-3-8 14:58:23
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:entities,fs-extra,jszip,readline-sync,request-promise,socks5-https-client
@@ -34,6 +34,9 @@ const request = require('request-promise')
 const Agent = require('socks5-https-client/lib/Agent')
 const readlineSync = require('readline-sync')
 const entities = require('entities')
+
+const fullWidth2Half = require('./../../_lib/fullWidth2Half')
+const removeOtherInfo = require('./../js/removeOtherInfo')
 
 // Function
 const color = {
@@ -101,44 +104,9 @@ let req = async (url, option = {}) => {
   return result
 }
 
-function fullWidth2Half (str) { // 全角字符转半角
-  // info: https://en.wikipedia.org/wiki/Halfwidth_and_fullwidth_forms
-  // refer: https://www.cnblogs.com/html55/p/10298569.html
-  let result = ''
-  for (let i = 0; i < str.length; i++) {
-    if (str.charCodeAt(i) === 12288) {
-      result += String.fromCharCode(str.charCodeAt(i) - 12256)
-      continue
-    }
-    if (str.charCodeAt(i) > 65280 && str.charCodeAt(i) < 65375) result += String.fromCharCode(str.charCodeAt(i) - 65248)
-    else result += String.fromCharCode(str.charCodeAt(i))
-  }
-  return result
-}
-
-function reEscape (text) {
-  // refer https://github.com/lodash/lodash/blob/master/escapeRegExp.js
-  return text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')
-}
-
-let infoGroup = ['[]', '()', '{}', '【】']
-let removeOtherInfo = (text, reverse = false) => {
-  if (reverse) text = text.split('').reverse().join('')
-  let group = reverse ? infoGroup.map(i => i.split('').reverse().join('')) : infoGroup
-  group = group.map(i => i.split('').map(j => reEscape(j)))
-  let re = group.map(i => `${i[0]}.*?${i[1]}`).join('|')
-  re = new RegExp(`^(${re})`)
-  let matched = text.match(re)
-  while (matched) {
-    text = text.replace(re, '').trim()
-    matched = text.match(re)
-  }
-  if (reverse) text = text.split('').reverse().join('')
-  return text
-}
 let digitalRomaji = {
   0: [['rei', 'zero'], ['0', '０', '零', '〇']],
-  1: [['ichi', 'i'], ['1', '１', '一', '壹', '壱']],
+  1: [['ichi', 'i'], ['1', '１', 'I', '一', '壹', '壱']],
   2: [['ni', 'ii'], ['2', '２', '二', '贰', '貮', '弐']],
   3: [['san', 'sann', 'iii'], ['3', '３', '三', '参', '參']],
   4: [['yon', 'yonn', 'shi', 'iv'], ['4', '４', '四', '肆']],
@@ -382,9 +350,15 @@ const main = async () => {
     let infoFilePath = path.resolve(infoFileDir, 'info.txt')
     fse.writeFileSync(infoFilePath, infoArr.join('\r\n'))
 
-    cp.execSync(`${_['7z']} a -tzip -mx9 "${file}" "${infoFile}"`, {
-      cwd: targetDir
-    })
+    try {
+      cp.execFileSync(_['7z'], ['a', '-tzip', '-mx9', file, infoFile], {
+        cwd: targetDir
+      })
+    } catch (error) {
+      console.clear()
+      console.log(error)
+      readlineSync.keyInPause()
+    }
 
     fse.unlinkSync(infoFilePath)
     if (infoFileDir !== targetDir) fse.removeSync(infoFileDir)

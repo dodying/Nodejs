@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.290
+// @Version:            1.0.316
 // @Author:             dodying
-// @Modified:           2020-3-4 12:14:48
+// @Modified:           2020-3-8 15:54:34
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
@@ -30,7 +30,10 @@ const request = require('request-promise')
 const sizeOf = require('image-size')
 const fse = require('fs-extra')
 const Agent = require('socks5-https-client/lib/Agent')
-const walk = require('./js/walk')
+
+const waitInMs = require('./../_lib/waitInMs')
+const walk = require('./../_lib/walk')
+
 const parseInfo = require('./js/parseInfo')
 const findData = require('./js/findData')
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, 'EHT.json'), 'utf-8')).data
@@ -353,6 +356,7 @@ const moveByInfo = (info, target) => {
   }
 
   let nameNew = escape(_.jTitle ? info.jTitle : info.title)
+  nameNew = nameNew.replace(/\u200B/g, '').trim()
 
   let targetNew = path.resolve(targetFolderNew, nameNew + '.cbz')
 
@@ -393,13 +397,6 @@ const moveByInfo = (info, target) => {
   moveFile(target, targetNew, atime)
 
   console.log(' ==> ', colors.info(targetShort))
-}
-function waitInMs (time) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve()
-    }, time)
-  })
 }
 const deleteInZip = (file, zip, dir) => {
   console.log(colors.error('Deleted: '), colors.info(file))
@@ -475,6 +472,8 @@ const main = async () => {
         let infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
         let data = await zip.files[infoFile].async('text')
         let info = parseInfo(data)
+        if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1)
+        if (info.parody && info.parody.length === 0) delete info.parody
 
         // 检测图片及大小
         if ((_.delIntroPic || _.checkImageSize || _.checkImageRatio) && info.web.match(/e(-|x)hentai.org/)) {
