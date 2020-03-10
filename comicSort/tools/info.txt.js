@@ -20,23 +20,23 @@
 //  "" (empty) re-generate info.txt
 
 // 设置
-const _ = require('./../config')
+const _ = require('./../config');
 
 // 导入原生模块
-const path = require('path')
-const cp = require('child_process')
-const parseInfo = require('./../js/parseInfo')
+const path = require('path');
+const cp = require('child_process');
+const parseInfo = require('./../js/parseInfo');
 
 // 导入第三方模块
-const JSZip = require('jszip')
-const fse = require('fs-extra')
-const request = require('request-promise')
-const Agent = require('socks5-https-client/lib/Agent')
-const readlineSync = require('readline-sync')
-const entities = require('entities')
+const JSZip = require('jszip');
+const fse = require('fs-extra');
+const request = require('request-promise');
+const Agent = require('socks5-https-client/lib/Agent');
+const readlineSync = require('readline-sync');
+const entities = require('entities');
 
-const fullWidth2Half = require('./../../_lib/fullWidth2Half')
-const removeOtherInfo = require('./../js/removeOtherInfo')
+const fullWidth2Half = require('./../../_lib/fullWidth2Half');
+const removeOtherInfo = require('./../js/removeOtherInfo');
 
 // Function
 const color = {
@@ -65,46 +65,46 @@ const color = {
   BgMagenta: '\x1b[45m',
   BgCyan: '\x1b[46m',
   BgWhite: '\x1b[47m'
-}
+};
 const colors = {
   info: text => color.FgGreen + text + color.Reset,
   help: text => color.FgCyan + text + color.Reset,
   warn: text => color.FgYellow + text + color.Reset,
   debug: text => color.FgBlue + text + color.Reset,
   error: text => color.FgRed + text + color.Reset
-}
+};
 
-let req = async (url, option = {}) => {
-  let requestOption = {
+const req = async (url, option = {}) => {
+  const requestOption = {
     url: url,
     headers: {
       'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Mobile Safari/537.36'
     },
     timeout: 30 * 1000,
     resolveWithFullResponse: true
-  }
+  };
   if (_.proxy.match(/^http:/i)) {
-    requestOption.proxy = _.proxy
+    requestOption.proxy = _.proxy;
   } else if (_.proxy.match(/^socks5:/i)) {
-    requestOption.agentClass = Agent
-    let match = _.proxy.match(/^socks5:\/\/([\d.]+):(\w+)/i)
+    requestOption.agentClass = Agent;
+    const match = _.proxy.match(/^socks5:\/\/([\d.]+):(\w+)/i);
     requestOption.agentOptions = {
       socksHost: match[1],
       socksPort: match[2]
-    }
+    };
   }
 
-  let result
+  let result;
   try {
-    result = await request(Object.assign(requestOption, option))
+    result = await request(Object.assign(requestOption, option));
   } catch (error) {
-    console.log(url)
-    result = await req(url, option)
+    console.log(url);
+    result = await req(url, option);
   }
-  return result
-}
+  return result;
+};
 
-let digitalRomaji = {
+const digitalRomaji = {
   0: [['rei', 'zero'], ['0', '０', '零', '〇']],
   1: [['ichi', 'i'], ['1', '１', 'I', '一', '壹', '壱']],
   2: [['ni', 'ii'], ['2', '２', '二', '贰', '貮', '弐']],
@@ -116,168 +116,168 @@ let digitalRomaji = {
   8: [['hachi', 'viii'], ['8', '８', '八', '捌']],
   9: [['kyuu', 'kyu', 'ix'], ['9', '９', '九', '玖']],
   10: [['jyuu', 'jyu', 'juu', 'ju', 'x'], ['10', '１０', '十', '拾']]
-}
+};
 
 const changeTitle = (text, titleJp) => {
-  let title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/, ' ').trim()
+  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/, ' ').trim();
 
   // 去除标题中首尾的信息，如作者，组织，原作，语言，翻译组
-  let mainTitleJp = removeOtherInfo(titleJp)
-  mainTitleJp = removeOtherInfo(mainTitleJp, true)
+  let mainTitleJp = removeOtherInfo(titleJp);
+  mainTitleJp = removeOtherInfo(mainTitleJp, true);
 
-  let digitalRomajiJpRe = Object.values(digitalRomaji).map(i => i[1].join('|')).join('|')
-  digitalRomajiJpRe = new RegExp(`(${digitalRomajiJpRe})(\\W+|$)`)
+  let digitalRomajiJpRe = Object.values(digitalRomaji).map(i => i[1].join('|')).join('|');
+  digitalRomajiJpRe = new RegExp(`(${digitalRomajiJpRe})(\\W+|$)`);
 
-  if (!mainTitleJp.match(digitalRomajiJpRe)) return title
+  if (!mainTitleJp.match(digitalRomajiJpRe)) return title;
 
-  let mainTitle = removeOtherInfo(title)
-  mainTitle = removeOtherInfo(mainTitle, true)
-  mainTitle = mainTitle.replace(/[|~].*/, '').replace(/\s+/, ' ').trim()
+  let mainTitle = removeOtherInfo(title);
+  mainTitle = removeOtherInfo(mainTitle, true);
+  mainTitle = mainTitle.replace(/[|~].*/, '').replace(/\s+/, ' ').trim();
 
-  let index = title.indexOf(mainTitle)
-  let prefix = title.substr(0, index).trim()
-  let suffix = title.substr(index + mainTitle.length).trim()
+  const index = title.indexOf(mainTitle);
+  const prefix = title.substr(0, index).trim();
+  const suffix = title.substr(index + mainTitle.length).trim();
 
-  let mianTitleArr = mainTitle.split(/\s+/).reverse()
+  const mianTitleArr = mainTitle.split(/\s+/).reverse();
   for (let i = 0; i < mianTitleArr.length; i++) {
-    let text = mianTitleArr[i]
+    const text = mianTitleArr[i];
 
-    let re = digitalRomaji[10][0].join('|')
-    re = new RegExp(`(${re})`, 'i')
+    let re = digitalRomaji[10][0].join('|');
+    re = new RegExp(`(${re})`, 'i');
     if (text.match(re)) {
-      let arr = text.split(re).filter(i => i)
+      const arr = text.split(re).filter(i => i);
       if (arr.length > 1) {
-        let digitalRomajiRe = Object.values(digitalRomaji).map(i => i[0].join('|')).join('|')
-        digitalRomajiRe = new RegExp(`(\\W+|^)(${digitalRomajiRe})(\\W+|$)`, 'i')
+        let digitalRomajiRe = Object.values(digitalRomaji).map(i => i[0].join('|')).join('|');
+        digitalRomajiRe = new RegExp(`(\\W+|^)(${digitalRomajiRe})(\\W+|$)`, 'i');
         if (arr.every(j => j.match(digitalRomajiRe))) {
-          mianTitleArr.splice(i, 1, ...arr.reverse())
-          i--
-          continue
+          mianTitleArr.splice(i, 1, ...arr.reverse());
+          i--;
+          continue;
         }
       }
     }
 
-    let matched = false
-    for (let j in digitalRomaji) {
-      let re = digitalRomaji[j][0].join('|')
-      re = new RegExp(`^(${re})(\\W+|$)`, 'i')
-      if (!text.match(re)) continue
-      matched = true
-      mianTitleArr[i] = text.replace(re, digitalRomaji[j][1][0] + '$2')
+    let matched = false;
+    for (const j in digitalRomaji) {
+      let re = digitalRomaji[j][0].join('|');
+      re = new RegExp(`^(${re})(\\W+|$)`, 'i');
+      if (!text.match(re)) continue;
+      matched = true;
+      mianTitleArr[i] = text.replace(re, digitalRomaji[j][1][0] + '$2');
 
       if (i > 0 && mianTitleArr[i].match(/^\d+$/) && mianTitleArr[i - 1].match(/^(\d+)(\W+)$/)) {
-        let number1 = mianTitleArr[i] * 1
-        let re0 = mianTitleArr[i - 1].match(/^(\d+)(\W+)$/)
-        let number0 = re0[1] * 1
-        mianTitleArr[i - 1] = number1 < 10 && number0 < 10 ? number1.toString() + number0.toString() : (number1 + number0).toString()
-        mianTitleArr[i - 1] += re0[2]
-        mianTitleArr.splice(i, 1)
-        i--
+        const number1 = mianTitleArr[i] * 1;
+        const re0 = mianTitleArr[i - 1].match(/^(\d+)(\W+)$/);
+        const number0 = re0[1] * 1;
+        mianTitleArr[i - 1] = number1 < 10 && number0 < 10 ? number1.toString() + number0.toString() : (number1 + number0).toString();
+        mianTitleArr[i - 1] += re0[2];
+        mianTitleArr.splice(i, 1);
+        i--;
       }
-      break
+      break;
     }
-    if (!matched) break
+    if (!matched) break;
   }
-  mainTitle = mianTitleArr.reverse().join(' ')
+  mainTitle = mianTitleArr.reverse().join(' ');
 
-  return `${prefix} ${mainTitle} ${suffix}`
-}
+  return `${prefix} ${mainTitle} ${suffix}`;
+};
 
 // Main
 const main = async () => {
-  let [command, ...files] = process.argv.slice(2)
+  const [command, ...files] = process.argv.slice(2);
   // console.log({ command, files })
 
-  let mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc']
-  let mainInfo = ['title', 'jTitle', 'web']
-  let otherInfo = ['Category', 'Uploader', 'Posted', 'Parent', 'Visible', 'Language', 'File Size', 'Length', 'Favorited', 'Rating']
-  let toDeleteInfo = ['page', 'length', 'genre', 'lang', 'bw', 'rating', 'tags']
+  const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+  const mainInfo = ['title', 'jTitle', 'web'];
+  const otherInfo = ['Category', 'Uploader', 'Posted', 'Parent', 'Visible', 'Language', 'File Size', 'Length', 'Favorited', 'Rating'];
+  const toDeleteInfo = ['page', 'length', 'genre', 'lang', 'bw', 'rating', 'tags'];
 
-  for (let file of files) {
-    console.log(file)
-    let targetDir = path.parse(file).dir
+  for (const file of files) {
+    console.log(file);
+    const targetDir = path.parse(file).dir;
 
     // 读取数据
-    let targetData = fse.readFileSync(file)
-    let jszip = new JSZip()
-    let zip
+    const targetData = fse.readFileSync(file);
+    const jszip = new JSZip();
+    let zip;
     try {
-      zip = await jszip.loadAsync(targetData)
+      zip = await jszip.loadAsync(targetData);
     } catch (error) {
-      console.error(`Error:\t无法读取文件 "${file}"`)
+      console.error(`Error:\t无法读取文件 "${file}"`);
       // readlineSync.keyInPause('Press any key to Continue')
-      continue
+      continue;
     }
 
     // 查看列表
-    let fileList = Object.keys(zip.files)
+    const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
     if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
-      console.warn(colors.warn('压缩档内不存在info.txt: '), file)
-      return new Error('no info.txt')
+      console.warn(colors.warn('压缩档内不存在info.txt: '), file);
+      return new Error('no info.txt');
     }
 
     // 读取info.txt
-    let infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
-    let data = await zip.files[infoFile].async('text')
-    let info = parseInfo(data)
+    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const data = await zip.files[infoFile].async('text');
+    const info = parseInfo(data);
 
     // 如果info不存在tags(EHD v1.23之前下载的)
     if (command.match(/^reInfo/) && info.web.match(/e(-|x)hentai.org/)) {
-      let url = info.web.replace(/^.*hentai.org/, 'https://e-hentai.org')
-      let pram = url.split('/')
-      let res = await req('https://e-hentai.org/api.php', {
+      const url = info.web.replace(/^.*hentai.org/, 'https://e-hentai.org');
+      const pram = url.split('/');
+      const res = await req('https://e-hentai.org/api.php', {
         method: 'POST',
         body: JSON.stringify({
           method: 'gdata',
           gidlist: [[pram[4] * 1, pram[5]]],
           namespace: 1
         })
-      })
-      let json
+      });
+      let json;
       try {
-        json = JSON.parse(res.body)
+        json = JSON.parse(res.body);
       } catch (error) {
-        console.log(res.body)
-        process.exit()
+        console.log(res.body);
+        process.exit();
       }
-      json = json.gmetadata[0]
+      json = json.gmetadata[0];
 
-      let infoNew = {}
+      const infoNew = {};
 
       // infoNew.title = json.title
-      infoNew.title = entities.decode(changeTitle(json.title, json.title_jpn))
-      infoNew.jTitle = entities.decode(json.title_jpn)
-      infoNew.Category = json.category
-      infoNew.Uploader = json.uploader
+      infoNew.title = entities.decode(changeTitle(json.title, json.title_jpn));
+      infoNew.jTitle = entities.decode(json.title_jpn);
+      infoNew.Category = json.category;
+      infoNew.Uploader = json.uploader;
 
-      let date = new Date(json.posted * 1000)
-      infoNew.Posted = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+      const date = new Date(json.posted * 1000);
+      infoNew.Posted = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
-      infoNew.Visible = json.expunged ? 'No' : 'Yes'
-      infoNew.Length = json.filecount + ' pages'
-      infoNew['File Size'] = Math.round(json.filesize * 100 / 1024 / 1024) / 100 + ' MB'
-      infoNew.Rating = json.rating
+      infoNew.Visible = json.expunged ? 'No' : 'Yes';
+      infoNew.Length = json.filecount + ' pages';
+      infoNew['File Size'] = Math.round(json.filesize * 100 / 1024 / 1024) / 100 + ' MB';
+      infoNew.Rating = json.rating;
 
-      for (let tag of json.tags) {
-        let [main, sub] = tag.split(':')
-        if (!sub) [main, sub] = ['misc', main]
-        if (!(main in infoNew)) infoNew[main] = []
-        infoNew[main].push(sub)
+      for (const tag of json.tags) {
+        let [main, sub] = tag.split(':');
+        if (!sub) [main, sub] = ['misc', main];
+        if (!(main in infoNew)) infoNew[main] = [];
+        infoNew[main].push(sub);
       }
 
       if (command.match(/reInfo\s+(no|only):\s*(.*)/)) {
-        let [, mode, keys] = command.match(/reInfo\s+(no|only):\s*(.*)/)
-        keys = keys.split(',').map(i => i.trim())
-        let withTags = keys.includes('tags')
-        for (let i in infoNew) {
-          let keysIncludes = keys.includes(i)
-          let tagIncludes = withTags && mainTag.includes(i)
+        let [, mode, keys] = command.match(/reInfo\s+(no|only):\s*(.*)/);
+        keys = keys.split(',').map(i => i.trim());
+        const withTags = keys.includes('tags');
+        for (const i in infoNew) {
+          const keysIncludes = keys.includes(i);
+          const tagIncludes = withTags && mainTag.includes(i);
           if (mode === 'no' && (keysIncludes || tagIncludes)) {
-            delete infoNew[i]
+            delete infoNew[i];
           } else if (mode === 'only' && !keysIncludes && !tagIncludes) {
-            delete infoNew[i]
+            delete infoNew[i];
           }
         }
       }
@@ -286,91 +286,91 @@ const main = async () => {
       //   if (info[i] !== infoNew[i]) console.log({ i, old: info[i], new: infoNew[i] })
       // }
 
-      Object.assign(info, infoNew)
+      Object.assign(info, infoNew);
     } else if (command.match(/^add\s/)) {
-      let [, main, sub] = command.match(/^add\s+(\w.*?):\s*(.*)/)
-      console.log({ main, sub })
-      if (!(main in info)) info[main] = []
-      info[main].push(sub)
-      info[main] = info[main].filter((item, index, array) => array.indexOf(item) === index)
+      const [, main, sub] = command.match(/^add\s+(\w.*?):\s*(.*)/);
+      console.log({ main, sub });
+      if (!(main in info)) info[main] = [];
+      info[main].push(sub);
+      info[main] = info[main].filter((item, index, array) => array.indexOf(item) === index);
     } else if (command.match(/^del\s/)) {
-      let [, main, sub] = command.match(/^del\s+(\w.*?):\s*(.*)/)
-      console.log({ main, sub })
-      if (main in info && info[main].indexOf(sub) >= 0) info[main].splice(info[main].indexOf(sub), 1)
+      const [, main, sub] = command.match(/^del\s+(\w.*?):\s*(.*)/);
+      console.log({ main, sub });
+      if (main in info && info[main].indexOf(sub) >= 0) info[main].splice(info[main].indexOf(sub), 1);
     } else if (command.match(/^view/)) {
-      toDeleteInfo.forEach(i => delete info[i])
+      toDeleteInfo.forEach(i => delete info[i]);
 
       if (command.match(/view\s+(no|only):\s*(.*)/)) {
-        let [, mode, keys] = command.match(/view\s+(no|only):\s*(.*)/)
-        keys = keys.split(',').map(i => i.trim())
-        let withTags = keys.includes('tags')
-        for (let i in info) {
-          let keysIncludes = keys.includes(i)
-          let tagIncludes = withTags && mainTag.includes(i)
+        let [, mode, keys] = command.match(/view\s+(no|only):\s*(.*)/);
+        keys = keys.split(',').map(i => i.trim());
+        const withTags = keys.includes('tags');
+        for (const i in info) {
+          const keysIncludes = keys.includes(i);
+          const tagIncludes = withTags && mainTag.includes(i);
           if (mode === 'no' && (keysIncludes || tagIncludes)) {
-            delete info[i]
+            delete info[i];
           } else if (mode === 'only' && !keysIncludes && !tagIncludes) {
-            delete info[i]
+            delete info[i];
           }
         }
       }
 
-      console.clear()
-      console.log(info)
-      readlineSync.keyInPause()
-      continue
+      console.clear();
+      console.log(info);
+      readlineSync.keyInPause();
+      continue;
     }
 
-    let infoArr = []
+    const infoArr = [];
 
-    mainInfo.forEach(i => infoArr.push(info[i]))
-    infoArr.push('')
+    mainInfo.forEach(i => infoArr.push(info[i]));
+    infoArr.push('');
 
-    otherInfo.forEach(i => infoArr.push(`${i}: ${info[i]}`))
-    infoArr.push('')
+    otherInfo.forEach(i => infoArr.push(`${i}: ${info[i]}`));
+    infoArr.push('');
 
-    infoArr.push('Tags:')
+    infoArr.push('Tags:');
     mainTag.forEach(main => {
-      if (main in info && info[main].length) infoArr.push(`> ${main}: ${info[main].sort().join(', ')}`)
-    })
-    infoArr.push('')
+      if (main in info && info[main].length) infoArr.push(`> ${main}: ${info[main].sort().join(', ')}`);
+    });
+    infoArr.push('');
 
-    infoArr.push(info.summary || '', '')
+    infoArr.push(info.summary || '', '');
 
     for (let i = 0; i < info.page.length; i++) {
-      let pageThis = info.page[i]
-      if (!pageThis) continue
-      infoArr.push(`Page ${i}: ${pageThis.url}`, `Image ${i}: ${pageThis.name}`, '')
+      const pageThis = info.page[i];
+      if (!pageThis) continue;
+      infoArr.push(`Page ${i}: ${pageThis.url}`, `Image ${i}: ${pageThis.name}`, '');
     }
 
-    infoArr.push(`Downloaded at ${info.downloadTime}`, '', 'Generated by E-Hentai Downloader. https://github.com/ccloli/E-Hentai-Downloader')
+    infoArr.push(`Downloaded at ${info.downloadTime}`, '', 'Generated by E-Hentai Downloader. https://github.com/ccloli/E-Hentai-Downloader');
 
-    let infoFileDir = path.resolve(targetDir, path.parse(infoFile).dir)
-    fse.mkdirsSync(infoFileDir)
-    let infoFilePath = path.resolve(infoFileDir, 'info.txt')
-    fse.writeFileSync(infoFilePath, infoArr.join('\r\n'))
+    const infoFileDir = path.resolve(targetDir, path.parse(infoFile).dir);
+    fse.mkdirsSync(infoFileDir);
+    const infoFilePath = path.resolve(infoFileDir, 'info.txt');
+    fse.writeFileSync(infoFilePath, infoArr.join('\r\n'));
 
     try {
       cp.execFileSync(_['7z'], ['a', '-tzip', '-mx9', file, infoFile], {
         cwd: targetDir
-      })
+      });
     } catch (error) {
-      console.clear()
-      console.log(error)
-      readlineSync.keyInPause()
+      console.clear();
+      console.log(error);
+      readlineSync.keyInPause();
     }
 
-    fse.unlinkSync(infoFilePath)
-    if (infoFileDir !== targetDir) fse.removeSync(infoFileDir)
+    fse.unlinkSync(infoFilePath);
+    if (infoFileDir !== targetDir) fse.removeSync(infoFileDir);
 
-    let mtime = new Date(info.downloadTime)
-    fse.utimesSync(file, mtime, mtime)
+    const mtime = new Date(info.downloadTime);
+    fse.utimesSync(file, mtime, mtime);
   }
-}
+};
 
 main().then(async () => {
   //
 }, async err => {
-  console.error(err)
-  process.exit()
-})
+  console.error(err);
+  process.exit();
+});

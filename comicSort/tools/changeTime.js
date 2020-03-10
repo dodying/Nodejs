@@ -24,16 +24,16 @@
 // 设置
 
 // 导入原生模块
-const path = require('path')
-const cp = require('child_process')
+const path = require('path');
+const cp = require('child_process');
 
 // 导入第三方模块
-const fse = require('fs-extra')
-const JSZip = require('jszip')
+const fse = require('fs-extra');
+const JSZip = require('jszip');
 // const readlineSync = require('readline-sync')
 
-const walk = require('./../../_lib/walk')
-const parseInfo = require('./../js/parseInfo')
+const walk = require('./../../_lib/walk');
+const parseInfo = require('./../js/parseInfo');
 
 // Function
 const color = {
@@ -62,18 +62,18 @@ const color = {
   BgMagenta: '\x1b[45m',
   BgCyan: '\x1b[46m',
   BgWhite: '\x1b[47m'
-}
+};
 const colors = {
   info: text => color.FgGreen + text + color.Reset,
   help: text => color.FgCyan + text + color.Reset,
   warn: text => color.FgYellow + text + color.Reset,
   debug: text => color.FgBlue + text + color.Reset,
   error: text => color.FgRed + text + color.Reset
-}
+};
 
 const timeFormat = (time, format = 'yyyy-MM-dd HH:mm:ss') => {
-  let date = new Date(time)
-  let obj = {
+  const date = new Date(time);
+  const obj = {
     yyyy: date.getFullYear().toString(),
     MM: (date.getMonth() + 1).toString().padStart(2, '0'),
     dd: date.getDate().toString().padStart(2, '0'),
@@ -81,111 +81,111 @@ const timeFormat = (time, format = 'yyyy-MM-dd HH:mm:ss') => {
     HH: date.getHours().toString().padStart(2, '0'),
     mm: date.getMinutes().toString().padStart(2, '0'),
     ss: date.getSeconds().toString().padStart(2, '0')
-  }
-  let re = new RegExp(`(${Object.keys(obj).join('|')})`, 'g')
-  return format.replace(re, (matched, p1) => obj[p1])
-}
+  };
+  const re = new RegExp(`(${Object.keys(obj).join('|')})`, 'g');
+  return format.replace(re, (matched, p1) => obj[p1]);
+};
 const changeTime = async (file, btime, mtime) => {
   try {
-    btime = timeFormat(btime)
-    mtime = timeFormat(mtime)
-    let info = fse.statSync(file)
-    console.log(file)
+    btime = timeFormat(btime);
+    mtime = timeFormat(mtime);
+    const info = fse.statSync(file);
+    console.log(file);
 
     if (btime !== timeFormat(info.birthtimeMs)) {
-      console.log({ btime })
-      cp.execFileSync('powershell', [`(Get-Item -LiteralPath '${file}').CreationTime`, '=', '"', btime, '"'])
+      console.log({ btime });
+      cp.execFileSync('powershell', [`(Get-Item -LiteralPath '${file}').CreationTime`, '=', '"', btime, '"']);
     }
 
     if (mtime !== timeFormat(info.mtimeMs)) {
-      console.log({ mtime })
-      cp.execFileSync('powershell', [`(Get-Item -LiteralPath '${file}').LastWriteTime`, '=', '"', mtime, '"'])
+      console.log({ mtime });
+      cp.execFileSync('powershell', [`(Get-Item -LiteralPath '${file}').LastWriteTime`, '=', '"', mtime, '"']);
     }
 
     // readlineSync.keyInPause()
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
   // await waitInMs(20)
-}
+};
 
 // Main
 const main = async () => {
-  let [command, ...files] = process.argv.slice(2)
+  let [command, ...files] = process.argv.slice(2);
   // console.log({ command, files })
 
-  files = files.map(file => fse.statSync(file).isDirectory() ? [file].concat(walk(file)) : [file])
-  files = [].concat(...files).filter((item, index, array) => array.indexOf(item) === index)
+  files = files.map(file => fse.statSync(file).isDirectory() ? [file].concat(walk(file)) : [file]);
+  files = [].concat(...files).filter((item, index, array) => array.indexOf(item) === index);
 
-  let folders = files.filter(file => fse.statSync(file).isDirectory()).sort((a, b) => a.split('\\').length > b.split('\\').length ? -1 : a.split('\\').length === b.split('\\').length ? 0 : 1).map(i => i.replace(/\\+$/, ''))
-  files = files.filter(file => fse.statSync(file).isFile() && ['.jpg', '.cbz'].includes(path.extname(file))).sort((a, b) => path.extname(a) === '.cbz' ? -1 : 1)
+  const folders = files.filter(file => fse.statSync(file).isDirectory()).sort((a, b) => a.split('\\').length > b.split('\\').length ? -1 : a.split('\\').length === b.split('\\').length ? 0 : 1).map(i => i.replace(/\\+$/, ''));
+  files = files.filter(file => fse.statSync(file).isFile() && ['.jpg', '.cbz'].includes(path.extname(file))).sort((a, b) => path.extname(a) === '.cbz' ? -1 : 1);
 
-  for (let file of files) {
+  for (const file of files) {
     if (path.extname(file) === '.jpg') {
-      let info = path.parse(file)
-      let cbzFile = path.join(info.dir, info.name + '.cbz')
-      if (!fse.existsSync(cbzFile)) continue
-      let cbzFileInfo = fse.statSync(cbzFile)
-      await changeTime(file, cbzFileInfo.birthtime, cbzFileInfo.mtime)
-      continue
+      const info = path.parse(file);
+      const cbzFile = path.join(info.dir, info.name + '.cbz');
+      if (!fse.existsSync(cbzFile)) continue;
+      const cbzFileInfo = fse.statSync(cbzFile);
+      await changeTime(file, cbzFileInfo.birthtime, cbzFileInfo.mtime);
+      continue;
     }
 
     // 读取数据
-    let targetData = fse.readFileSync(file)
-    let jszip = new JSZip()
-    let zip
+    const targetData = fse.readFileSync(file);
+    const jszip = new JSZip();
+    let zip;
     try {
-      zip = await jszip.loadAsync(targetData)
+      zip = await jszip.loadAsync(targetData);
     } catch (error) {
-      console.error(`Error:\t无法读取文件 "${file}"`)
+      console.error(`Error:\t无法读取文件 "${file}"`);
       // readlineSync.keyInPause('Press any key to Continue')
-      continue
+      continue;
     }
 
     // 查看列表
-    let fileList = Object.keys(zip.files)
+    const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
     if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
-      console.warn(colors.warn('压缩档内不存在info.txt: '), file)
-      return new Error('no info.txt')
+      console.warn(colors.warn('压缩档内不存在info.txt: '), file);
+      return new Error('no info.txt');
     }
 
     // 读取info.txt
-    let infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/))
-    let data = await zip.files[infoFile].async('text')
-    let info = parseInfo(data)
+    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const data = await zip.files[infoFile].async('text');
+    const info = parseInfo(data);
 
-    await changeTime(file, info.Posted, info.downloadTime)
+    await changeTime(file, info.Posted, info.downloadTime);
   }
 
-  for (let folder of folders) {
-    let files = fse.readdirSync(folder).map(file => path.join(folder, file)).filter(file => ['.cbz'].includes(path.extname(file)))
+  for (const folder of folders) {
+    const files = fse.readdirSync(folder).map(file => path.join(folder, file)).filter(file => ['.cbz'].includes(path.extname(file)));
     if (files.length === 0) {
-      await changeTime(folder, '2010-01-01 00:00:00', '2010-01-01 00:00:00')
-      continue
+      await changeTime(folder, '2010-01-01 00:00:00', '2010-01-01 00:00:00');
+      continue;
     }
 
-    let infos = files.map(file => fse.statSync(file))
-    let btime = infos.map(info => info.birthtimeMs).sort().reverse()[0]
-    let mtime
+    const infos = files.map(file => fse.statSync(file));
+    const btime = infos.map(info => info.birthtimeMs).sort().reverse()[0];
+    let mtime;
 
     if (command === 'now') {
-      mtime = new Date()
+      mtime = new Date();
     } else if (command === 'dl') {
-      mtime = infos.map(info => info.mtimeMs).sort().reverse()[0]
+      mtime = infos.map(info => info.mtimeMs).sort().reverse()[0];
     } else if (command === 'old') {
-      mtime = '2010-01-01 00:00:00'
+      mtime = '2010-01-01 00:00:00';
     } else {
-      mtime = btime
+      mtime = btime;
     }
-    await changeTime(folder, btime, mtime)
+    await changeTime(folder, btime, mtime);
   }
-}
+};
 
 main().then(async () => {
   //
 }, async err => {
-  console.error(err)
-  process.exit()
-})
+  console.error(err);
+  process.exit();
+});

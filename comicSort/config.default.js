@@ -1,6 +1,6 @@
-'use strict'
+'use strict';
 
-let config = {
+const config = {
   '7z': 'D:\\GreenSoftware\\_Basis\\7-Zip\\7z.exe', // 7z路径 (仅删除宣传图与压缩info.txt所需)
   loop: true, // 是否一直运行
   proxy: 'socks5://127.0.0.1:2345', // HTTP代理/SOCKS5代理
@@ -59,5 +59,5 @@ let config = {
     'teitoku', // 提督
     'producer' // 制作人
   ]
-}
-module.exports = config
+};
+module.exports = config;
