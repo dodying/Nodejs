@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1072
+// @Version:            1.0.1077
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-3-10 10:31:16
+// @Modified:           2020-3-10 11:25:48
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -133,10 +133,10 @@ const ipcRenderer = electron.ipcRenderer;
 const Menu = electron.remote.Menu;
 
 // Function
-async function configChange (func) {
-  const CONFIG = ipcRenderer.sendSync('config');
-  const noSave = await func(CONFIG);
-  if (!noSave) ipcRenderer.sendSync('config', 'set', CONFIG);
+async function configChange (func, name = 'config') {
+  const value = ipcRenderer.sendSync(name);
+  const noSave = await func(value);
+  if (!noSave) ipcRenderer.sendSync(name, 'set', value);
 }
 function tooltip (option, content) {
   if (lastTooltip) lastTooltip.close();
@@ -287,13 +287,17 @@ const showFile = async (option = {}) => {
   if (option.relativeBook) {
     let files;
     if (condition) {
-      if ('list_' + condition in window.localStorage) {
-        files = JSON.parse(window.localStorage.getItem('list_' + condition));
+      const resultList = ipcRenderer.sendSync('store', 'get', 'resultList', {});
+      if (condition in resultList) {
+        files = resultList[condition];
       } else {
         const conditionArr = JSON.parse(condition);
         const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
         files = rows.map(i => i.path);
-        window.localStorage.setItem('list_' + condition, JSON.stringify(files));
+        configChange(obj => {
+          if (!('resultList' in obj)) obj.resultList = {};
+          obj.resultList[JSON.stringify(condition)] = files;
+        }, 'store');
       }
     } else {
       const dirname = path.dirname(file);
@@ -379,7 +383,10 @@ const showFile = async (option = {}) => {
   viewInfo = { file, page, condition };
 
   if (condition) {
-    window.localStorage.setItem(condition, file);
+    configChange(obj => {
+      if (!('resultPosition' in obj)) obj.resultPosition = {};
+      obj.resultPosition[condition] = file;
+    }, 'store');
   }
   // updateTitleUrl()
 
@@ -917,13 +924,17 @@ const main = async () => {
 
     let files;
     if (condition) {
-      if ('list_' + condition in window.localStorage) {
-        files = JSON.parse(window.localStorage.getItem('list_' + condition));
+      const resultList = ipcRenderer.sendSync('store', 'get', 'resultList', {});
+      if (condition in resultList) {
+        files = resultList[condition];
       } else {
         const conditionArr = JSON.parse(condition);
         const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
         files = rows.map(i => i.path);
-        window.localStorage.setItem('list_' + condition, JSON.stringify(files));
+        configChange(obj => {
+          if (!('resultList' in obj)) obj.resultList = {};
+          obj.resultList[JSON.stringify(condition)] = files;
+        }, 'store');
       }
     } else {
       const dirname = path.dirname(file);

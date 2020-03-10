@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1444
+// @Version:            1.0.1462
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-10 10:23:34
+// @Modified:           2020-3-10 11:18:26
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -359,10 +359,10 @@ const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/E
 findData.init(EHT);
 
 // Function
-async function configChange (func) {
-  const CONFIG = ipcRenderer.sendSync('config');
-  const noSave = await func(CONFIG);
-  if (!noSave) ipcRenderer.sendSync('config', 'set', CONFIG);
+async function configChange (func, name = 'config') {
+  const value = ipcRenderer.sendSync(name);
+  const noSave = await func(value);
+  if (!noSave) ipcRenderer.sendSync(name, 'set', value);
 }
 function tooltip (option, content) {
   if (lastTooltip) lastTooltip.close();
@@ -494,13 +494,17 @@ const showResult = (rows = []) => {
   }).on('sortEnd', function (e, t) {
     const condition = getCondition();
     const arr = $('.result tbody>tr').toArray().map(i => $(i).attr('path'));
-    window.localStorage.setItem('list_' + JSON.stringify(condition), JSON.stringify(arr));
+    configChange(obj => {
+      if (!('resultList' in obj)) obj.resultList = {};
+      obj.resultList[JSON.stringify(condition)] = arr;
+    }, 'store');
   });
   if (pagerOption.enable && rows.length > pagerOption.minCount) {
     let page = 0;
     const condition = getCondition();
-    if (JSON.stringify(condition) in window.localStorage) {
-      const file = window.localStorage.getItem(JSON.stringify(condition));
+    const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
+    if (JSON.stringify(condition) in resultPosition) {
+      const file = resultPosition[JSON.stringify(condition)];
       const item = $('.result tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
       if (item.length) {
         const index = item.index();
@@ -679,8 +683,9 @@ const scrollToLast = () => {
   let scrollTop = 0;
 
   const condition = getCondition();
-  if (JSON.stringify(condition) in window.localStorage) {
-    const file = window.localStorage.getItem(JSON.stringify(condition));
+  const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
+  if (JSON.stringify(condition) in resultPosition) {
+    const file = resultPosition[JSON.stringify(condition)];
     const item = $('.result tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
     if (item.length) {
       item.addClass('trHover');
@@ -862,7 +867,10 @@ const main = async () => {
     const condition = getCondition();
 
     const [rows] = ipcRenderer.sendSync('query-by-condition', condition);
-    window.localStorage.setItem('list_' + JSON.stringify(condition), JSON.stringify(rows.map(i => i.path)));
+    configChange(obj => {
+      if (!('resultList' in obj)) obj.resultList = {};
+      obj.resultList[JSON.stringify(condition)] = rows.map(i => i.path);
+    }, 'store');
     showResult(rows);
     updateTitleUrl();
   });
@@ -972,7 +980,6 @@ const main = async () => {
   // 按钮-清理
   $('.filter').find('[name="clear"]').on('click', async (e) => {
     ipcRenderer.sendSync('clear');
-    // window.localStorage.clear()
   });
 
   // 按钮-切换hide
@@ -1181,7 +1188,12 @@ const main = async () => {
     }
 
     const condition = getCondition();
-    if (file) window.localStorage.setItem(JSON.stringify(condition), file);
+    if (file) {
+      configChange(obj => {
+        if (!('resultPosition' in obj)) obj.resultPosition = {};
+        obj.resultPosition[JSON.stringify(condition)] = file;
+      }, 'store');
+    }
   });
 
   // 全局快捷键

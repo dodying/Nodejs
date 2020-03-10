@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.776
+// @Version:            1.0.784
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-10 10:22:56
+// @Modified:           2020-3-10 11:15:30
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -15,6 +15,7 @@ const debug = false;
 const windowHistory = [];
 const windows = {};
 let config = {};
+let store = {};
 let connection = null;
 let connectionLastTime = null;
 const connectionTimeout = 5 * 60 * 1000;
@@ -396,19 +397,34 @@ ipcMain.on('open-external', async (event, url, name) => {
   }
 });
 
-ipcMain.on('config', (event, todo = 'get', obj, value) => {
+ipcMain.on('config', (event, todo = 'get', name, value) => {
   let configThis;
   if (todo === 'set') {
-    obj = obj || {};
+    const obj = name || {};
     configThis = Object.assign(config, obj);
     fse.writeJSONSync('./config.json', configThis, { spaces: 2 });
     config = configThis;
   } else if (todo === 'get') {
-    config = fse.readJSONSync('./config.json');
+    config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
     configThis = config;
-    if (obj) configThis = obj in configThis ? configThis[obj] : value;
+    if (name) configThis = name in configThis ? configThis[name] : value;
   }
   event.returnValue = configThis;
+});
+
+ipcMain.on('store', (event, todo = 'get', name, value) => {
+  let storeThis;
+  if (todo === 'set') {
+    const obj = name || {};
+    storeThis = Object.assign(store, obj);
+    fse.writeJSONSync('./store.json', storeThis, { spaces: 2 });
+    store = storeThis;
+  } else if (todo === 'get') {
+    store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
+    storeThis = store;
+    if (name) storeThis = name in storeThis ? storeThis[name] : value;
+  }
+  event.returnValue = storeThis;
 });
 
 ipcMain.on('clear', (event) => {
@@ -593,6 +609,7 @@ app.on('ready', async function () {
   const urls = ['./src/index.html'];
 
   config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
+  store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
 
   for (const url of urls) {
     await openWindow(url);
