@@ -9,6 +9,7 @@ const config = {
   moveFile: true, // 是否移动文件
   globRecursive: true, // 是否递归comicFolder
   jTitle: false, // 是否重命名为日本名称
+  cutLongTitle: true, // 当名称过长时，裁剪
   delIntroPic: true, // 是否删除宣传图
   introPicName: [],
   introPic: [],

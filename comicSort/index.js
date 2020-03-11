@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.317
+// @Version:            1.0.346
 // @Author:             dodying
-// @Modified:           2020-3-10 10:24:13
+// @Modified:           2020-3-11 13:24:03
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
@@ -326,7 +326,7 @@ const sortFile = info => {
     let value = [].concat(info.artist, info.group).filter(i => i)[0];
     const valueRaw = value;
     value = findData('artist', value).cname || findData('group', value).cname || value;
-    if (value === valueRaw) value = value.split(/\s/).map(i => i.substring(0, 1).toUpperCase() + i.substring(1)).join(' ');
+    if (value === valueRaw) value = value.replace(/[a-z]+/gi, all => all.slice(0, 1).toUpperCase() + all.slice(1).toLowerCase());
     value = escape(value);
 
     if (_.artistTags) {
@@ -360,9 +360,8 @@ const moveByInfo = (info, target) => {
 
   let targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
 
-  if (targetNew.length >= 250) { // 文件名 > 250
-    const sub = targetNew.length - 250;
-    nameNew = nameNew.substr(0, nameNew.length - sub);
+  if (targetNew.length > 260 && _.cutLongTitle) { // 文件名 > 260
+    nameNew = nameNew.substr(0, 260 - targetFolderNew.length - 4);
     targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
   }
 

@@ -34,7 +34,7 @@ const reLib = {
 const reLibArr = Object.keys(reLib).map(i => [i, reLib[i]]);
 const cutReLib = (text) => {
   const arr = [];
-  while (reLibArr.some(i => text.match(i[1]))) {
+  while (reLibArr.some(i => text.match(i[1])) && text) {
     const matched = reLibArr.filter(i => text.match(i[1]))[0];
     if (['number', 'numberJpn'].includes(matched[0])) {
       const number = text.match(matched[1]).filter(i => i && i.trim().match(new RegExp(`^${numberStr}$`)));
@@ -71,4 +71,5 @@ const main = (text) => {
 
   return [mainText, numberText];
 };
+
 module.exports = main;

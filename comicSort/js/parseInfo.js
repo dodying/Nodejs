@@ -82,7 +82,7 @@ const parseInfo = text => {
     output.Category = output.genre;
   }
 
-  if (info.Language) output.lang = info.Language.match('Chinese') ? 'zh' : info.Language.match('English') ? 'en' : 'ja';
+  if (info.Language) output.lang = (info.Language.match('Chinese') || (info.language && info.language.includes('chinese'))) ? 'zh' : info.Language.match('English') ? 'en' : 'ja';
 
   output.bw = !('misc' in info && info.misc.indexOf('full color') >= 0);
 
