@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1462
+// @Version:            1.0.1499
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-10 11:18:26
+// @Modified:           2020-3-11 15:23:40
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -98,245 +98,7 @@ const autoCompleteOption = {
   minLength: 3,
   limit: 50
 };
-const tagsAlert = {
-  'female:rape': 'Alert',
-  'male:tomgirl': 'Alert',
-  'male:blood': 'Alert',
-  'male:tentacles': 'Alert',
-  'female:tentacles': 'Alert',
-  'female:yuri': 'Alert',
-  'male:urination': 'Alert',
-  'female:inflation': 'Alert',
-  'female:corruption': 'Alert',
-  'female:transformation': 'Alert',
-  'female:femdom': 'Alert',
-  'female:mind break': 'Alert',
-  'female:sex toys': 'Alert',
-  'female:collar': 'Alert',
-  'male:dilf': 'Alert',
-  'female:pregnant': 'Alert',
-  'female:huge breasts': 'Alert',
-  'female:skinsuit': 'Alert',
-  'male:gender bender': 'Alert',
-  'full censorship': 'Alert',
-  'male:bondage': 'Alert',
-  'male:alien': 'Alert',
-  'female:mind control': 'Alert',
-  'female:strap-on': 'Alert',
-  'female:slave': 'Alert',
-  'female:urination': 'Alert',
-  'female:diaper': 'Alert',
-  'female:farting': 'Alert',
-  'male:piss drinking': 'Alert',
-  'male:netorare': 'Alert',
-  'male:bald': 'Alert',
-  'male:bbm': 'Alert',
-  'female:bondage': 'Alert',
-  'female:vomit': 'Alert',
-  'female:human pet': 'Alert',
-  'female:asphyxiation': 'Alert',
-  'female:big areolae': 'Alert',
-  'female:drugs': 'Alert',
-  'female:gender bender': 'Alert',
-  'female:birth': 'Alert',
-  'female:wooden horse': 'Alert',
-  'female:horse girl': 'Alert',
-  'female:bdsm': 'Alert',
-  'female:muscle': 'Alert',
-  'female:bbw': 'Alert',
-  '3d': 'Alert',
-  'female:possession': 'Alert',
-  'male:possession': 'Alert',
-  'male:urethra insertion': 'Alert',
-  'female:cervix penetration': 'Alert',
-  incomplete: 'Alert',
-  'female:chloroform': 'Alert',
-  'male:big penis': 'Alert',
-  'female:stomach deformation': 'Alert',
-  'already uploaded': 'Alert',
-  anthology: 'Alert',
-  sample: 'Alert',
-  'female:netorare': 'Alert',
-  'male:miniguy': 'Unlike',
-  'male:shrinking': 'Unlike',
-  'male:unbirth': 'Unlike',
-  'male:males only': 'Unlike',
-  'male:yaoi': 'Unlike',
-  'male:shotacon': 'Alert',
-  'female:dick growth': 'Alert',
-  'body swap': 'Alert',
-  'female:big penis': 'Alert',
-  'female:autofellatio': 'Alert',
-  'male:dark skin': 'Alert',
-  'female:swinging': 'Alert',
-  'female:piercing': 'Alert',
-  'female:blackmail': 'Alert',
-  'female:tomboy': 'Alert',
-  'female:exhibitionism': 'Alert',
-  'language:english': 'Alert',
-  'female:full body tattoo': 'Alert',
-  'female:moral degeneration': 'Alert',
-  'female:double vaginal': 'Alert',
-  'female:smell': 'Alert',
-  'female:filming': 'Alert',
-  'male:dragon': 'Unlike',
-  'female:monster girl': 'Alert',
-  'female:fox girl': 'Alert',
-  'female:oni': 'Alert',
-  'female:mermaid': 'Alert',
-  'female:emotionless sex': 'Alert',
-  'female:plant girl': 'Like',
-  'female:wings': 'Alert',
-  'male:body painting': 'Alert',
-  'female:dark skin': 'Alert',
-  'female:dark nipples': 'Alert',
-  'female:bukkake': 'Alert',
-  'female:body painting': 'Alert',
-  'male:farting': 'Alert',
-  'parody:kemono friends': 'Alert',
-  'parody:zombie land saga': 'Alert',
-  'parody:one punch man': 'Alert',
-  'multi-work series': 'Like',
-  'female:maid': 'Like',
-  uncensored: 'Like',
-  'female:harem': 'Like',
-  'story arc': 'Like',
-  incest: 'Like',
-  'artist:ohtomo takuji': 'Like',
-  'artist:kamisiro ryu': 'Like',
-  'female:oyakodon': 'Like',
-  'female:lingerie': 'Like',
-  'female:incest': 'Like',
-  'female:garter belt': 'Like',
-  'female:bride': 'Like',
-  'male:maid': 'Like',
-  'full color': 'Like',
-  tankoubon: 'Like',
-  'male:crossdressing': 'Like',
-  'female:oppai loli': 'Like',
-  'female:twintails': 'Like',
-  'female:beauty mark': 'Like',
-  'male:bride': 'Like',
-  'female:mother': 'Like',
-  inseki: 'Like',
-  'female:crotch tattoo': 'Like',
-  'female:twins': 'Like',
-  'female:amputee': 'Unlike',
-  'female:bestiality': 'Unlike',
-  'female:females only': 'Unlike',
-  'female:dickgirl on dickgirl': 'Unlike',
-  'female:dickgirls only': 'Unlike',
-  animated: 'Unlike',
-  novel: 'Unlike',
-  'female:guro': 'Unlike',
-  'female:snuff': 'Unlike',
-  'female:torture': 'Unlike',
-  'female:nose hook': 'Unlike',
-  'female:ryona': 'Unlike',
-  'female:blood': 'Unlike',
-  'female:necrophilia': 'Unlike',
-  'female:catfight': 'Unlike',
-  'male:bisexual': 'Unlike',
-  'male:snuff': 'Unlike',
-  'female:giantess': 'Unlike',
-  'female:growth': 'Unlike',
-  'male:guro': 'Unlike',
-  'male:vore': 'Unlike',
-  'female:brain fuck': 'Unlike',
-  'female:insect': 'Unlike',
-  'male:asphyxiation': 'Unlike',
-  'female:cannibalism': 'Unlike',
-  'female:human cattle': 'Unlike',
-  'male:necrophilia': 'Unlike',
-  'female:body modification': 'Unlike',
-  'female:machine': 'Unlike',
-  'female:slime': 'Unlike',
-  'female:spider': 'Unlike',
-  'female:double anal': 'Unlike',
-  'female:eggs': 'Unlike',
-  'female:multiple penises': 'Unlike',
-  'female:petrification': 'Unlike',
-  'female:shemale': 'Unlike',
-  'female:vore': 'Unlike',
-  'male:bear boy': 'Unlike',
-  'female:horse': 'Unlike',
-  'female:zebra': 'Unlike',
-  'male:human on furry': 'Unlike',
-  'male:horse': 'Unlike',
-  'male:dog': 'Unlike',
-  'male:monkey': 'Unlike',
-  'male:monster': 'Unlike',
-  'male:pig': 'Unlike',
-  'female:prolapse': 'Unlike',
-  'female:nipple fuck': 'Unlike',
-  'female:urethra insertion': 'Unlike',
-  'male:orc': 'Unlike',
-  'female:low bestiality': 'Unlike',
-  'male:goblin': 'Unlike',
-  'female:maggot': 'Unlike',
-  'male:gorilla': 'Unlike',
-  'female:cat': 'Unlike',
-  'male:ryona': 'Unlike',
-  'male:pegging': 'Unlike',
-  'female:sole dickgirl': 'Unlike',
-  'female:muscle growth': 'Unlike',
-  'female:dicknipples': 'Unlike',
-  'male:bestiality': 'Unlike',
-  'male:dicknipples': 'Unlike',
-  'male:eggs': 'Unlike',
-  'male:nipple fuck': 'Unlike',
-  'male:penis birth': 'Unlike',
-  'male:double anal': 'Unlike',
-  'character:kenichi saruyama': 'Unlike',
-  'male:amputee': 'Unlike',
-  'female:fisting': 'Unlike',
-  'female:triple anal': 'Unlike',
-  'time stop': 'Unlike',
-  'character:kallen stadtfeld': 'Unlike',
-  'parody:toaru majutsu no index': 'Unlike',
-  'male:furry': 'Unlike',
-  'female:furry': 'Unlike',
-  'parody:toaru kagaku no railgun': 'Unlike',
-  'female:living clothes': 'Unlike',
-  'character:shino asada': 'Unlike',
-  'parody:highschool of the dead': 'Unlike',
-  webtoon: 'Unlike',
-  'male:multiple penises': 'Unlike',
-  'male:dickgirl on male': 'Unlike',
-  'male:pig man': 'Unlike',
-  'parody:shingeki no kyojin': 'Unlike',
-  'female:harpy': 'Unlike',
-  'male:catboy': 'Unlike',
-  'female:snake girl': 'Unlike',
-  'male:fox boy': 'Unlike',
-  'parody:naruto': 'Unlike',
-  'female:centaur': 'Unlike',
-  'male:old man': 'Unlike',
-  'parody:onmyoji': 'Unlike',
-  'female:tickling': 'Unlike',
-  'female:futanari': 'Unlike',
-  'female:parasite': 'Unlike',
-  'character:archer': 'Unlike',
-  'group:atelier hachifukuan': 'Unlike',
-  'male:giant': 'Unlike',
-  'female:kappa': 'Unlike',
-  'female:human on furry': 'Unlike',
-  'parody:its not my fault that im not popular': 'Unlike',
-  'group:purple haze': 'Unlike',
-  'female:selfcest': 'Unlike',
-  'parody:boruto': 'Unlike',
-  'parody:my hero academia': 'Unlike',
-  'female:scat': 'Unlike',
-  'parody:league of legends': 'Unlike',
-  'parody:nano core': 'Unlike',
-  'group:zenmai kourogi': 'Unlike',
-  'female:stuck in wall': 'Alert',
-  'female:pillory': 'Alert',
-  'parody:pokemon': 'Unlike',
-  'artist:sumomo ex': 'Unlike',
-  'male:facial hair': 'Unlike',
-  'male:muscle': 'Alert'
-};
+let tagsAlert = null;
 const tagsAlertStyle = {
   Alert: 'color:#FF0;background-color:#080;',
   // 'Unlike': 'color:#F00!important;background-color:#000;',
@@ -397,7 +159,7 @@ function tooltip (option, content) {
   });
 }
 const showResult = (rows = []) => {
-  const CONFIG = ipcRenderer.sendSync('config');
+  const store = ipcRenderer.sendSync('store');
   const condition = encodeURIComponent(JSON.stringify(getCondition()));
 
   const html = ['<table>', '<thead>', '<th></th>'];
@@ -411,8 +173,8 @@ const showResult = (rows = []) => {
   for (const row of rows) {
     // tr
     const tagString = encodeURIComponent(JSON.stringify(row.tags));
-    const star = CONFIG.star && CONFIG.star[row.path] ? CONFIG.star[row.path] : 0;
-    const invisible = CONFIG.invisible && CONFIG.invisible.includes(row.path) ? 1 : 0;
+    const star = store.star && store.star.includes(row.path) ? 1 : 0;
+    const invisible = store.invisible && store.invisible.includes(row.path) ? 1 : 0;
     let tr = `<tr path="${row.path}" star="${star}" tags="${tagString}" invisible="${invisible}">`; // path 用于定位
 
     // td order
@@ -423,7 +185,7 @@ const showResult = (rows = []) => {
         const attr = [`name="${i}"`];
         let text = '';
         if (['time_upload', 'time_download', 'time_view'].includes(i)) {
-          const time = ['time_view'].includes(i) ? (CONFIG.lastViewTime && CONFIG.lastViewTime[row.path] ? CONFIG.lastViewTime[row.path] : null) : row[i];
+          const time = ['time_view'].includes(i) ? (store.lastViewTime && store.lastViewTime[row.path] ? store.lastViewTime[row.path] : null) : row[i];
 
           const data = new Date(time);
           attr.push(`datetime="${time}"`, `sort-value="${data.getTime()}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`);
@@ -543,9 +305,7 @@ const showResult = (rows = []) => {
   });
 };
 const showBookmarks = () => {
-  const CONFIG = ipcRenderer.sendSync('config');
-  if (!CONFIG.bookmarkCondition) return;
-  const conditions = CONFIG.bookmarkCondition;
+  const conditions = ipcRenderer.sendSync('config', 'get', 'bookmarkCondition', {});
   const html = ['<ul>'];
   for (const name in conditions) {
     const condition = encodeURIComponent(conditions[name]);
@@ -555,9 +315,7 @@ const showBookmarks = () => {
   $('.bookmarks').html(html.join(''));
 };
 const showHistory = () => {
-  const CONFIG = ipcRenderer.sendSync('config');
-  if (!CONFIG.history) return;
-  const history = CONFIG.history;
+  const history = ipcRenderer.sendSync('store', 'get', 'history', []);
   const html = [
     '<ul>'
   ];
@@ -611,17 +369,16 @@ const getConditionReadable = () => {
   return text;
 };
 const rememberLastCondition = () => {
-  configChange((CONFIG) => {
+  configChange(config => {
     const condition = getCondition();
-    if (CONFIG.rememberLastCondition) {
-      CONFIG.lastCondition = JSON.stringify(condition);
+    if (config.rememberLastCondition) {
+      config.lastCondition = JSON.stringify(condition);
     } else {
       return true;
     }
   });
 };
 const showCondition = (conditions) => {
-  const CONFIG = ipcRenderer.sendSync('config');
   for (let i = 0; i < conditions.length; i++) {
     const [not, column, comparison, value, value1] = conditions[i];
     if (i !== 0) $('.filter').find('.condition>[name="new-condition"]').eq(-1).click();
@@ -633,7 +390,7 @@ const showCondition = (conditions) => {
     parent.find('.value:visible').val(value);
     parent.find('.value:visible').eq(1).val(value1);
   }
-  if (CONFIG.fastQuery) $('.filter').find('[name="query"]').trigger('click');
+  if (ipcRenderer.sendSync('config', 'get', 'fastQuery')) $('.filter').find('[name="query"]').trigger('click');
 };
 const calcRelativeTime = (time) => {
   const lasttime = new Date(time).getTime();
@@ -699,7 +456,7 @@ const scrollToLast = () => {
 
 // Main
 const main = async () => {
-  if (electron.remote.getCurrentWindow().id === 1 && ipcRenderer.sendSync('config', 'get', 'rememberLastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs').length) {
+  if (electron.remote.getCurrentWindow().id === 1 && ipcRenderer.sendSync('config', 'get', 'rememberLastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs', []).length) {
     const confirm = await tooltip({
       title: '是否打开上次保存的网页',
       autoClose: 'cancel|10000',
@@ -717,7 +474,9 @@ const main = async () => {
       }
     });
     if (confirm === 'ok') {
-      if (ipcRenderer.sendSync('config', 'get', 'deleteLastTabs')) configChange(config => delete config.lastTabs);
+      if (ipcRenderer.sendSync('config', 'get', 'deleteLastTabs')) {
+        configChange(config => delete config.lastTabs);
+      }
 
       ipcRenderer.sendSync('open', ipcRenderer.sendSync('config', 'get', 'lastTabs'));
       electron.remote.getCurrentWindow().close();
@@ -822,13 +581,12 @@ const main = async () => {
         }
       });
 
-      html = [...(new Set(html))];
+      html = Array.from(new Set(html));
       $('.datalist>ol').html(html.join(''));
     } else if (showColumns[column][1] === 'text') {
       const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)} LIMIT ${autoCompleteOption.limit}`;
       const [rows] = await ipcRenderer.sendSync('database-query', query);
-      const html = []
-      ;[...new Set(rows.map(i => i[column]))].forEach(i => html.push(`<li>${i}</li>`));
+      const html = Array.from(new Set(rows.map(i => i[column]))).forEach(i => html.push(`<li>${i}</li>`));
       $('.datalist>ol').html(html);
     }
     $('.datalist').show();
@@ -882,11 +640,11 @@ const main = async () => {
   $('.filter').find('[name="bookmark-condition"]').on('click', async (e) => {
     const condition = getCondition();
     let nameBefore = null;
-    const CONFIG = ipcRenderer.sendSync('config');
+    const bookmarkCondition = ipcRenderer.sendSync('config', 'get', 'bookmarkCondition', {});
     const conditionStr = JSON.stringify(condition);
-    if (CONFIG.bookmarkCondition && Object.values(CONFIG.bookmarkCondition).includes(conditionStr)) {
-      const index = Object.values(CONFIG.bookmarkCondition).indexOf(conditionStr);
-      nameBefore = Object.keys(CONFIG.bookmarkCondition)[index];
+    if (Object.values(bookmarkCondition).includes(conditionStr)) {
+      const index = Object.values(bookmarkCondition).indexOf(conditionStr);
+      nameBefore = Object.keys(bookmarkCondition)[index];
     }
 
     const name = await new Promise((resolve, reject) => {
@@ -918,10 +676,10 @@ const main = async () => {
       });
     });
     if (!name) return;
-    configChange((CONFIG) => {
-      if (!('bookmarkCondition' in CONFIG)) CONFIG.bookmarkCondition = {};
-      if (nameBefore) delete CONFIG.bookmarkCondition[nameBefore];
-      CONFIG.bookmarkCondition[name.trim()] = conditionStr;
+    configChange(config => {
+      if (!('bookmarkCondition' in config)) config.bookmarkCondition = {};
+      if (nameBefore) delete config.bookmarkCondition[nameBefore];
+      config.bookmarkCondition[name.trim()] = conditionStr;
     });
     tooltip('保存完成', name);
   });
@@ -1005,7 +763,7 @@ const main = async () => {
   $('.result').on('mouseover', 'tr>[name^="title"]', (e) => {
     if (loading) return;
     loading = true;
-    const CONFIG = ipcRenderer.sendSync('config');
+    const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
     const target = e.currentTarget.parentElement;
     const file = $(target).attr('path');
     if (!file) {
@@ -1014,11 +772,11 @@ const main = async () => {
       return;
     }
 
-    const fullpath = path.resolve(CONFIG.libraryFolder, file);
+    const fullpath = path.resolve(libraryFolder, file);
     $(target).attr('exists', fs.existsSync(fullpath));
 
     const { dir, name } = path.parse(file);
-    const src = path.resolve(CONFIG.libraryFolder, dir, name + '.jpg');
+    const src = path.resolve(libraryFolder, dir, name + '.jpg');
     let cover = $(target).attr('cover');
     if (!cover && !$(target).prop('image_loading') && fs.existsSync(src)) {
       $(target).prop('image_loading', true);
@@ -1096,14 +854,14 @@ const main = async () => {
     const file = parent.attr('path');
     let star = parent.attr('star');
     star = star === '1' ? 0 : 1;
-    configChange((CONFIG) => {
-      if (!('star' in CONFIG)) CONFIG.star = {};
-      if (star === 1) {
-        CONFIG.star[file] = star;
-      } else {
-        delete CONFIG.star[file];
+    configChange(obj => {
+      if (!('star' in obj)) obj.star = [];
+      if (star === 1 && !obj.star.includes(file)) {
+        obj.star.push(file);
+      } else if (star === 0 && obj.star.includes(file)) {
+        obj.star.splice(obj.star.indexOf(file, 1));
       }
-    });
+    }, 'store');
     parent.attr('star', star);
   });
   $('.result').on('click', 'tr[path]>td>button[name="clear"]', async (e) => {
@@ -1111,11 +869,11 @@ const main = async () => {
     const parent = $(e.target).parentsUntil('tbody').eq(-1);
     const file = parent.attr('path');
     parent.find('[name="time_view"]').attr('datetime', 'null').attr('sort-value', 0);
-    configChange((CONFIG) => {
-      if (CONFIG.lastViewPosition && file in CONFIG.lastViewPosition) delete CONFIG.lastViewPosition[file];
-      if (CONFIG.lastViewTime && file in CONFIG.lastViewTime) delete CONFIG.lastViewTime[file];
-      if (CONFIG.history && CONFIG.history.includes(file)) CONFIG.history.splice(CONFIG.history.indexOf(file), 1);
-    });
+    configChange(obj => {
+      if (obj.lastViewPosition && file in obj.lastViewPosition) delete obj.lastViewPosition[file];
+      if (obj.lastViewTime && file in obj.lastViewTime) delete obj.lastViewTime[file];
+      if (obj.history && obj.history.includes(file)) obj.history.splice(obj.history.indexOf(file), 1);
+    }, 'store');
     updateRelativeTime();
   });
   $('.result').on('click', 'tr[path]>td>button[name="invisible"]', async (e) => {
@@ -1124,14 +882,14 @@ const main = async () => {
     const file = parent.attr('path');
     const invisible = (parent.attr('invisible') || parent.attr('raw-invisible')) === '1' ? 0 : 1;
     console.log(invisible);
-    configChange((CONFIG) => {
-      if (!('invisible' in CONFIG)) CONFIG.invisible = [];
+    configChange(obj => {
+      if (!('invisible' in obj)) obj.invisible = [];
       if (invisible) {
-        CONFIG.invisible.push(file);
+        obj.invisible.push(file);
       } else {
-        if (CONFIG.invisible.includes(file)) CONFIG.invisible.splice(CONFIG.invisible.indexOf(file), 1);
+        if (obj.invisible.includes(file)) obj.invisible.splice(obj.invisible.indexOf(file), 1);
       }
-    });
+    }, 'store');
     parent.attr('invisible', invisible);
     parent.attr('raw-invisible', invisible);
   });
@@ -1168,10 +926,10 @@ const main = async () => {
       ipcRenderer.send('open-external', href, name);
       if (name === 'path') {
         const date = new Date();
-        configChange((CONFIG) => {
-          if (!('lastViewTime' in CONFIG)) CONFIG.lastViewTime = {};
-          CONFIG.lastViewTime[file] = date.toLocaleString('zh-CN', { hour12: false });
-        });
+        configChange(obj => {
+          if (!('lastViewTime' in obj)) obj.lastViewTime = {};
+          obj.lastViewTime[file] = date.toLocaleString('zh-CN', { hour12: false });
+        }, 'store');
         parent.find('[name="time_view"]').attr('datetime', date).attr('sort-value', date.getTime());
         waitInMs(1000).then(() => {
           updateRelativeTime();
@@ -1179,12 +937,11 @@ const main = async () => {
       }
     }
     if (!['delete', 'everything'].includes(name)) {
-      configChange((CONFIG) => {
-        if (!name || !CONFIG.rememberHistory) return true;
-        if (!('history' in CONFIG)) CONFIG.history = [];
-        CONFIG.history.unshift(href);
-        CONFIG.history = [...(new Set(CONFIG.history))];
-      });
+      configChange(obj => {
+        if (!name || !obj.rememberHistory) return true;
+        if (!('history' in obj)) obj.history = [];
+        obj.history.unshift(href);
+      }, 'store');
     }
 
     const condition = getCondition();
@@ -1242,6 +999,8 @@ const main = async () => {
     showCondition(JSON.parse(ipcRenderer.sendSync('config', 'get', 'lastCondition', '[]')));
   }
 
+  tagsAlert = ipcRenderer.sendSync('config', 'get', 'tagsAlert', '{}');
+  tagsAlert = JSON.parse(tagsAlert);
   $('<style>').text(Object.keys(tagsAlertStyle).map(i => `[color="${i}"]{${tagsAlertStyle[i]}}`).join('\n')).appendTo('head');
 };
 

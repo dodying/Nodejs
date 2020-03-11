@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1077
+// @Version:            1.0.1097
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-3-10 11:25:48
+// @Modified:           2020-3-11 14:42:56
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -246,24 +246,23 @@ const jumpToImage = async (page) => {
 };
 const rememberPosition = async (noTooltip) => {
   if (!viewInfo.file || isNaN(viewTime) || new Date().getTime() - viewTime < viewTimeMin || fileList.indexOf(viewInfo.page) < viewPageMin) return;
-  await configChange((CONFIG) => {
-    if (!('lastViewPosition' in CONFIG)) CONFIG.lastViewPosition = {};
-    CONFIG.lastViewPosition[viewInfo.file] = viewInfo.page;
+  await configChange(obj => {
+    if (!('lastViewPosition' in obj)) obj.lastViewPosition = {};
+    obj.lastViewPosition[viewInfo.file] = viewInfo.page;
 
-    if (!('lastViewTime' in CONFIG)) CONFIG.lastViewTime = {};
+    if (!('lastViewTime' in obj)) obj.lastViewTime = {};
     const date = new Date();
-    CONFIG.lastViewTime[viewInfo.file] = date.toLocaleString('zh-CN', { hour12: false });
+    obj.lastViewTime[viewInfo.file] = date.toLocaleString('zh-CN', { hour12: false });
 
-    if (CONFIG.rememberHistory) {
-      if (!('history' in CONFIG)) CONFIG.history = [];
+    if (obj.rememberHistory) {
+      if (!('history' in obj)) obj.history = [];
       const params = new URLSearchParams();
       for (const key in viewInfo) {
         if (viewInfo[key] && !(['page'].includes(key))) params.set(key, viewInfo[key]);
       }
-      CONFIG.history.unshift(`./src/viewer.html?${params.toString()}`);
-      CONFIG.history = [...(new Set(CONFIG.history))];
+      obj.history.unshift(`./src/viewer.html?${params.toString()}`);
     }
-  });
+  }, 'store');
   if (!noTooltip) await tooltip('记录已保存');
 };
 const showFile = async (option = {}) => {
@@ -278,11 +277,11 @@ const showFile = async (option = {}) => {
     onLoadError();
     return;
   }
-  const CONFIG = ipcRenderer.sendSync('config');
+  const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
   let page = option.page;
   const condition = params.get('condition');
 
-  let fullpath = path.resolve(CONFIG.libraryFolder, file);
+  let fullpath = path.resolve(libraryFolder, file);
 
   if (option.relativeBook) {
     let files;
@@ -307,12 +306,12 @@ const showFile = async (option = {}) => {
     let index = files.indexOf(file);
     if (option.relativeBook === 'prev') {
       if (index - 1 >= 0) {
-        fullpath = path.resolve(CONFIG.libraryFolder, files[index - 1]);
+        fullpath = path.resolve(libraryFolder, files[index - 1]);
         while (!fs.existsSync(fullpath)) {
           await tooltip('文件不存在，继续查找上一本', fullpath);
           index = index - 1;
           if (index <= 0) break;
-          fullpath = path.resolve(CONFIG.libraryFolder, files[index - 1]);
+          fullpath = path.resolve(libraryFolder, files[index - 1]);
         }
       }
       if (index === 0) {
@@ -322,12 +321,12 @@ const showFile = async (option = {}) => {
       }
     } else if (option.relativeBook === 'next') {
       if (index + 1 <= files.length - 1) {
-        fullpath = path.resolve(CONFIG.libraryFolder, files[index + 1]);
+        fullpath = path.resolve(libraryFolder, files[index + 1]);
         while (!fs.existsSync(fullpath)) {
           await tooltip('文件不存在，继续查找下一本', fullpath);
           index = index + 1;
           if (index >= files.length - 1) break;
-          fullpath = path.resolve(CONFIG.libraryFolder, files[index + 1]);
+          fullpath = path.resolve(libraryFolder, files[index + 1]);
         }
       }
       if (index === files.length - 1) {
@@ -335,7 +334,7 @@ const showFile = async (option = {}) => {
         onLoadEnd();
         return;
       } else {
-        fullpath = path.resolve(CONFIG.libraryFolder, files[index + 1]);
+        fullpath = path.resolve(libraryFolder, files[index + 1]);
       }
     }
     rememberPosition();
@@ -347,7 +346,7 @@ const showFile = async (option = {}) => {
     return;
   }
 
-  file = path.relative(CONFIG.libraryFolder, fullpath);
+  file = path.relative(libraryFolder, fullpath);
 
   $('.content').empty().focus();
   $('.titlebar').html('正在载入，请稍后').show();
@@ -377,7 +376,8 @@ const showFile = async (option = {}) => {
 
   fileList = fileList.filter(i => ['.jpg', '.png', '.gif'].includes(path.extname(i)));
 
-  if (!page && CONFIG.lastViewPosition && CONFIG.lastViewPosition[file]) page = CONFIG.lastViewPosition[file];
+  const lastViewPosition = ipcRenderer.sendSync('store', 'get', 'lastViewPosition', {});
+  if (!page && lastViewPosition[file]) page = lastViewPosition[file];
   if (!page || !fileList.includes(page)) page = fileList[0];
 
   viewInfo = { file, page, condition };
@@ -398,9 +398,9 @@ const showFile = async (option = {}) => {
   onLoadEnd();
 };
 const openFile = async () => {
-  const CONFIG = ipcRenderer.sendSync('config');
+  const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
   const result = electron.remote.dialog.showOpenDialogSync({
-    defaultPath: path.resolve(CONFIG.libraryFolder, viewInfo.file ? path.dirname(viewInfo.file) : ''),
+    defaultPath: path.resolve(libraryFolder, viewInfo.file ? path.dirname(viewInfo.file) : ''),
     filters: [{
       name: '漫画压缩包',
       extensions: ['cbz', 'zip']
@@ -412,7 +412,7 @@ const openFile = async () => {
   });
   if (result && result.length) {
     const fullpath = result[0];
-    const file = path.relative(CONFIG.libraryFolder, fullpath);
+    const file = path.relative(libraryFolder, fullpath);
     viewInfo = { file };
     updateTitleUrl();
     await showFile();
@@ -636,9 +636,7 @@ const main = async () => {
     {
       label: '打开文件夹',
       click: () => {
-        const CONFIG = ipcRenderer.sendSync('config');
-        const fullpath = path.resolve(CONFIG.libraryFolder, viewInfo.file);
-        electron.remote.shell.showItemInFolder(fullpath);
+        ipcRenderer.send('open-external', viewInfo.file, 'item');
       }
     }, {
       label: '外部浏览',
@@ -695,11 +693,11 @@ const main = async () => {
     $('.openfile').show();
 
     const file = viewInfo.file;
-    configChange((CONFIG) => {
-      if (CONFIG.lastViewPosition && file in CONFIG.lastViewPosition) delete CONFIG.lastViewPosition[file];
-      if (CONFIG.lastViewTime && file in CONFIG.lastViewTime) delete CONFIG.lastViewTime[file];
-      if (CONFIG.history && CONFIG.history.includes(file)) CONFIG.history.splice(CONFIG.history.indexOf(file), 1);
-    });
+    configChange(obj => {
+      if (obj.lastViewPosition && file in obj.lastViewPosition) delete obj.lastViewPosition[file];
+      if (obj.lastViewTime && file in obj.lastViewTime) delete obj.lastViewTime[file];
+      if (obj.history && obj.history.includes(file)) obj.history.splice(obj.history.indexOf(file), 1);
+    }, 'store');
 
     await tooltip('记录已清除');
     return false;
@@ -726,15 +724,15 @@ const main = async () => {
       }
     });
     if (confirm !== 'ok') return;
-    const CONFIG = ipcRenderer.sendSync('config');
-    const fullpath = path.resolve(CONFIG.libraryFolder, viewInfo.file);
+    const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
+    const fullpath = path.resolve(libraryFolder, viewInfo.file);
     const result = cp.execFileSync(sevenZip, ['d', fullpath, viewInfo.page]);
     if (result.toString().match('Everything is Ok')) {
       await tooltip('页面已删除', viewInfo.file + '\\' + viewInfo.page);
-      await configChange((CONFIG) => {
-        if (!('delete' in CONFIG)) CONFIG.delete = [];
-        CONFIG.delete.push(viewInfo.file + '\\' + viewInfo.page);
-      });
+      await configChange(obj => {
+        if (!('delete' in obj)) obj.delete = [];
+        obj.delete.push(viewInfo.file + '\\' + viewInfo.page);
+      }, 'store');
       viewInfo.page = $(`.content>div[name="${viewInfo.page}"]`).prev().attr('name');
       await rememberPosition(true);
       await showFile();
@@ -886,10 +884,10 @@ const main = async () => {
     window.location.reload();
   });
   Mousetrap.bind(keyMap.starFile, async function (e, combo) { // 星标书籍
-    await configChange((CONFIG) => {
-      if (!('star' in CONFIG)) CONFIG.star = {};
-      CONFIG.star[viewInfo.file] = 1;
-    });
+    await configChange(obj => {
+      if (!('star' in obj)) obj.star = [];
+      if (!obj.star.includes(viewInfo.file)) obj.star.push(viewInfo.file);
+    }, 'store');
     tooltip('书籍已收藏');
   });
   Mousetrap.bind(keyMap.showFileList, function (e, combo) { // 显示文件列表并跳转
@@ -917,10 +915,10 @@ const main = async () => {
     });
   });
   Mousetrap.bind(keyMap.readingList, async function (e, combo) { // 显示阅读列表
-    const CONFIG = ipcRenderer.sendSync('config');
+    const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
     const condition = viewInfo.condition;
     const file = viewInfo.file;
-    const fullpath = path.resolve(CONFIG.libraryFolder, file);
+    const fullpath = path.resolve(libraryFolder, file);
 
     let files;
     if (condition) {
@@ -945,14 +943,13 @@ const main = async () => {
     showFileList(files, 'Reading List:');
   });
   Mousetrap.bind(keyMap.starList, async function (e, combo) { // 显示星标列表
-    const CONFIG = ipcRenderer.sendSync('config');
-    const files = Object.keys(CONFIG.star);
+    const files = ipcRenderer.sendSync('store', 'get', 'star', []);
 
     showFileList(files, 'Star List:');
   });
   Mousetrap.bind(keyMap.historyList, async function (e, combo) { // 显示历史列表
-    const CONFIG = ipcRenderer.sendSync('config');
-    let files = Object.keys(CONFIG.lastViewTime).map(key => ({ key, value: CONFIG.lastViewTime[key] }));
+    const lastViewTime = ipcRenderer.sendSync('store', 'get', 'lastViewTime', {});
+    let files = Object.keys(lastViewTime).map(key => ({ key, value: lastViewTime[key] }));
     files = files.sort((a, b) => new Date(a.value).getTime() > new Date(b.value).getTime() ? -1 : 1).map(i => i.key);
 
     showFileList(files, 'History List:');

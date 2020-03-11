@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.784
+// @Version:            1.0.832
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-10 11:15:30
+// @Modified:           2020-3-11 14:41:27
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -308,6 +308,7 @@ const rebuildTrayMenu = () => {
         } else {
           win.show();
         }
+        rebuildTrayMenu();
       }
     },
     {
@@ -315,8 +316,17 @@ const rebuildTrayMenu = () => {
       click: (menuItem, browserWindow, event) => {
         for (const id in windows) {
           windows[id].show();
-          rebuildTrayMenu();
         }
+        rebuildTrayMenu();
+      }
+    },
+    {
+      label: '隐藏所有窗口',
+      click: (menuItem, browserWindow, event) => {
+        for (const id in windows) {
+          windows[id].hide();
+        }
+        rebuildTrayMenu();
       }
     },
     { type: 'separator' }
@@ -360,7 +370,6 @@ const saveLastTabs = () => {
     urls.push(url.replace('file:///E:/Desktop/_/GitHub/Nodejs/comicBrowser/', './'));
   }
   config.lastTabs = urls;
-  fse.writeJSONSync('./config.json', config, { spaces: 2 });
   console.log('last tabs wrote');
 };
 
@@ -384,12 +393,11 @@ ipcMain.on('open-external', async (event, url, name) => {
     const cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg');
     if (fse.existsSync(cover)) fse.unlinkSync(cover);
 
-    if (!('delete' in config)) config.delete = [];
-    config.delete.push(url);
-    if (config.lastViewPosition && url in config.lastViewPosition) delete config.lastViewPosition[url];
-    if (config.lastViewTime && url in config.lastViewTime) delete config.lastViewTime[url];
-    if (config.history && config.history.includes(url)) config.history.splice(config.history.indexOf(url), 1);
-    fse.writeJSONSync('./config.json', config, { spaces: 2 });
+    if (!('delete' in store)) store.delete = [];
+    store.delete.push(url);
+    if (store.lastViewPosition && url in store.lastViewPosition) delete store.lastViewPosition[url];
+    if (store.lastViewTime && url in store.lastViewTime) delete store.lastViewTime[url];
+    if (store.history && store.history.includes(url)) store.history.splice(store.history.indexOf(url), 1);
   } else if (name === 'everything') {
     if (config.everything && fse.existsSync(config.everything)) cp.execFileSync(config.everything, ['-search', url]);
   } else if (!name) {
@@ -405,7 +413,7 @@ ipcMain.on('config', (event, todo = 'get', name, value) => {
     fse.writeJSONSync('./config.json', configThis, { spaces: 2 });
     config = configThis;
   } else if (todo === 'get') {
-    config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
+    // config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
     configThis = config;
     if (name) configThis = name in configThis ? configThis[name] : value;
   }
@@ -420,7 +428,7 @@ ipcMain.on('store', (event, todo = 'get', name, value) => {
     fse.writeJSONSync('./store.json', storeThis, { spaces: 2 });
     store = storeThis;
   } else if (todo === 'get') {
-    store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
+    // store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
     storeThis = store;
     if (name) storeThis = name in storeThis ? storeThis[name] : value;
   }
@@ -428,15 +436,27 @@ ipcMain.on('store', (event, todo = 'get', name, value) => {
 });
 
 ipcMain.on('clear', (event) => {
-  delete config.history;
-  delete config.delete;
-  for (const i of ['star', 'lastViewPosition', 'lastViewTime']) {
-    for (const file in config[i]) {
+  delete store.history;
+  delete store.delete;
+  delete store.resultList;
+  for (const i of ['lastViewPosition', 'lastViewTime']) {
+    for (const file in store[i]) {
       const fullpath = path.resolve(config.libraryFolder, file);
-      if (!fse.existsSync(fullpath)) delete config[i][file];
+      if (!fse.existsSync(fullpath)) delete store[i][file];
     }
   }
-  fse.writeJSONSync('./config.json', config, { spaces: 2 });
+  for (const i of ['star']) {
+    store[i] = Array.from(new Set(store[i]));
+    for (let j = 0; j < store[i].length; j++) {
+      const file = store[i][j];
+      const fullpath = path.resolve(config.libraryFolder, file);
+      if (!fse.existsSync(fullpath)) {
+        store[i].splice(j, 1);
+        j--;
+      }
+    }
+  }
+
   event.returnValue = true;
 });
 
@@ -491,7 +511,7 @@ ipcMain.on('log', (event, ...args) => {
 
 ipcMain.on('database-query', async (event, str) => {
   if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config);
-  console.debug('database-query', str);
+  console.debug('database-query', '\n\x1b[32m', str, '\x1b[0m');
   let result = [
     []
   ];
@@ -500,7 +520,7 @@ ipcMain.on('database-query', async (event, str) => {
   } catch (error) {
     console.error('Error:', error.message);
   }
-  console.log('database-query-end', result[0].length);
+  console.debug('database-query-end', result[0].length);
   event.returnValue = result;
 });
 
@@ -572,14 +592,14 @@ ipcMain.on('query-by-condition', async (event, condition) => {
   query += querySegment.join(' AND ');
   query += ' ORDER BY ' + order.join(', ');
   if (condition.filter(i => !i[0] && i[1] === 'command').length) query = condition.filter(i => !i[0] && i[1] === 'command').map(i => i[3]).join('\n');
-  console.log('database-query', query);
+  console.debug('database-query', '\n\x1b[32m', query, '\x1b[0m');
   let result = [[]];
   try {
     result = await connection.query(query);
   } catch (error) {
     console.error('Error:', error.message);
   }
-  console.log('database-query-end', result[0].length);
+  console.debug('database-query-end', result[0].length);
   event.returnValue = result;
 });
 
@@ -602,6 +622,8 @@ ipcMain.on('close-all-tabs', (event, id) => {
 });
 
 app.on('window-all-closed', function () {
+  fse.writeJSONSync('./config.json', config, { spaces: 2 });
+  fse.writeJSONSync('./store.json', store, { spaces: 2 });
   if (process.platform !== 'darwin') app.quit();
 });
 
