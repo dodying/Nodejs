@@ -29,6 +29,7 @@
     "jszip": "3.2.2",
     "mysql2": "2.1.0",
     "node-notifier": "6.0.0",
+    "pinyinlite": "^1.2.1",
     "pixl-xml": "1.0.13",
     "pureimage": "0.1.6",
     "readline-sync": "1.4.10",
