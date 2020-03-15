@@ -115,6 +115,8 @@ body {
   font-family: "Microsoft YaHei";
   font-size: 22px;
   color: #000;
+  width: 99%;
+  height: calc(100% - 30px);
 }
 
 .tabContent[name="chapter"] [name="patternPre"], .tabContent[name="chapter"] [name="patternNumber"], .tabContent[name="chapter"] [name="patternSuf"] {
@@ -199,7 +201,7 @@ body {
 }
 
 .tabContent[name="chapter"] [name="title"] {
-  width: calc(100% - 200px);
+  width: calc(100% - 250px);
 }
 
 .tabContent[name="chapter"] [name="length"] {

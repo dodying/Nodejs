@@ -45,7 +45,7 @@
       <div><input type="button" name="end,long" value="处理末尾，处理长文本"></div>
     </div>
     <div>
-      <div name="content" contentEditable="true"></div>
+      <div name="content"></div>
     </div>
   </div>
   <div class="tabContent" name="info">
@@ -67,14 +67,14 @@
     <div>
       <div>
         <span>前缀: </span>
-        <input type="text" name="patternPre" list="patternPreList" value="">
+        <input type="text" name="patternPre" list="patternPreList" value="^\s*第">
         <datalist id="patternPreList">
           <option value="第">第</option>
           <option value="卷">卷</option>
           <option value="chapter">chapter</option>
         </datalist>
         <span>数字: </span>
-        <input type="text" name="patternNumber" list="patternNumberList" value="\n\s+\r\n">
+        <input type="text" name="patternNumber" list="patternNumberList" value="-1">
         <datalist id="patternNumberList">
           <option value="-1">通用</option>
           <option value=".*">所有</option>
@@ -84,10 +84,10 @@
           <option value="一">简体数字</option>
           <option value="壹">繁体数字</option>
           <option value="一壹">简体/繁体数字</option>
-          <option value="\n\r\n">空行</option>
+          <option value="①">特殊数字</option>
         </datalist>
         <span>后缀: </span>
-        <input type="text" name="patternSuf" list="patternSufList" value="">
+        <input type="text" name="patternSuf" list="patternSufList" value="章">
         <datalist id="patternSufList">
           <option value="-1">通用</option>
           <option value="章">章</option>
@@ -107,6 +107,7 @@
         <datalist id="patternGroupList">
           <option value="||">清空</option>
           <option value="[（【《\(]|-1|[）】》\)]">括号</option>
+          <option value="^\s*[（【《\(]|.*?|[）】》\)]\s$">仅括号</option>
           <option value="|\n\r\n|">空行</option>
           <option value="|\n\s+\r\n|">空行1</option>
           <option value="^\s*第|-1|章">第.*章</option>
@@ -120,12 +121,14 @@
           <option value="外传||">外传</option>
           <option value="番外||">番外</option>
           <option value="后记||">后记</option>
+          <option value="作者||">作者</option>
+          <option value="^\S||">非空</option>
         </datalist>
         <input type="hidden" name="pattern">
         <br>
         <input type="checkbox" name="titleMatch">
         <span>匹配</span>
-        <input type="text" name="titlePattern" list="titlePatternList" value="第.*[章回节集卷部话篇]">
+        <input type="text" name="titlePattern" list="titlePatternList" value="">
         <datalist id="titlePatternList">
           <option value="第.*[章回节集卷部话篇季]">第.*章</option>
           <option value="正文">正文</option>
@@ -156,11 +159,13 @@
       </div>
     </div>
     <div>
+      <input type="checkbox" name="editable">
+      <span>编辑</span>
       <span>章节内容预览: </span>
       <input type="text" name="title">
       <input type="text" name="length" disabled="disabled">
       <br>
-      <div name="content" contentEditable="true"></div>
+      <textarea name="content" disabled="disabled"></textarea>
     </div>
   </div>
   <div class="tabContent" name="export">

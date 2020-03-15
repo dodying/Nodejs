@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.987
+// @Version:            1.0.1062
 // @Author:             dodying
 // @Created:            2020-01-11 13:06:39
-// @Modified:           2020-3-10 10:22:13
+// @Modified:           2020-3-14 14:04:08
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            archiver,chardet,iconv-lite
+// @Require:            archiver,chardet,iconv-lite,pinyinlite
 // ==/Headers==
 /* global tranStr */
 
@@ -25,12 +25,13 @@ var THIS = {
 const numberLib = {
   1: '\\.0-9',
   '１': '\\.０-９',
-  一: '点零一二三四五六七八九十卅百千万廿卅上中下',
-  壹: '点點零壹贰叁参肆伍陆柒捌玖拾佰仟萬上中下'
+  一: '点零一二两三四五六七八九十卅百千万廿卅上中下',
+  壹: '点點零壹贰叁参肆伍陆柒捌玖拾佰仟萬上中下',
+  '①': '〇①-⒛'
 };
 numberLib['1１'] = numberLib['1'] + numberLib['１'];
 numberLib['一壹'] = numberLib['一'] + numberLib['壹'];
-numberLib['-1'] = numberLib['1１'] + numberLib['一壹'];
+numberLib['-1'] = numberLib['1１'] + numberLib['一壹'] + numberLib['①'];
 
 const suffixLib = {
   '-1': '章回节集卷部话篇季'
@@ -46,6 +47,16 @@ const path = require('path');
 const archiver = require('archiver');
 const chardet = require('chardet');
 const iconv = require('iconv-lite');
+const pinyinlite = require('pinyinlite');
+const chSort = (a, b) => {
+  const c1 = pinyinlite(a, {
+    keepUnrecognized: true
+  }).join('');
+  const c2 = pinyinlite(b, {
+    keepUnrecognized: true
+  }).join('');
+  return c1.localeCompare(c2);
+};
 
 // Function
 function wordSection (mode, word) { // 文本强制分段-测试功能
@@ -141,7 +152,7 @@ const funcStart = () => {
 
   // 设置本地参数
   let files;
-  files = fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase()));
+  files = fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).sort(chSort);
 
   // 设置本地元素属性
   if (files.length) {
@@ -176,7 +187,7 @@ const funcStart = () => {
   });
 
   $('.tabContent[name="start"]').find('input[name="list"]').off('click').on('click', (e) => {
-    const files = fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).map(file => path.join(CONFIG.workDir, file));
+    const files = fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).map(file => path.join(CONFIG.workDir, file)).sort(chSort);
     THIS.title = path.basename(CONFIG.workDir);
     THIS.list = [];
     for (const file of files) {
@@ -208,7 +219,7 @@ const funcStart = () => {
 
     if (THIS.title.match(/^《(.*?)》/)) THIS.title = THIS.title.match(/^《(.*?)》/)[1];
     if (THIS.title.match(/^【(.*?)】/)) THIS.title = THIS.title.match(/^【(.*?)】/)[1];
-    THIS.title = THIS.title.replace(/作者：.*|(全本|全集|完本)|\(.*?\)|（.*?）|【.*?】/g, '').trim();
+    THIS.title = THIS.title.replace(/\(.*?\)|（.*?）|【.*?】|作者：.*|全本|全集|完本|(无|未)删?减.*$/g, '').trim();
 
     THIS.content = THIS.content.replace(/^\s*(\*+|\*\s+.*?(更多好书请访问|shuchong8).*?\s*\*)\s*$/mg, '\r\n').replace(/([^\S\r\n]|[*]){10,}/g, '\r\n').replace(//g, '').replace(/<\/?br>/gi, '\r\n').replace(/<\/?font>/gi, '').replace(/^.*(书虫包小说网).*$/mig, '').trim();
     if (THIS.list) {
@@ -328,14 +339,14 @@ const funcChapter = () => {
     '<span></span>',
     '<span count="{length}">{length}</span>',
     '<span>{title}</span>',
-    '<input type="button" key="a" title="向上移动" name="moveup" value="▲">',
-    '<input type="button" key="s" title="按标记分割章节" name="split" value="拆">',
-    '<input type="button" key="d" title="按字数分割章节" name="cut" value="分">',
-    '<input type="button" key="f" title="按章节字数分割章节" name="chapter" value="章">',
-    '<input type="button" key="g" title="合并到上一章节" name="combine" value="合">',
-    '<input type="button" key="h" title="新增章节" name="add" value="增">',
-    '<input type="button" key="j" title="插入章节" name="insert" value="插">',
-    '<input type="button" key="k" title="移除章节" name="delete" value="减">',
+    '<input type="button" key="a" title="(&a)向上移动" name="moveup" value="▲">',
+    '<input type="button" key="s" title="(&s)按标记分割章节" name="split" value="拆">',
+    '<input type="button" key="d" title="(&d)按字数分割章节" name="cut" value="分">',
+    '<input type="button" key="f" title="(&f)按章节字数分割章节" name="chapter" value="章">',
+    '<input type="button" key="g" title="(&g)合并到上一章节" name="combine" value="合">',
+    '<input type="button" key="h" title="(&h)新增章节" name="add" value="增">',
+    '<input type="button" key="j" title="(&j)插入章节" name="insert" value="插">',
+    '<input type="button" key="k" title="(&k)移除章节" name="delete" value="减">',
     '</div>'
   ].join('');
   const elemGen = chapter => {
@@ -376,6 +387,14 @@ const funcChapter = () => {
     });
   };
   window.regenChapterElements = regenChapterElements;
+  let store = window.localStorage.getItem('value-store');
+  if (store) {
+    store = JSON.parse(store);
+    for (const name in store) {
+      const list = $('.tabContent[name="chapter"]').find('input[list]').filter(`[name="${name}"]`).prop('list');
+      $(list).append(store[name].map(value => `<option value="${value}">${value}</option>`).join(''));
+    }
+  }
 
   // 设置本地元素属性
   regenChapterElements();
@@ -396,6 +415,19 @@ const funcChapter = () => {
       if (number !== 'null') $('.tabContent[name="chapter"]').find('[name="patternNumber"]').val(number);
       if (suf !== 'null') $('.tabContent[name="chapter"]').find('[name="patternSuf"]').val(suf);
       updateRegExp();
+    }
+  });
+  $('.tabContent[name="chapter"]').find('input[list]').on('change', (e) => {
+    const value = $(e.target).val();
+    const name = $(e.target).attr('name');
+    const list = $(e.target).prop('list');
+    const options = $(list.options).map((i, e) => $(e).val()).toArray();
+    if (!options.includes(value)) {
+      const store = JSON.parse(window.localStorage.getItem('value-store') || '{}');
+      if (!(name in store)) store[name] = [];
+      store[name].push(value);
+      window.localStorage.setItem('value-store', JSON.stringify(store));
+      $(`<option value="${value}">${value}</option>`).appendTo(list);
     }
   });
 
@@ -487,6 +519,9 @@ const funcChapter = () => {
   });
 
   $('.tabContent[name="chapter"]').find('[name="chapterList"]').off('click').on('click', 'span', (e) => {
+    $('.tabContent[name="chapter"]').find('[name="editable"]').prop('checked', false);
+    $('.tabContent[name="chapter"]').find('[name="content"]').attr('disabled', 'disabled');
+
     const wordCount = $('.tabContent[name="chapter"]').find('[name="wordCount"]').val() * 1;
     const target = $(e.target).parent();
     target.siblings().removeClass('actived');
@@ -495,11 +530,7 @@ const funcChapter = () => {
 
     $('.tabContent[name="chapter"]').find('[name="title"]').val(THIS.chapters[index].title);
     $('.tabContent[name="chapter"]').find('[name="length"]').val(THIS.chapters[index].content.length);
-    if (THIS.chapters[index].content.length < wordCount * 4) {
-      $('.tabContent[name="chapter"]').find('[name="content"]').attr('contenteditable', 'true').text(THIS.chapters[index].content);
-    } else {
-      $('.tabContent[name="chapter"]').find('[name="content"]').attr('contenteditable', 'false').text(THIS.chapters[index].content.substr(0, wordCount * 10));
-    }
+    $('.tabContent[name="chapter"]').find('[name="content"]').val(THIS.chapters[index].content.substr(0, wordCount * 10));
     $('.tabContent[name="chapter"]').find('[name="content"]')[0].scrollTop = 0;
   });
 
@@ -688,20 +719,25 @@ const funcChapter = () => {
 
   $(window).off('keyup', keyupFunc).on('keyup', keyupFunc);
 
-  $('.tabContent[name="chapter"]').find('[name="title"]').off('change').on('change', (e) => {
-    THIS.chapters[index].title = $(e.target).val().trim();
-    $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').eq(index).replaceWith(elemGen(THIS.chapters[index]));
-  });
-  $('.tabContent[name="chapter"]').find('[name="content"]').off('keyup').on('keyup', (e) => {
-    if ((e.ctrlKey && e.key === 's')) { // || e.key === 'Enter'
-      THIS.chapters[index].content = $(e.target).html().replace(/<\/div><div>/g, '\r\n').replace(/<\/?(div|br)>/gi, '\r\n');
-      $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').eq(index).replaceWith(elemGen(THIS.chapters[index]));
+  $('.tabContent[name="chapter"]').find('[name="editable"]').off('change').on('change', (e) => {
+    const checked = $(e.target).prop('checked');
+    if (checked) {
+      $('.tabContent[name="chapter"]').find('[name="content"]').val(THIS.chapters[index].content);
+      $('.tabContent[name="chapter"]').find('[name="content"]').attr('disabled', null);
+    } else {
+      $('.tabContent[name="chapter"]').find('[name="content"]').attr('disabled', 'disabled');
+      THIS.chapters[index].content = $('.tabContent[name="chapter"]').find('[name="content"]').val();
+
+      const elem = $(elemGen(THIS.chapters[index])).addClass('actived');
+      $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').eq(index).replaceWith(elem);
     }
   });
-  // $('.tabContent[name="chapter"]').find('[name="content"]').off('blur').on('blur', (e) => {
-  //   THIS.chapters[index].content = $(e.target).text()
-  //   $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').eq(index).replaceWith(elemGen(THIS.chapters[index]))
-  // })
+  $('.tabContent[name="chapter"]').find('[name="title"]').off('change').on('change', (e) => {
+    THIS.chapters[index].title = e.target.value;
+
+    const elem = $(elemGen(THIS.chapters[index])).addClass('actived');
+    $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').eq(index).replaceWith(elem);
+  });
 
   // if ($('.tabContent[name="chapter"]').find('[name="chapterList"]>div').length === 1) $('.tabContent[name="chapter"]').find('[name="chapterList"]>div>input[type="button"][name="split"]').eq(0).click()
   $('.tabContent[name="chapter"]').find('[name="chapterList"]>div>span:nth-child(3)').eq(0).click();
