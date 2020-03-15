@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               info.txt
 // @Description:        info.txt
-// @Version:            1.0.413
+// @Version:            1.0.414
 // @Author:             dodying
 // @Created:            2020-01-21 12:15:39
-// @Modified:           2020-3-8 14:58:23
+// @Modified:           2020-3-12 13:14:27
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:entities,fs-extra,jszip,readline-sync,request-promise,socks5-https-client
@@ -358,6 +358,7 @@ const main = async () => {
       console.clear();
       console.log(error);
       readlineSync.keyInPause();
+      continue;
     }
 
     fse.unlinkSync(infoFilePath);

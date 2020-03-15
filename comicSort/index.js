@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.346
+// @Version:            1.0.350
 // @Author:             dodying
-// @Modified:           2020-3-11 13:24:03
+// @Modified:           2020-3-12 13:19:42
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
@@ -395,7 +395,7 @@ const moveByInfo = (info, target) => {
   if (_.makeTags.length) createSymlinkByInfo(nameNew + '.cbz');
   moveFile(target, targetNew, atime);
 
-  console.log(' ==> ', colors.info(targetShort));
+  console.log(' ==> ', colors.info(targetShort), path.parse(target).name === nameNew ? '' : colors.warn(nameNew));
 };
 const deleteInZip = (file, zip, dir) => {
   console.log(colors.error('Deleted: '), colors.info(file));
