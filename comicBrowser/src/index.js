@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1499
+// @Version:            1.0.1537
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-11 15:23:40
+// @Modified:           2020-3-15 21:53:12
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -16,13 +16,13 @@
 
 // 全局变量
 let scrollElement = $('html').get(0);
-let lastTooltip = null;
 let observer = null;
+let tagsAlert = null;
 
 // 可自定义
-const keypressTimeout = 80;
-const scrollHeight = 50;
-const showInfo = {
+const keypressTimeout = 80; // keypress事件延迟
+const scrollHeight = 50; // 滚动高度(keyMap.up/down)
+const showInfo = { // 查询结果-显示列
   // 按key顺序显示
   // [是否显示， 中文标题]
   category: [true, '类别'],
@@ -41,8 +41,8 @@ const showInfo = {
   title_main: [true, '标题(主)'], // 英文标题的主要部分
   title_number: [true, '数字'], // 英文标题的数字部分
   title: [true, '标题'], // 英文标题
-  title_jpn: [false, '标题(日文)'],
-  title_jpn_main: [false, '标题(日文)(主)'],
+  title_jpn: [true, '标题(日文)'],
+  title_jpn_main: [true, '标题(日文)(主)'],
   title_jpn_number: [false, '数字(日文)'],
   path: [true, '路径'],
   tags: [false, '标签'],
@@ -51,18 +51,18 @@ const showInfo = {
   'tag:male': [true, '标签:男性'], // (#)标签:男性
   'tag:misc': [true, '标签:杂项'], // (#)标签:杂项
   'tag:group': [false, '标签:组织'] // (#)标签:组织
+  // tag:language
+  // tag:reclass
 };
-const keyMap = {
-  up: ['w', 'up', '8'],
-  down: ['s', 'down', '5'],
-  left: ['a', 'left', '4'],
-  right: ['d', 'right', '6'],
-  upLeft: ['q', '7'],
-  upRight: ['e', '9'],
-  plus: ['+', '='],
-  minus: ['-']
+const keyMap = { // 按键事件
+  up: ['w', 'up', '8'], // 向上滚动scrollHeight高度
+  down: ['s', 'down', '5'], // 向下滚动scrollHeight高度
+  left: ['a', 'left', '4'], // 向上翻页
+  right: ['d', 'right', '6'], // 向下翻页
+  upLeft: ['q', '7'], // 上一页
+  upRight: ['e', '9'] // 下一页
 };
-const showColumns = {
+const showColumns = { // 筛选条件要显示的类别
   // 按key顺序显示
   // [是否显示， 类型]
   tags: [true, 'json'],
@@ -86,20 +86,20 @@ const showColumns = {
   time_download: [true, 'datetime'],
   command: [true, 'text'] // (#)
 };
-keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`);
-keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`);
-const pagerOption = {
-  enable: true,
+keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`); // 滚动到顶部
+keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`); // 滚动到底部
+const pagerOption = { // 分页设置
+  enable: true, // 是否启用
   minCount: 300, // 结果数量超过则pager
-  size: 100
+  size: 100 // 每页数量
 };
-const autoCompleteOption = {
+const autoCompleteOption = { // 自动填充条件
   enbaleColumns: ['tags'].concat(Object.keys(showColumns).map(i => [i, showColumns[i]]).filter(i => i[1][0] && i[1][1] === 'text' && !(['command'].includes(i[0]))).map(i => i[0])), // 支持tags或类型为text
-  minLength: 3,
-  limit: 50
+  minLength: 3, // 最小字符数时，显示
+  limit: 50 // 填充结果数限制
 };
-let tagsAlert = null;
-const tagsAlertStyle = {
+const tagsAlertStyle = { // 高亮标签
+  // action: css
   Alert: 'color:#FF0;background-color:#080;',
   // 'Unlike': 'color:#F00!important;background-color:#000;',
   Unlike: 'color:#F00;background-color:#00F;',
@@ -116,48 +116,14 @@ const mysql = require('mysql2/promise');
 
 const waitInMs = require('./../../_lib/waitInMs');
 const findData = require('./../js/findData');
+const configChange = require('./common/configChange');
+const tooltip = require('./common/tooltip');
 const ipcRenderer = electron.ipcRenderer;
 const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data;
 findData.init(EHT);
+const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
 
 // Function
-async function configChange (func, name = 'config') {
-  const value = ipcRenderer.sendSync(name);
-  const noSave = await func(value);
-  if (!noSave) ipcRenderer.sendSync(name, 'set', value);
-}
-function tooltip (option, content) {
-  if (lastTooltip) lastTooltip.close();
-  if (typeof option === 'string') {
-    option = { title: option };
-    if (typeof content !== 'undefined') option.content = content;
-  }
-  return new Promise((resolve, reject) => {
-    lastTooltip = $.confirm(Object.assign({
-      theme: 'banner',
-      boxWidth: '50%',
-      useBootstrap: false,
-      title: null,
-      autoClose: 'ok|0',
-      backgroundDismiss: 'ok',
-      buttons: {
-        ok: {
-          text: 'OK',
-          btnClass: 'btn-blue',
-          keys: ['enter']
-        }
-      },
-      onClose: function () {
-        resolve();
-        lastTooltip = null;
-      },
-      onAction: function (btn) {
-        resolve(btn);
-        lastTooltip = null;
-      }
-    }, option));
-  });
-}
 const showResult = (rows = []) => {
   const store = ipcRenderer.sendSync('store');
   const condition = encodeURIComponent(JSON.stringify(getCondition()));
@@ -211,13 +177,15 @@ const showResult = (rows = []) => {
           ].join('');
         } else if (['path'].includes(i)) {
           text = `<a href="${row.path}" name="item">${path.dirname(row[i])}</a>`;
-        } else if (['title', 'title_main'].includes(i)) {
-          text = `${row[i]}<a href="${row[i]}" name="everything"></a>`;
+        } else if (['title', 'title_main', 'title_jpn', 'title_jpn_main'].includes(i)) {
+          const condition = [[false, i, '=', row[i], undefined]];
+          text = `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify(condition))}"></a>`;
+          text += row[i] + (['title', 'title_main'].includes(i) ? `<a href="${row[i]}" name="everything"></a>` : '');
         } else if (i.match(/^tag:(.*)$/)) {
           const main = i.match(/^tag:(.*)$/)[1];
           if (row.tags && main in row.tags) {
             text = row.tags[main].map((sub) => {
-              const condition = [[false, 'tags', `tags:${main}`, sub.split(' | ')[0], undefined]];
+              const condition = [[false, 'tags', `tags:${main}`, `"${sub.split(' | ')[0]}"`, undefined]];
               let color = '';
               const full = main === 'misc' ? sub : `${main}:${sub}`;
               if (full in tagsAlert) color = tagsAlert[full];
@@ -464,11 +432,11 @@ const main = async () => {
       buttons: {
         ok: {
           text: 'OK',
+          keys: ['enter'],
           btnClass: 'btn-red'
         },
         cancel: {
           text: 'Cancel',
-          keys: ['enter'],
           btnClass: 'btn-blue'
         }
       }
@@ -575,8 +543,9 @@ const main = async () => {
 
       tags.forEach(i => {
         for (const key in i.data) {
-          if (key.match(value) || i.data[key].name.match(value)) {
-            html.push(`<li cname="${i.data[key].name}">${key}</li>`);
+          const name = i.data[key].name.replace(/!\[(.*?)\]\((.*?)\)/g, '');
+          if (key.match(value) || name.match(value)) {
+            html.push(`<li cname="${name}">${key}</li>`);
           }
         }
       });
@@ -586,7 +555,8 @@ const main = async () => {
     } else if (showColumns[column][1] === 'text') {
       const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)} LIMIT ${autoCompleteOption.limit}`;
       const [rows] = await ipcRenderer.sendSync('database-query', query);
-      const html = Array.from(new Set(rows.map(i => i[column]))).forEach(i => html.push(`<li>${i}</li>`));
+      const html = [];
+      Array.from(new Set(rows.map(i => i[column]))).forEach(i => html.push(`<li>${i}</li>`));
       $('.datalist>ol').html(html);
     }
     $('.datalist').show();
@@ -697,7 +667,7 @@ const main = async () => {
 
   // 按钮-更新数据库
   $('.filter').find('[name="database-update"]').on('click', async (e) => {
-    ipcRenderer.sendSync('database-connect', undefined, 'update');
+    ipcRenderer.send('database-connect', undefined, 'update');
   });
 
   // 按钮-移动结果
@@ -805,7 +775,8 @@ const main = async () => {
       } else {
         tags = JSON.parse(decodeURIComponent(tags));
         tagsChs = [];
-        for (const main in tags) {
+        for (const main of mainTag) {
+          if (!(main in tags)) continue;
           const chs = findData(main).cname + ': ';
           const subChs = [];
           for (const sub of tags[main]) {
@@ -817,7 +788,7 @@ const main = async () => {
           }
           tagsChs.push(chs + subChs.join(', '));
         }
-        tagsChs = tagsChs.map(i => `<span>${i}</span>`).join('<br>');
+        tagsChs = '<ul>' + tagsChs.map(i => `<li>${i}</li>`).join('') + '</ul>';
       }
       $(target).prop('tagsChs', tagsChs).attr('tags', null);
     }
@@ -936,9 +907,11 @@ const main = async () => {
         });
       }
     }
+    console.log(!['delete', 'everything'].includes(name));
     if (!['delete', 'everything'].includes(name)) {
+      const rememberHistory = ipcRenderer.sendSync('config', 'get', 'rememberHistory');
       configChange(obj => {
-        if (!name || !obj.rememberHistory) return true;
+        if (!name || !rememberHistory) return true;
         if (!('history' in obj)) obj.history = [];
         obj.history.unshift(href);
       }, 'store');

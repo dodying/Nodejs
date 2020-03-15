@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.832
+// @Version:            1.0.904
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-11 14:41:27
+// @Modified:           2020-3-14 12:32:00
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -12,14 +12,15 @@
 
 // 设置
 const debug = false;
-const windowHistory = [];
+let windowHistory = [];
 const windows = {};
 let config = {};
 let store = {};
+let tray = null;
+
 let connection = null;
 let connectionLastTime = null;
 const connectionTimeout = 5 * 60 * 1000;
-let tray = null;
 const lastConnection = {
   info: {},
   result: []
@@ -62,7 +63,6 @@ const walk = require('./../_lib/walk');
 const waitInMs = require('./../_lib/waitInMs');
 const parseInfo = require('./js/parseInfo');
 const getTitleMain = require('./js/getTitleMain');
-const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, './../comicSort', 'EHT.json'), 'utf-8')).data;
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
 
 // Function
@@ -88,31 +88,53 @@ const openWindow = (url) => {
     windows[id] = win;
 
     windows[id].on('maximize', () => {
-      resolve(id);
+      if (resolve) resolve(id);
+      resolve = null;
     });
+
+    if (config.alwaysMaximize) {
+      windows[id].on('unmaximize', () => {
+        windows[id].maximize();
+      });
+
+      windows[id].on('restore', () => {
+        windows[id].maximize();
+      });
+    }
+
+    if (config.hideOnMinimize) {
+      windows[id].on('minimize', () => {
+        windows[id].hide();
+        rebuildTrayMenu();
+      });
+    }
 
     windows[id].once('ready-to-show', () => {
       windows[id].show();
-      resolve(id);
+      if (resolve) resolve(id);
+      resolve = null;
     });
 
     windows[id].on('closed', function () {
       delete windows[id];
       win = null;
 
-      for (let i = 0; i < windowHistory.length;) {
+      for (let i = 0; i < windowHistory.length; i++) {
         const id = windowHistory[i];
         if (id in windows) {
+          if (!windows[id].isVisible()) continue;
           windows[id].show();
           break;
         } else {
           windowHistory.splice(0, 1);
+          i--;
         }
       }
     });
 
     windows[id].on('focus', function () {
       windowHistory.unshift(id);
+      windowHistory = Array.from(new Set(windowHistory));
     });
 
     windows[id].loadURL(url);
@@ -169,48 +191,31 @@ const createConnection = async (obj) => {
     return ['Connection Success, but you need to init', 0];
   }
 };
-const updateTableTags = async (obj) => {
-  const [rows] = await connection.query('SHOW TABLES');
-  if (rows.filter(i => i[`Tables_in_${obj.database}`] === 'tags').length) {
-    await connection.query('DROP TABLE tags');
-  }
-
-  await connection.query('CREATE TABLE `tags` (`id` int unsigned not null auto_increment primary key, `tag` varchar(255), `main` varchar(255), `sub` varchar(255), `cname` varchar(255), `info` text)');
-
-  console.time('EHT');
-  const queryString = 'insert into tags (tag, main, sub, cname, info) values ';
-  let arr = [];
-  for (const mainObj of EHT) {
-    const main = mainObj.namespace;
-    for (const sub in mainObj.data) {
-      arr.push([`${main}:${sub}`, main, sub, mainObj.data[sub].name, mainObj.data[sub].intro]);
-    }
-  }
-
-  arr = arr.map(i => `(${i.map(j => connection.escape(j)).join(', ')})`).join(',');
-  await connection.query(queryString + arr);
-  console.timeEnd('EHT');
-};
 const updateTableFiles = async (obj) => {
+  console.log('database-update');
+
   console.time('walk');
-  let files = walk(obj.libraryFolder);
-  files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.relative(obj.libraryFolder, i));
+  let filesLocal = walk(obj.libraryFolder);
+  filesLocal = filesLocal.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.relative(obj.libraryFolder, i));
   console.timeEnd('walk');
 
   console.time('query');
   const [rows] = await connection.query('select path from files');
-  const existedInfo = rows.map(i => i.path).map(i => i.toUpperCase());
+  const filesDatabase = rows.map(i => i.path);
   console.timeEnd('query');
 
-  console.debug('Total Files:\t', files.length);
-  files = files.filter(i => !existedInfo.includes(i.toUpperCase()));
-  console.debug('New Files\t', files.length, '\nExisted Files:\t', existedInfo.length);
+  console.debug('Total Files:\t', filesLocal.length, '\nExisted Files:\t', filesDatabase.length);
+  const filesLocalUpperCase = filesLocal.map(i => i.toUpperCase());
+  const filesDatabaseUpperCase = filesDatabase.map(i => i.toUpperCase());
+  const filesDeleted = filesDatabase.filter(i => !filesLocalUpperCase.includes(i.toUpperCase()));
+  const filesNew = filesLocal.filter(i => !filesDatabaseUpperCase.includes(i.toUpperCase()));
+  console.debug('New Files\t', filesNew.length, '\nDeleted Files:\t', filesDeleted.length);
 
   console.time('INSERT INTO');
   const column = Object.keys(columns);
   let queryString = `INSERT INTO files (${column.join(', ')}) values `;
   let arr = [];
-  for (const file of files) {
+  for (const file of filesNew) {
     if (arr.length >= 100) {
       const arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
       await connection.query(queryString + arr1);
@@ -281,15 +286,14 @@ const updateTableFiles = async (obj) => {
   console.time('DELETE INTO');
   queryString = 'DELETE FROM files WHERE ';
   arr = [];
-  for (const file of existedInfo) {
+  for (const file of filesDeleted) {
     if (arr.length >= 100) {
       const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
       await connection.query(queryString + arr1);
       arr = [];
     }
 
-    const fullpath = path.join(obj.libraryFolder, file);
-    if (!fse.existsSync(fullpath)) arr.push(file);
+    arr.push(file);
   }
   if (arr.length) {
     const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
@@ -302,11 +306,18 @@ const rebuildTrayMenu = () => {
     {
       label: '显示/隐藏最后窗口',
       click: (menuItem, browserWindow, event) => {
-        const win = windows[windowHistory[0]];
-        if (win.isVisible()) {
-          win.hide();
-        } else {
-          win.show();
+        for (let i = 0; i < windowHistory.length;) {
+          const id = windowHistory[i];
+          if (id in windows) {
+            if (windows[id].isVisible()) {
+              windows[id].hide();
+            } else {
+              windows[id].show();
+            }
+            break;
+          } else {
+            windowHistory.splice(0, 1);
+          }
         }
         rebuildTrayMenu();
       }
@@ -365,9 +376,12 @@ const rebuildTrayMenu = () => {
 };
 const saveLastTabs = () => {
   const urls = [];
+  const separator = __dirname.replace(/\\/g, '/');
   for (const id in windows) {
-    const url = windows[id].webContents.getURL();
-    urls.push(url.replace('file:///E:/Desktop/_/GitHub/Nodejs/comicBrowser/', './'));
+    let url = windows[id].webContents.getURL();
+    const arr = url.split(separator);
+    if (arr.length > 1) url = '.' + arr.slice(1).join(separator);
+    urls.push(url);
   }
   config.lastTabs = urls;
   console.log('last tabs wrote');
@@ -484,22 +498,16 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
     queryString = `USE ${obj.database}`;
     await connection.query(queryString);
 
-    // queryString = 'CREATE TABLE `tags` (`id` int unsigned not null auto_increment primary key, `tag` varchar(255), `main` varchar(255), `sub` varchar(255), `cname` varchar(255), `info` text)'
-    // await connection.query(queryString)
-
     queryString = 'CREATE TABLE `files` (' + [
       'id int unsigned not null auto_increment',
       ...Object.keys(columns).map(i => `${i} ${columns[i]}`),
       'PRIMARY KEY (id)'
-      // 'INDEX index_path (path(255))'
     ].join(', ') + ')';
-    // SELECT MAX(LENGTH(path)) FROM files
     await connection.query(queryString);
     event.returnValue = ['Init Success', code];
   } else if (todo === 'update' && code === 0) {
     event.returnValue = ['You need to init', code];
   } else if (todo === 'update' && code === 1) {
-    // await updateTableTags(obj)
     await updateTableFiles(obj);
     event.returnValue = ['Update Success', code];
   }
@@ -558,15 +566,22 @@ ipcMain.on('query-by-condition', async (event, condition) => {
       }
     } else if (type === 'json') {
       // unused method:
-      // equal: JSON_CONTAINS(tags, '"mind break"', '$.female')
+      // equal: JSON_SEARCH(tags, 'one', 'mind break', null, '$.female[*]')
       const [column, path] = comparison.split(':');
+      if (value.match(/^\/(.*)\/$/)) {
+        value = value.match(/^\/(.*)\/$/)[1];
+        comparison = 'REGEXP';
+      } else {
+        value = `%${value.replace(/\\/g, '\\\\')}%`;
+        comparison = 'LIKE';
+      }
 
       if (path === '*') {
         // WHERE tags like '%mind break%'
-        str = `${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)}`;
+        str = `${column} ${comparison} ${mysql.escape(value)}`;
       } else {
         // WHERE JSON_EXTRACT(tags, '$.female[*]') like '%mind break%'
-        str = `JSON_EXTRACT(${column}, '$.${path}[*]') LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)}`;
+        str = `JSON_EXTRACT(${column}, '$.${path}[*]') ${comparison} ${mysql.escape(value)}`;
       }
     } else if (['=', '!=', '>', '>=', '<', '<='].includes(comparison)) {
       if (type === 'text' || type.match('varchar')) value = mysql.escape(value);
@@ -579,6 +594,10 @@ ipcMain.on('query-by-condition', async (event, condition) => {
       str = `${column} ${comparison} ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)}`;
       // str=`INSTR(${column}, ${mysql.escape(`${value}`)})`
       // str=`NOT(INSTR(${column}, ${mysql.escape(`${value}`)}))`
+    } else if (['START WITH'].includes(comparison)) {
+      str = `${column} LIKE ${mysql.escape(`${value.replace(/\\/g, '\\\\')}%`)}`;
+    } else if (['END WITH'].includes(comparison)) {
+      str = `${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}`)}`;
     } else if (['REGEXP', 'NOT REGEXP'].includes(comparison)) {
       str = `${column} ${comparison} ${mysql.escape(`${value}`)}`;
     } else if (['Duplicate'].includes(comparison)) {
@@ -640,11 +659,18 @@ app.on('ready', async function () {
   tray = new Tray('./src/icon.png');
   rebuildTrayMenu();
   tray.on('click', () => {
-    const win = windows[windowHistory[0]];
-    if (win.isVisible()) {
-      win.hide();
-    } else {
-      win.show();
+    for (let i = 0; i < windowHistory.length;) {
+      const id = windowHistory[i];
+      if (id in windows) {
+        if (windows[id].isVisible()) {
+          windows[id].hide();
+        } else {
+          windows[id].show();
+        }
+        break;
+      } else {
+        windowHistory.splice(0, 1);
+      }
     }
     rebuildTrayMenu();
   });

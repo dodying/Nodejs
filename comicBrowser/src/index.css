@@ -172,6 +172,10 @@ a, .result button, .result input[type="button"] {
   content: "📜"
 }
 
+.result tr a[name="native"][href^="./src/index.html?condition="]::before {
+  content: "🐬"
+}
+
 .result tr button[name="clear"]::before {
   content: "🧹"
 }

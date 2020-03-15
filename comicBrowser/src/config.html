@@ -31,6 +31,10 @@
     <div>
       libraryFolder: <input type="text" id="config-libraryFolder">
       <br>
+      <input type="checkbox" id="config-hideOnMinimize"> 最小化时隐藏(需重启)
+      <br>
+      <input type="checkbox" id="config-alwaysMaximize"> 强制最大化(需重启)
+      <br>
       <input type="checkbox" id="config-rememberLastCondition"> 记住上次条件
       <br>
       <input type="checkbox" id="config-rememberLastTabs"> 记住使用(Ctrl+Shift+S)保存的网页
@@ -43,7 +47,7 @@
       <br>
       Everything: <input type="text" id="config-everything">
       <br>
-      tagsAlert: <textarea id="config-tagsAlert"></textarea>
+      tagsAlert: <textarea id="config-tagsAlert" placeholder="请在设置窗口中设置，格式与本人的脚本[EH]Enhance中的tagAction相同&#13;&#10;如{&quot;female:rape&quot;:&quot;Alert&quot;}" style="width:50vw;height:100px;"></textarea>
     </div>
   </div>
   <input type="button" id="config-btnSave" value="保存">

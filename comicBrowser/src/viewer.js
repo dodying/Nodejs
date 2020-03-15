@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1097
+// @Version:            1.0.1116
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-3-11 14:42:56
+// @Modified:           2020-3-15 21:55:27
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -16,7 +16,6 @@ let loading = null;
 let pageAnchor = null;
 let zipContent = null;
 let fileList = null;
-let lastTooltip = null;
 let viewInfo = {
   file: '', // 仅在showFile时修改
   page: '',
@@ -26,55 +25,6 @@ let fileInfo = null;
 let viewTime = null;
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
 const scrollElement = $('.content').get(0);
-
-// 设置
-const sevenZip = '7z';
-const viewTimeMin = 10 * 1000;
-const viewPageMin = 3;
-const mousemoveDelay = 50;
-const fixHeight = 1; // TO ENHANCEMENT 1px 待测试
-const keypressTimeout = 80; // 小于此时间的keypress事件不触发
-const scorllMode = 'jquery'; // jquery||auto
-const scrollHeight = 50; // 滚动高度
-const scrollTime = 200; // 仅jquery，每滚动单位高度（可视页面高度）所需时间
-const scrollTimeMax = 2000; // 仅jquery，滚动最大时间
-let zoomPercent = 120; // 缩放百分比
-const zoomPercentStep = 5; // 缩放百分比间隔
-const loadPageHeight = 100; // 距离底部或顶部多高时，读取页面
-const keyMap = {
-  // 全局通用
-  separator: [],
-  closeAllTabs: ['ctrl+t'],
-  closeTab: ['esc'],
-  saveAllTabs: ['ctrl+shift+s'],
-  hideAllTabs: ['ctrl+`'],
-  hideTab: ['`'],
-  openNewTab: ['ctrl+t'],
-
-  help: ['f1'],
-  openFile: ['f2', 'ctrl+o'],
-  closeAndSave: ['f3'],
-  closeAndClear: ['f4'],
-  showFileList: ['f5'],
-  readingList: ['f6'],
-  starList: ['f7'],
-  historyList: ['f8'],
-  deletePage: ['del'],
-  deleteFile: ['shift+del'],
-  reload: ['r'],
-  jumpToPageTop: ['t'],
-  findByTags: ['f'],
-  starFile: ['z'],
-  plus: ['+', '='],
-  minus: ['-'],
-
-  up: ['w', 'up', '8'],
-  down: ['s', 'down', '5'],
-  left: ['a', 'left', '4'],
-  right: ['d', 'right', '6'],
-  upLeft: ['q', '7'],
-  upRight: ['e', '9']
-};
 const keyHelp = {
   help: '显示帮助',
   openFile: '打开文件',
@@ -111,10 +61,60 @@ const keyHelp = {
   upLeft: '打开上一本',
   upRight: '打开下一本'
 };
+
+// 设置
+const sevenZip = '7z'; // 7z所在位置，删除当前页面有用
+const viewTimeMin = 10 * 1000; // 最小阅读时间，当停留当前本子时间超过该时间时，才会记录
+const viewPageMin = 3; // 最小阅读页数，当当前页数超过该页数时，才会记录
+const mousemoveDelay = 50; // mousemove时间的延迟
+const fixHeight = 1; // TO ENHANCEMENT 1px 待测试
+const keypressTimeout = 80; // 小于此时间的keypress事件不触发
+const scorllMode = 'jquery'; // jquery||auto，jquery时使用jquery.animate来显示滚动动画，否则使用css的scroll-behavior:smooth
+const scrollHeight = 50; // 滚动高度
+const scrollTime = 200; // 仅jquery，每滚动单位高度（可视页面高度）所需时间
+const scrollTimeMax = 2000; // 仅jquery，滚动最大时间
+let zoomPercent = 120; // 缩放百分比
+const zoomPercentStep = 5; // 缩放百分比间隔
+const loadPageHeight = 100; // 距离底部或顶部多高时，读取页面
+const keyMap = { // 按键事件
+  // 说明请看 keyHelp
+  // 全局通用
+  separator: [],
+  closeAllTabs: ['ctrl+t'],
+  closeTab: ['esc'],
+  saveAllTabs: ['ctrl+shift+s'],
+  hideAllTabs: ['ctrl+`'],
+  hideTab: ['`'],
+  openNewTab: ['ctrl+t'],
+
+  help: ['f1'],
+  openFile: ['f2', 'ctrl+o'],
+  closeAndSave: ['f3'],
+  closeAndClear: ['f4'],
+  showFileList: ['f5'],
+  readingList: ['f6'],
+  starList: ['f7'],
+  historyList: ['f8'],
+  deletePage: ['del'],
+  deleteFile: ['shift+del'],
+  reload: ['r'],
+  jumpToPageTop: ['t'],
+  findByTags: ['f'],
+  starFile: ['z'],
+  plus: ['+', '='],
+  minus: ['-'],
+
+  up: ['w', 'up', '8'],
+  down: ['s', 'down', '5'],
+  left: ['a', 'left', '4'],
+  right: ['d', 'right', '6'],
+  upLeft: ['q', '7'],
+  upRight: ['e', '9']
+};
 keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`);
 keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`);
 const pageLoadCount = 5; // 一次载入多少页
-const nextPageTop = 200; // 图片距离顶部多远视为下一页
+const nextPageTop = 1 / 2 * document.documentElement.clientHeight; // 图片距离顶部多远视为下一页
 
 // 导入原生模块
 const fs = require('fs');
@@ -129,48 +129,12 @@ const waitInMs = require('./../../_lib/waitInMs');
 const parseInfo = require('./../js/parseInfo');
 const findData = require('./../js/findData');
 const removeOtherInfo = require('./../js/removeOtherInfo');
+const configChange = require('./common/configChange');
+const tooltip = require('./common/tooltip');
 const ipcRenderer = electron.ipcRenderer;
 const Menu = electron.remote.Menu;
 
 // Function
-async function configChange (func, name = 'config') {
-  const value = ipcRenderer.sendSync(name);
-  const noSave = await func(value);
-  if (!noSave) ipcRenderer.sendSync(name, 'set', value);
-}
-function tooltip (option, content) {
-  if (lastTooltip) lastTooltip.close();
-  if (typeof option === 'string') {
-    option = { title: option };
-    if (typeof content !== 'undefined') option.content = content;
-  }
-  return new Promise((resolve, reject) => {
-    lastTooltip = $.confirm(Object.assign({
-      theme: 'banner',
-      boxWidth: '50%',
-      useBootstrap: false,
-      title: null,
-      content: viewInfo.file,
-      autoClose: 'ok|0',
-      backgroundDismiss: 'ok',
-      buttons: {
-        ok: {
-          text: 'OK',
-          btnClass: 'btn-blue',
-          keys: ['enter']
-        }
-      },
-      onClose: function () {
-        resolve();
-        lastTooltip = null;
-      },
-      onAction: function (btn) {
-        resolve(btn);
-        lastTooltip = null;
-      }
-    }, option));
-  });
-}
 const getCurrentPage = () => {
   let onView = $('.content>div').eq(-1);
   for (const ele of $('.content>div').toArray()) {
@@ -254,7 +218,7 @@ const rememberPosition = async (noTooltip) => {
     const date = new Date();
     obj.lastViewTime[viewInfo.file] = date.toLocaleString('zh-CN', { hour12: false });
 
-    if (obj.rememberHistory) {
+    if (ipcRenderer.sendSync('config', 'get', 'rememberHistory')) {
       if (!('history' in obj)) obj.history = [];
       const params = new URLSearchParams();
       for (const key in viewInfo) {
@@ -263,7 +227,7 @@ const rememberPosition = async (noTooltip) => {
       obj.history.unshift(`./src/viewer.html?${params.toString()}`);
     }
   }, 'store');
-  if (!noTooltip) await tooltip('记录已保存');
+  if (!noTooltip) await tooltip('记录已保存', viewInfo.file);
 };
 const showFile = async (option = {}) => {
   // option:
@@ -273,7 +237,7 @@ const showFile = async (option = {}) => {
   const params = (new URL(document.location)).searchParams;
   let file = params.get('file');
   if (!file) {
-    await tooltip('缺少参数', null);
+    await tooltip('缺少参数');
     onLoadError();
     return;
   }
@@ -699,7 +663,7 @@ const main = async () => {
       if (obj.history && obj.history.includes(file)) obj.history.splice(obj.history.indexOf(file), 1);
     }, 'store');
 
-    await tooltip('记录已清除');
+    await tooltip('记录已清除', viewInfo.file);
     return false;
   }, 'keyup');
   Mousetrap.bind(keyMap.jumpToPageTop, function (e, combo) { // 对位到当前页顶部
@@ -714,11 +678,11 @@ const main = async () => {
       buttons: {
         ok: {
           text: 'OK',
+          keys: ['enter'],
           btnClass: 'btn-red'
         },
         cancel: {
           text: 'Cancel',
-          keys: ['enter'],
           btnClass: 'btn-blue'
         }
       }
@@ -747,11 +711,11 @@ const main = async () => {
       buttons: {
         ok: {
           text: 'OK',
+          keys: ['enter'],
           btnClass: 'btn-red'
         },
         cancel: {
           text: 'Cancel',
-          keys: ['enter'],
           btnClass: 'btn-blue'
         }
       }
@@ -813,7 +777,7 @@ const main = async () => {
   });
   Mousetrap.bind([].concat(keyMap.plus, keyMap.minus), async (e, combo) => { // 放大缩小
     zoomPercent += (keyMap.plus.includes(combo) ? zoomPercentStep : -zoomPercentStep);
-    tooltip(`当前缩放: ${zoomPercent}%`);
+    tooltip(`当前缩放: ${zoomPercent}%`, viewInfo.file);
     for (const ele of $('.content>div').toArray()) {
       const width = $(ele).find('img').prop('naturalWidth');
       $(ele).css('width', width * zoomPercent / 100);
@@ -888,7 +852,7 @@ const main = async () => {
       if (!('star' in obj)) obj.star = [];
       if (!obj.star.includes(viewInfo.file)) obj.star.push(viewInfo.file);
     }, 'store');
-    tooltip('书籍已收藏');
+    tooltip('书籍已收藏', viewInfo.file);
   });
   Mousetrap.bind(keyMap.showFileList, function (e, combo) { // 显示文件列表并跳转
     const html = [
