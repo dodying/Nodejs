@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1537
+// @Version:            1.0.1560
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-15 21:53:12
+// @Modified:           2020-3-30 19:11:28
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -336,14 +336,10 @@ const getConditionReadable = () => {
   }).join('&&');
   return text;
 };
-const rememberLastCondition = () => {
+const rememberCondition = (key) => {
   configChange(config => {
     const condition = getCondition();
-    if (config.rememberLastCondition) {
-      config.lastCondition = JSON.stringify(condition);
-    } else {
-      return true;
-    }
+    config[key] = JSON.stringify(condition);
   });
 };
 const showCondition = (conditions) => {
@@ -358,7 +354,6 @@ const showCondition = (conditions) => {
     parent.find('.value:visible').val(value);
     parent.find('.value:visible').eq(1).val(value1);
   }
-  if (ipcRenderer.sendSync('config', 'get', 'fastQuery')) $('.filter').find('[name="query"]').trigger('click');
 };
 const calcRelativeTime = (time) => {
   const lasttime = new Date(time).getTime();
@@ -495,7 +490,9 @@ const main = async () => {
     const hasItem = $('.datalist li').length;
     let onItem = $('.datalistHover').index();
     if ((e.ctrlKey && e.key === 's')) {
-      rememberLastCondition();
+      rememberCondition('starCondition');
+    } else if (['Enter'].includes(e.key) && (hasItem === 0 || $('.datalist').is(':hidden'))) {
+      $('.filter').find('[name="query"]').trigger('click');
     } else if (hasItem && e.key.match(/^[0-9]$/)) {
       e.preventDefault();
       $('.datalist li').eq(e.key === '0' ? 9 : e.key - 1).click();
@@ -522,7 +519,7 @@ const main = async () => {
     } else if (onItem >= 0 && ['Enter', 'Insert'].includes(e.key)) {
       $('.datalistHover').click();
     }
-    // console.log(e.key)
+    // console.log(e.key, hasItem, onItem);
   });
   $('.filter').on('input', '.value[name="value-common"]', async (e) => {
     const value = $(e.target).val();
@@ -590,7 +587,7 @@ const main = async () => {
 
   // 按钮-查询
   $('.filter').find('[name="query"]').on('click', async (e) => {
-    rememberLastCondition();
+    rememberCondition('lastCondition');
 
     const condition = getCondition();
 
@@ -604,8 +601,8 @@ const main = async () => {
   });
 
   // 按钮-保存/收藏
-  $('.filter').find('[name="save-condition"]').on('click', async (e) => {
-    rememberLastCondition();
+  $('.filter').find('[name="star-condition"]').on('click', async (e) => {
+    rememberCondition('starCondition');
   });
   $('.filter').find('[name="bookmark-condition"]').on('click', async (e) => {
     const condition = getCondition();
@@ -964,17 +961,20 @@ const main = async () => {
     electron.remote.getCurrentWindow().close();
   }
 
+  tagsAlert = ipcRenderer.sendSync('config', 'get', 'tagsAlert', '{}');
+  tagsAlert = JSON.parse(tagsAlert);
+  $('<style>').text(Object.keys(tagsAlertStyle).map(i => `[color="${i}"]{${tagsAlertStyle[i]}}`).join('\n')).appendTo('head');
+
   // 还原上次或链接里的条件
   const params = (new URL(document.location)).searchParams;
   if (params.get('condition')) {
     showCondition(JSON.parse(params.get('condition')));
+    if (ipcRenderer.sendSync('config', 'get', 'fastQuery')) $('.filter').find('[name="query"]').trigger('click');
   } else if (ipcRenderer.sendSync('config', 'get', 'rememberLastCondition')) {
     showCondition(JSON.parse(ipcRenderer.sendSync('config', 'get', 'lastCondition', '[]')));
+  } else if (ipcRenderer.sendSync('config', 'get', 'useStarCondition')) {
+    showCondition(JSON.parse(ipcRenderer.sendSync('config', 'get', 'starCondition', '[]')));
   }
-
-  tagsAlert = ipcRenderer.sendSync('config', 'get', 'tagsAlert', '{}');
-  tagsAlert = JSON.parse(tagsAlert);
-  $('<style>').text(Object.keys(tagsAlertStyle).map(i => `[color="${i}"]{${tagsAlertStyle[i]}}`).join('\n')).appendTo('head');
 };
 
 main().then(async () => {

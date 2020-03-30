@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.904
+// @Version:            1.0.909
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-14 12:32:00
+// @Modified:           2020-3-30 18:44:45
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -568,20 +568,24 @@ ipcMain.on('query-by-condition', async (event, condition) => {
       // unused method:
       // equal: JSON_SEARCH(tags, 'one', 'mind break', null, '$.female[*]')
       const [column, path] = comparison.split(':');
-      if (value.match(/^\/(.*)\/$/)) {
-        value = value.match(/^\/(.*)\/$/)[1];
-        comparison = 'REGEXP';
+      if (value.match(/^[><]?=\d+$/)) {
+        str = `JSON_LENGTH(JSON_EXTRACT(${column},'$.${path}[*]'))${value}`;
       } else {
-        value = `%${value.replace(/\\/g, '\\\\')}%`;
-        comparison = 'LIKE';
-      }
+        if (value.match(/^\/(.*)\/$/)) {
+          value = value.match(/^\/(.*)\/$/)[1];
+          comparison = 'REGEXP';
+        } else {
+          value = `%${value.replace(/\\/g, '\\\\')}%`;
+          comparison = 'LIKE';
+        }
 
-      if (path === '*') {
-        // WHERE tags like '%mind break%'
-        str = `${column} ${comparison} ${mysql.escape(value)}`;
-      } else {
-        // WHERE JSON_EXTRACT(tags, '$.female[*]') like '%mind break%'
-        str = `JSON_EXTRACT(${column}, '$.${path}[*]') ${comparison} ${mysql.escape(value)}`;
+        if (path === '*') {
+          // WHERE tags like '%mind break%'
+          str = `${column} ${comparison} ${mysql.escape(value)}`;
+        } else {
+          // WHERE JSON_EXTRACT(tags, '$.female[*]') like '%mind break%'
+          str = `JSON_EXTRACT(${column}, '$.${path}[*]') ${comparison} ${mysql.escape(value)}`;
+        }
       }
     } else if (['=', '!=', '>', '>=', '<', '<='].includes(comparison)) {
       if (type === 'text' || type.match('varchar')) value = mysql.escape(value);
