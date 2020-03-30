@@ -24,7 +24,7 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[main](comicBrowser/main.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/main.js) | 1.0.904 | 2020-3-14 12:32:00 | 2020-01-28 21:26:56 | main
+[main](comicBrowser/main.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/main.js) | 1.0.909 | 2020-3-30 18:44:45 | 2020-01-28 21:26:56 | main
 
 ##### comicBrowser/src/common
 
@@ -38,7 +38,7 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
 [config](comicBrowser/src/config.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/config.js) | 1.0.81 | 2020-3-10 10:23:29 | 2020-02-05 13:44:47 | config
-[index](comicBrowser/src/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/index.js) | 1.0.1537 | 2020-3-15 21:53:12 | 2020-02-04 13:54:15 | index
+[index](comicBrowser/src/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/index.js) | 1.0.1560 | 2020-3-30 19:11:28 | 2020-02-04 13:54:15 | index
 [main](comicBrowser/src/main.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/main.js) | 1.0.100 | 2020-3-10 10:23:38 | 2020-02-09 16:15:40 | main
 [viewer](comicBrowser/src/viewer.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/viewer.js) | 1.0.1116 | 2020-3-15 21:55:27 | 2020-02-08 18:17:38 | viewer
 
@@ -79,7 +79,7 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[index](epubBuilder/src/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/epubBuilder/src/index.js) | 1.0.1062 | 2020-3-14 14:04:08 | 2020-01-11 13:06:39 | index
+[index](epubBuilder/src/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/epubBuilder/src/index.js) | 1.0.1097 | 2020-3-28 16:05:18 | 2020-01-11 13:06:39 | index
 
 ##### githubSoftwareSpider
 

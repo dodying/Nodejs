@@ -1634,11 +1634,6 @@ pify@^3.0.0:
   resolved "https://registry.npm.taobao.org/pify/download/pify-3.0.0.tgz#e5a4acd2c101fdf3d9a4d07f0dbc4db49dd28176"
   integrity sha1-5aSs0sEB/fPZpNB/DbxNtJ3SgXY=
 
-pinyinlite@^1.2.1:
-  version "1.2.1"
-  resolved "https://registry.npm.taobao.org/pinyinlite/download/pinyinlite-1.2.1.tgz#48b30f68a4f1daf193756d9b6ea66acb233fa4fb"
-  integrity sha1-SLMPaKTx2vGTdW2bbqZqyyM/pPs=
-
 pixl-xml@1.0.13:
   version "1.0.13"
   resolved "https://registry.npm.taobao.org/pixl-xml/download/pixl-xml-1.0.13.tgz#5ba71408bdf37994c239dd01251c10c53c0587e3"
