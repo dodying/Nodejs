@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1062
+// @Version:            1.0.1097
 // @Author:             dodying
 // @Created:            2020-01-11 13:06:39
-// @Modified:           2020-3-14 14:04:08
+// @Modified:           2020-3-28 16:05:18
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            archiver,chardet,iconv-lite,pinyinlite
+// @Require:            archiver,chardet,iconv-lite
 // ==/Headers==
 /* global tranStr */
 
@@ -47,16 +47,7 @@ const path = require('path');
 const archiver = require('archiver');
 const chardet = require('chardet');
 const iconv = require('iconv-lite');
-const pinyinlite = require('pinyinlite');
-const chSort = (a, b) => {
-  const c1 = pinyinlite(a, {
-    keepUnrecognized: true
-  }).join('');
-  const c2 = pinyinlite(b, {
-    keepUnrecognized: true
-  }).join('');
-  return c1.localeCompare(c2);
-};
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 // Function
 function wordSection (mode, word) { // 文本强制分段-测试功能
@@ -152,7 +143,7 @@ const funcStart = () => {
 
   // 设置本地参数
   let files;
-  files = fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).sort(chSort);
+  files = fs.existsSync(CONFIG.workDir) ? fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).sort(collator.compare) : [];
 
   // 设置本地元素属性
   if (files.length) {
@@ -187,8 +178,16 @@ const funcStart = () => {
   });
 
   $('.tabContent[name="start"]').find('input[name="list"]').off('click').on('click', (e) => {
-    const files = fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).map(file => path.join(CONFIG.workDir, file)).sort(chSort);
-    THIS.title = path.basename(CONFIG.workDir);
+    let folder = fs.readdirSync(CONFIG.workDir).map(i => path.resolve(CONFIG.workDir, i)).filter(i => fs.statSync(i).isDirectory()).sort(collator.compare);
+    folder = folder.find(i => fs.readdirSync(i).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).length);
+    const files = fs.readdirSync(folder).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).map(file => path.join(folder, file)).sort(collator.compare);
+    if (files.length) {
+      $('.bottomBar [name="next"]').removeAttr('disabled');
+    } else {
+      return;
+    }
+    THIS.title = path.basename(folder);
+
     THIS.list = [];
     for (const file of files) {
       let charset = chardet.detectFileSync(file, { sampleSize: 1024 * 10 });
@@ -766,7 +765,7 @@ const funcExport = () => {
       'META-INF/container.xml': '<?xml version="1.0" encoding="UTF-8"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml" /></rootfiles></container>',
       'OEBPS/stylesheet.css': CONFIG.css,
       'OEBPS/cover.jpg': THIS.cover,
-      'OEBPS/content.opf': `<?xml version="1.0" encoding="UTF-8"?><package version="2.0" unique-identifier="${uuid}" xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><dc:title>${THIS.title}</dc:title><dc:creator>${THIS.author}</dc:creator><dc:identifier id="${uuid}">urn:uuid:${uuid}</dc:identifier><dc:language>zh-CN</dc:language><meta name="cover" content="cover-image" /></metadata><manifest>`,
+      'OEBPS/content.opf': `<?xml version="1.0" encoding="UTF-8"?><package version="2.0" unique-identifier="${uuid}" xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><dc:title>${THIS.title}</dc:title><dc:creator>${THIS.author}</dc:creator><dc:publisher>epubBuilder</dc:publisher><dc:identifier id="${uuid}">urn:uuid:${uuid}</dc:identifier><dc:language>zh-CN</dc:language><meta name="cover" content="cover-image" /></metadata><manifest>`,
       'OEBPS/toc.ncx': `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd"><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:${uuid}"/><meta name="dtb:depth" content="1"/><meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head><docTitle><text>${THIS.title}</text></docTitle><navMap><navPoint id="navpoint-1" playOrder="1"><navLabel><text>首页</text></navLabel><content src="cover.html"/></navPoint>`,
       'OEBPS/cover.html': `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${THIS.title}</title><link type="text/css" rel="stylesheet" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h1>${THIS.title}</h1><h2>本电子书由用户脚本${THIS.author}制作</h2></body></html>`
     };
@@ -778,7 +777,7 @@ const funcExport = () => {
       const chapter = THIS.chapters[i];
       const chapterName = chapter.title;
       const chapterOrder = String(i + 1).padStart(length, '0');
-      const chapterContent = chapter.content.replace(/[\r\n]+/g, '</p><p>').replace(/<p>\s+/g, '<p>');
+      const chapterContent = chapter.content.replace(/\r/g, '').replace(/\n/g, '</p><p>').replace(/<p>\s+/g, '<p>');
 
       files['OEBPS/toc.ncx'] += '<navPoint id="chapter' + chapterOrder + '" playOrder="' + (i + 2) + '"><navLabel><text>' + chapterName + '</text></navLabel><content src="' + chapterOrder + '.html"/></navPoint>';
 
@@ -808,7 +807,13 @@ const funcExport = () => {
     });
     output.on('close', function () {
       if (THIS.list) {
-        THIS.files.forEach(i => fs.unlinkSync(i));
+        for (const file of THIS.files) {
+          fs.unlinkSync(file);
+        }
+        const dir = path.dirname(THIS.files[0]);
+        if (path.relative(dir, CONFIG.workDir) !== '' && fs.readdirSync(dir).length === 0) {
+          fs.rmdirSync(dir);
+        }
       } else if (THIS.files && THIS.files.length) {
         fs.unlinkSync(THIS.files[0]);
       }
