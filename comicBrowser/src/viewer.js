@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1116
+// @Version:            1.0.1120
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-3-15 21:55:27
+// @Modified:           2020-4-12 20:56:45
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -133,6 +133,7 @@ const configChange = require('./common/configChange');
 const tooltip = require('./common/tooltip');
 const ipcRenderer = electron.ipcRenderer;
 const Menu = electron.remote.Menu;
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 // Function
 const getCurrentPage = () => {
@@ -338,7 +339,7 @@ const showFile = async (option = {}) => {
     fileInfo = parseInfo(data);
   }
 
-  fileList = fileList.filter(i => ['.jpg', '.png', '.gif'].includes(path.extname(i)));
+  fileList = fileList.filter(i => ['.jpg', '.png', '.gif', '.webp'].includes(path.extname(i))).sort(collator.compare);
 
   const lastViewPosition = ipcRenderer.sendSync('store', 'get', 'lastViewPosition', {});
   if (!page && lastViewPosition[file]) page = lastViewPosition[file];

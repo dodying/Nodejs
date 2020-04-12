@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1560
+// @Version:            1.0.1571
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-3-30 19:11:28
+// @Modified:           2020-4-4 12:02:20
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -600,7 +600,7 @@ const main = async () => {
     updateTitleUrl();
   });
 
-  // 按钮-保存/收藏
+  // 按钮-星标/收藏
   $('.filter').find('[name="star-condition"]').on('click', async (e) => {
     rememberCondition('starCondition');
   });
@@ -653,7 +653,7 @@ const main = async () => {
 
   // 按钮-打开新窗口
   $('.filter').find('[name="new-query"]').on('click', async (e) => {
-    ipcRenderer.send('open', './src/index.html?condition=%5B%5D');
+    ipcRenderer.send('open', './src/index.html');
   });
   $('.filter').find('[name="config"]').on('click', async (e) => {
     ipcRenderer.send('open', './src/config.html');
