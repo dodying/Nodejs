@@ -1,6 +1,6 @@
-'use strict'
+'use strict';
 
-let config = {
+const config = {
   userAgent: 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36',
   timeout: 60, // 请求超时(单位秒)
   proxyHTTP: 'http://user:password@host:port', // HTTP代理
@@ -41,6 +41,6 @@ let config = {
     ['（ブルーレイディスク）', '']
   ],
   nfo: true // 是否生成nfo文件(kodi格式)
-}
+};
 
-module.exports = config
+module.exports = config;
