@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.350
+// @Version:            1.0.428
 // @Author:             dodying
-// @Modified:           2020-3-12 13:19:42
+// @Modified:           2020-5-18 14:27:24
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
@@ -34,10 +34,13 @@ const Agent = require('socks5-https-client/lib/Agent');
 const waitInMs = require('./../_lib/waitInMs');
 const walk = require('./../_lib/walk');
 
+const replaceWithDict = require('./js/replaceWithDict');
 const parseInfo = require('./js/parseInfo');
 const findData = require('./js/findData');
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, 'EHT.json'), 'utf-8')).data;
 findData.init(EHT);
+const tags = ['language', 'reclass', 'artist', 'group', 'parody', 'character', 'female', 'male', 'misc'];
+const tagsChs = tags.map(i => `${i}:chs`);
 
 let tagFolder;
 if (_.makeTags && _.makeTags.length) tagFolder = path.resolve(_.libraryFolder, _.subFolderTag);
@@ -98,7 +101,6 @@ const colors = {
   debug: text => color.FgBlue + text + color.Reset,
   error: text => color.FgRed + text + color.Reset
 };
-
 const symlinkSync = (target, link) => {
   let { dir: parentPath, base } = path.parse(link);
   let children = fse.readdirSync(parentPath);
@@ -146,110 +148,24 @@ const moveFile = (oldpath, newpath, date = undefined) => {
 const unique = arr => [...(new Set(arr))];
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
 const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
-const sortFileBySpecialRule2 = info => {
-  const rule = _.specialRule;
-  for (let i = 0; i < rule.length; i++) {
-    const folder = rule[i].folder || '';
-    const mode = rule[i].mode || 0;
-    let filter;
-    if (mode === 0) {
-      filter = false;
-      for (const j in rule[i]) {
-        if (['mode', 'folder'].includes(j)) continue;
-        if (typeof info[j] === 'undefined') break;
-        const _rule = rule[i][j];
-        const _info = [].concat(info[j]);
-        if (typeof _rule === 'string') {
-          if (_info.some(k => k.match('|'))) {
-            let _info2 = [];
-            _info.forEach(k => {
-              _info2 = _info2.concat(k.split('|'));
-            });
-            _info2 = _info2.map(k => k.trim());
-            if (_info2.includes(_rule)) {
-              filter = true;
-              break;
-            }
-          }
-          if (_info.includes(_rule)) {
-            filter = true;
-            break;
-          }
-        } else if (_rule instanceof RegExp) {
-          if (_rule.exec(_info.join(', '))) {
-            filter = true;
-            break;
-          }
-        } else if (_rule instanceof Function) {
-          if (_rule(_info)) {
-            filter = true;
-            break;
-          }
-        }
-      }
-    } else if (mode === 1) {
-      filter = true;
-      for (const j in rule[i]) {
-        if (['mode', 'folder'].includes(j)) continue;
-        if (typeof info[j] === 'undefined') {
-          filter = false;
-          break;
-        }
-        const _rule = rule[i][j];
-        const _info = [].concat(info[j]);
-        if (typeof _rule === 'string') {
-          if (_info.some(k => k.match('|'))) {
-            let _info2 = [];
-            _info.forEach(k => {
-              _info2 = _info2.concat(k.split('|'));
-            });
-            _info2 = _info2.map(k => k.trim());
-            if (!_info2.includes(_rule)) {
-              filter = false;
-              break;
-            }
-            continue;
-          }
-          if (!_info.includes(_rule)) {
-            filter = false;
-            break;
-          }
-        } else if (_rule instanceof RegExp) {
-          if (!_rule.exec(_info.join(', '))) {
-            filter = false;
-            break;
-          }
-        } else if (_rule instanceof Function) {
-          if (!_rule(_info)) {
-            filter = false;
-            break;
-          }
-        }
-      }
-    }
-    if (filter) return path.resolve(_.libraryFolder, _.specialFolder, escape2(folder));
-  }
-  return false;
-};
 const sortFileBySpecialRule = info => {
-  // console.log({ info })
   const rules = _.specialRule;
   for (let rule of rules) {
-    if (!rule.length) rule = Object.keys(rule).map(key => [key, rule[key]]);
+    if (!rule.length) rule = Object.keys(rule).map(key => [key, rule[key]]); // 兼容旧版本
     // console.log({ rule })
-    let folder = rule.filter(arr => arr[0] === 'folder');
-    folder = folder.length ? folder[0][1] : '';
-    let mode = rule.filter(arr => arr[0] === 'mode');
-    mode = mode.length ? mode[0][1] : '0';
+    let folder = rule.find(arr => arr[0] === 'folder');
+    folder = folder ? folder[1] : '';
+    let mode = rule.find(arr => arr[0] === 'mode');
+    mode = mode ? mode[1] : '0';
 
     rule = rule.filter(arr => !['folder', 'mode'].includes(arr[0]));
     // console.log({ rule })
 
     const checkFunction = arr => {
       let [key, value] = [].concat(arr);
-      if (!value) [key, value] = ['artist', key];
+      if (arr.length === 1) [key, value] = ['artist', key];
       let infoThis = info[key];
-      if (!infoThis) return false;
+      if (!infoThis) return [null, undefined].includes(value);
       if (typeof infoThis === 'string') infoThis = [].concat(infoThis);
       infoThis = [].concat(...infoThis.map(i => i.split('|'))).map(i => i.trim());
       // console.log({ infoThis, key, value })
@@ -265,7 +181,20 @@ const sortFileBySpecialRule = info => {
     };
 
     const checked = mode === '0' ? rule.some(checkFunction) : rule.every(checkFunction);
-    if (checked) return path.resolve(_.libraryFolder, _.specialFolder, escape2(folder));
+    if (checked) {
+      if (typeof folder === 'function') {
+        folder = folder(info);
+      } else if (folder.match(/\{.*\}/)) {
+        folder = replaceWithDict(folder, info, (key, value) => {
+          if (tagsChs.includes(key)) {
+            const main = key.split(':chs')[0];
+            value = main in info ? info[main].map(i => findData(main, i).cname || i) : '';
+          }
+          if (value instanceof Array) return value.sort().join(',');
+        });
+      }
+      return path.resolve(_.libraryFolder, _.specialFolder, escape2(folder));
+    }
   }
   return false;
 };
@@ -285,22 +214,14 @@ const sortFile = info => {
     return _.subFolder[1];
   } else if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || (info.tags.includes('artbook'))) {
     return _.subFolder[2];
-  } else if (info.genre.match(/^(GAMECG|GAME CG SET|ARTISTCG|ARTIST CG SET)$/i)) {
+  } else if (info.genre.match(/^(game|artist) ?cg( set)?$/i)) {
     return _.subFolder[3];
   } else if (info.genre.match(/^DOUJINSHI$/i) && info.parody) {
-    let parody = info.parody.map(i => {
-      let j;
-      for (j = 0; j < _.parody.length; j++) {
-        if (i.match(_.parody[j].filter)) break;
-      }
-      return j < _.parody.length ? _.parody[j].name : i;
-    });
-    parody = unique(parody);
-    if (parody.length > 1) {
-      return _.subFolder[4] + '/' + escape(parody.map(i => findData('parody', i).cname || i).sort().join(', '));
+    if (info.parody.length > 1) {
+      return _.subFolder[4] + '/' + escape(info.parody.map(i => findData('parody', i).cname || i).sort().join(', '));
       // return _.subFolder[4] + '/Various'
     } else {
-      let value = parody[0];
+      let value = info.parody[0];
       value = escape(findData('parody', value).cname || value);
       if (info.character) {
         const character = info.character.filter(i => !(_.removeCharacter.includes(i)));
@@ -473,6 +394,15 @@ const main = async () => {
         const info = parseInfo(data);
         if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1);
         if (info.parody && info.parody.length === 0) delete info.parody;
+        if (info.parody && info.parody.some(i => _.parody.some(j => i.match(j.filter)))) {
+          info.parody = info.parody.map(i => {
+            for (let j = 0; j < _.parody.length; j++) {
+              if (i.match(_.parody[j].filter)) return _.parody[j].name;
+            }
+            return i;
+          });
+          info.parody = unique(info.parody);
+        }
 
         // 检测图片及大小
         if ((_.delIntroPic || _.checkImageSize || _.checkImageRatio) && info.web.match(/e(-|x)hentai.org/)) {
@@ -542,7 +472,7 @@ const main = async () => {
           if (img && fileList.find(item => item.match(new RegExp(img[1])))) {
             firstImg = fileList.find(item => item.match(new RegExp(img[1])));
           } else {
-            firstImg = fileList.find(item => item.match(/\.(jpg|png|gif)$/));
+            firstImg = fileList.find(item => item.match(/\.(jpg|png|gif|webp)$/));
           }
           const u8a = await zip.files[firstImg].async('uint8array');
           const targetCover = path.resolve(_.comicFolder, path.parse(target).name + '.jpg');

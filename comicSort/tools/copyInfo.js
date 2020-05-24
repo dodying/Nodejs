@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               copyInfo
 // @Description:        copyInfo
-// @Version:            1.0.355
+// @Version:            1.0.358
 // @Author:             dodying
 // @Created:            2020-01-18 15:55:20
-// @Modified:           2020-3-10 10:29:37
+// @Modified:           2020-5-18 12:56:21
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,fs-extra,jszip,readline-sync
@@ -64,6 +64,7 @@ const colors = {
   error: text => color.FgRed + text + color.Reset
 };
 
+const unique = arr => [...(new Set(arr))];
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
 // const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '')
 
@@ -154,6 +155,15 @@ const main = async () => {
     const info = parseInfo(data);
     if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1);
     if (info.parody && info.parody.length === 0) delete info.parody;
+    if (info.parody && info.parody.some(i => _.parody.some(j => i.match(j.filter)))) {
+      info.parody = info.parody.map(i => {
+        for (let j = 0; j < _.parody.length; j++) {
+          if (i.match(_.parody[j].filter)) return _.parody[j].name;
+        }
+        return i;
+      });
+      info.parody = unique(info.parody);
+    }
 
     toDeleteInfo.forEach(i => delete info[i]);
 
