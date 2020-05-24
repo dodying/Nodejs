@@ -9,28 +9,28 @@ const config = {
   proxySocksPort: 2345, // Socks代理-端口
   proxySocksUsername: 'user', // Socks代理-验证(无则留空)
   proxySocksPassword: 'password', // Socks代理-验证(无则留空)
+  retry: 5, // 请求重试次数
+  searchLibsEnable: ['javhoo', 'javlite', 'avfhd', 'duckduckgo', 'googleCSE'], // 要启用的搜索引擎
 
-  folderNew: '', // 整理后存放的目录, 相对于进行整理的目录
   /**
-   * [folderWith description]
+   * [folderSort description]
    * @type {String}
    * 建立层次文件夹
-   * 参考lib.data
+   * 参考lib.getInfo
    * 留空表示不建立
    */
-  folderWith: '{actor}',
+  folderSort: '{censored}/{actor}', // 整理后存放的目录, 相对于进行整理的目录
   emptyStr: '---', // 某属性为空时，使用的替代字符
   /**
    * [name description]
    * @type {String}
    * 重命名规则
-   * {x}
+   * {x} // 参考lib.getInfo
    * {prefix} 表示原文件名开头用方括号号引用的内容
    * {suffix} 表示原文件名末尾用方括号引用的内容
    */
-  name: '{prefix}{id}{suffix}', // 参考lib.data
+  name: '{prefix}{id}{suffix}',
   image: 1, // 是否下载图片，0不下载，1下载封面，2下载封面及预览图
-  imageRetry: 3, // 下载图片重试次数
   strReplace: [ // 要替换的字符串
   /**
    * eg: ['a', '1'], ['b', '2']
