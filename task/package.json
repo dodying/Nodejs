@@ -1,0 +1,19 @@
+{
+  "name": "task",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [],
+  "author": "dodying",
+  "license": "MIT",
+  "bin": {},
+  "dependencies": {
+    "clipboardy": "^1.2.3",
+    "inquirer": "^6.2.2"
+  },
+  "devDependencies": {}
+}
