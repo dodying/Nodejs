@@ -5,7 +5,8 @@
   "author": "dodying",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ./main.js"
+    "start": "electron ./main.js",
+    "update": "electron ./main.js update"
   },
   "main": "main.js",
   "dependencies": {

@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1120
+// @Version:            1.0.1166
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-4-12 20:56:45
+// @Modified:           2020-4-25 14:14:19
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -150,11 +150,11 @@ const getCurrentPage = () => {
   const img = $(`.content>div[name="${viewInfo.page}"]>img`).attr('src');
   $('.preview>div:nth-child(2)').attr('name', viewInfo.page).html(`<img src="${img}">`);
 };
-const getNaturalWidth = (src) => {
+const getNaturalSize = (src) => {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
     img.onload = function () {
-      resolve(this.width);
+      resolve([this.width, this.height]);
     };
     img.src = src;
   });
@@ -171,8 +171,9 @@ const loadImage = async (reverse) => {
     count++;
     const blob = await zipContent.files[name].async('blob');
     const imageUrl = URL.createObjectURL(blob);
-    const width = await getNaturalWidth(imageUrl);
+    const [width, height] = await getNaturalSize(imageUrl);
     const ele = $(`<div name="${name}"><img src="${imageUrl}" /></div>`).css('width', width * zoomPercent / 100);
+    // ele.css('width', width / height * document.documentElement.clientHeight * 0.6); // TODO
 
     if (reverse) {
       ele.prependTo('.content');
@@ -208,6 +209,8 @@ const jumpToImage = async (page) => {
       break;
     }
   }
+
+  electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(page) + 1) / fileList.length);
 };
 const rememberPosition = async (noTooltip) => {
   if (!viewInfo.file || isNaN(viewTime) || new Date().getTime() - viewTime < viewTimeMin || fileList.indexOf(viewInfo.page) < viewPageMin) return;
@@ -260,7 +263,7 @@ const showFile = async (option = {}) => {
         files = rows.map(i => i.path);
         configChange(obj => {
           if (!('resultList' in obj)) obj.resultList = {};
-          obj.resultList[JSON.stringify(condition)] = files;
+          obj.resultList[condition] = files;
         }, 'store');
       }
     } else {
@@ -355,6 +358,7 @@ const showFile = async (option = {}) => {
   }
   // updateTitleUrl()
 
+  // page = fileList.slice(-1)[0]; // TODO
   pageAnchor = fileList.includes(page) ? fileList.indexOf(page) : 0;
   await jumpToImage(page);
 
@@ -506,6 +510,8 @@ const main = async () => {
       }
     }
     lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
+
+    electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
   });
 
   // 内容-鼠标移动
@@ -800,7 +806,8 @@ const main = async () => {
       `<li>路径: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"path","LIKE","${dirname.replace(/\\/g, '\\\\')}",null]]`)}" style="margin:0 5px;">${dirname}</a></li>`,
       `<li>外部打开: <a name="path" href="${viewInfo.file}">${path.basename(viewInfo.file)}</a></li>`,
       `<li>打开路径: <a name="path" href="${dirname}">${dirname}</a></li>`,
-      `<li>web: <a href="${fileInfo.web}">${fileInfo.web}</a></li>`
+      `<li>web: <a href="${fileInfo.web}">${fileInfo.web}</a></li>`,
+      `<li>Uploader: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"uploader","=","${fileInfo.Uploader}",null]]`)}" style="margin:0 5px;">${fileInfo.Uploader}</a></li>`
     ];
     for (const main of mainTag) {
       if (!(main in fileInfo)) continue;
@@ -896,7 +903,7 @@ const main = async () => {
         files = rows.map(i => i.path);
         configChange(obj => {
           if (!('resultList' in obj)) obj.resultList = {};
-          obj.resultList[JSON.stringify(condition)] = files;
+          obj.resultList[condition] = files;
         }, 'store');
       }
     } else {

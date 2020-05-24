@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.913
+// @Version:            1.0.932
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-3-31 21:02:56
+// @Modified:           2020-4-26 16:55:13
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -47,6 +47,7 @@ const columns = {
   time_download: 'timestamp', // 下载时间
   tags: 'json' // 标签
 };
+const args = process.argv.splice(2);
 
 // 导入原生模块
 const path = require('path');
@@ -568,7 +569,7 @@ ipcMain.on('query-by-condition', async (event, condition) => {
       // unused method:
       // equal: JSON_SEARCH(tags, 'one', 'mind break', null, '$.female[*]')
       const [column, path] = comparison.split(':');
-      if (value.match(/^[><]?=\d+$/)) {
+      if (value.match(/^[><=!]+\d+$/)) {
         str = `JSON_LENGTH(JSON_EXTRACT(${column},'$.${path}[*]'))${value}`;
       } else {
         if (value.match(/^\/(.*)\/$/)) {
@@ -650,32 +651,53 @@ app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('ready', async function () {
-  const urls = ['./src/index.html'];
-
+// Main
+const main = async () => {
   config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
-  store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
 
-  for (const url of urls) {
-    await openWindow(url);
-  }
-
-  tray = new Tray('./src/icon.png');
-  rebuildTrayMenu();
-  tray.on('click', () => {
-    for (let i = 0; i < windowHistory.length;) {
-      const id = windowHistory[i];
-      if (id in windows) {
-        if (windows[id].isVisible()) {
-          windows[id].hide();
-        } else {
-          windows[id].show();
-        }
-        break;
-      } else {
-        windowHistory.splice(0, 1);
-      }
+  if (args.includes('update')) {
+    const [status, code] = await createConnection(config);
+    if (code === 1) {
+      await updateTableFiles(config);
+    } else {
+      console.error(status);
     }
+    app.exit();
+    return;
+  }
+  app.on('ready', async function () {
+    const urls = ['./src/index.html'];
+
+    store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
+
+    for (const url of urls) {
+      await openWindow(url);
+    }
+
+    tray = new Tray('./src/icon.png');
     rebuildTrayMenu();
+    tray.on('click', () => {
+      for (let i = 0; i < windowHistory.length;) {
+        const id = windowHistory[i];
+        if (id in windows) {
+          if (windows[id].isVisible()) {
+            windows[id].hide();
+          } else {
+            windows[id].show();
+          }
+          break;
+        } else {
+          windowHistory.splice(0, 1);
+        }
+      }
+      rebuildTrayMenu();
+    });
   });
+};
+
+main().then(async () => {
+  //
+}, async err => {
+  console.error(err);
+  process.exit();
 });

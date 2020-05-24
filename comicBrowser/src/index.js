@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1571
+// @Version:            1.0.1681
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-4-4 12:02:20
+// @Modified:           2020-5-19 14:54:21
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -16,8 +16,10 @@
 
 // 全局变量
 let scrollElement = $('html').get(0);
-let observer = null;
 let tagsAlert = null;
+let resultTable = null;
+let latestView = null;
+let lastResult = null;
 
 // 可自定义
 const keypressTimeout = 80; // keypress事件延迟
@@ -26,7 +28,7 @@ const showInfo = { // 查询结果-显示列
   // 按key顺序显示
   // [是否显示， 中文标题]
   category: [true, '类别'],
-  language: [false, '语言'],
+  language: [true, '语言'],
   time_upload: [true, '上传时间'],
   time_download: [true, '下载时间'],
   time_view: [true, '最近阅读'], // (#)上次阅读事件
@@ -127,6 +129,7 @@ const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist'
 const showResult = (rows = []) => {
   const store = ipcRenderer.sendSync('store');
   const condition = encodeURIComponent(JSON.stringify(getCondition()));
+  latestView = 0;
 
   const html = ['<table>', '<thead>', '<th></th>'];
   for (const i in showInfo) {
@@ -151,7 +154,16 @@ const showResult = (rows = []) => {
         const attr = [`name="${i}"`];
         let text = '';
         if (['time_upload', 'time_download', 'time_view'].includes(i)) {
-          const time = ['time_view'].includes(i) ? (store.lastViewTime && store.lastViewTime[row.path] ? store.lastViewTime[row.path] : null) : row[i];
+          let time;
+          if (['time_view'].includes(i)) {
+            if (store.lastViewTime && store.lastViewTime[row.path]) {
+              time = store.lastViewTime[row.path];
+              const timeNumber = new Date(time).getTime();
+              if (timeNumber > latestView) latestView = timeNumber;
+            }
+          } else {
+            time = row[i];
+          }
 
           const data = new Date(time);
           attr.push(`datetime="${time}"`, `sort-value="${data.getTime()}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`);
@@ -185,7 +197,7 @@ const showResult = (rows = []) => {
           const main = i.match(/^tag:(.*)$/)[1];
           if (row.tags && main in row.tags) {
             text = row.tags[main].map((sub) => {
-              const condition = [[false, 'tags', `tags:${main}`, `"${sub.split(' | ')[0]}"`, undefined]];
+              const condition = [[false, 'tags', `tags:${main}`, `${sub.split(' | ')[0]}`, undefined]];
               let color = '';
               const full = main === 'misc' ? sub : `${main}:${sub}`;
               if (full in tagsAlert) color = tagsAlert[full];
@@ -206,7 +218,7 @@ const showResult = (rows = []) => {
 
   $('.result').html(html.join(''));
 
-  const table = $('.result>table').tablesorter({
+  resultTable = $('.result>table').tablesorter({
     theme: 'blackice',
 
     widthFixed: true,
@@ -223,25 +235,35 @@ const showResult = (rows = []) => {
     }
   }).on('sortEnd', function (e, t) {
     const condition = getCondition();
-    const arr = $('.result tbody>tr').toArray().map(i => $(i).attr('path'));
+    const arr = resultTable.find('tbody>tr').toArray().map(i => $(i).attr('path'));
     configChange(obj => {
       if (!('resultList' in obj)) obj.resultList = {};
       obj.resultList[JSON.stringify(condition)] = arr;
     }, 'store');
+  }).on('filterEnd filterInit sortEnd pagerComplete columnUpdate', e => {
+    setTimeout(() => {
+      scrollToLast();
+    });
   });
+
   if (pagerOption.enable && rows.length > pagerOption.minCount) {
     let page = 0;
     const condition = getCondition();
     const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
-    if (JSON.stringify(condition) in resultPosition) {
-      const file = resultPosition[JSON.stringify(condition)];
-      const item = $('.result tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
+    if (JSON.stringify(condition) in resultPosition || latestView) {
+      let item;
+      if (JSON.stringify(condition) in resultPosition) {
+        const file = resultPosition[JSON.stringify(condition)];
+        item = resultTable.find('tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
+      } else {
+        item = resultTable.find('tbody>tr').filter(`:has([name="time_view"][sort-value="${latestView}"])`);
+      }
       if (item.length) {
         const index = item.index();
         page = Math.floor(index / pagerOption.size);
       }
     }
-    table.tablesorterPager({
+    resultTable.tablesorterPager({
       container: $('.pager'),
       savePages: false,
       page: page,
@@ -259,16 +281,16 @@ const showResult = (rows = []) => {
   }
 
   setTimeout(() => {
-    if (observer) observer.disconnect();
-
-    scrollElement = $('.result .tablesorter-scroller-table').get(0);
-    scrollToLast();
+    // addRows(rows.slice(0, 20));
     updateRelativeTime();
 
-    observer = new window.MutationObserver(scrollToLast);
-    observer.observe(scrollElement, {
-      childList: true,
-      subtree: true
+    scrollElement = $('.result .tablesorter-scroller-table').get(0);
+
+    $(scrollElement).on('scroll', () => {
+      const total = $(scrollElement).prop('scrollHeight');
+      let current = $(scrollElement).prop('scrollTop');
+      current += Math.min(parseInt($(scrollElement).css('height')), document.documentElement.clientHeight);
+      electron.remote.getCurrentWindow().setProgressBar(Math.min(current / total, 1));
     });
   });
 };
@@ -404,11 +426,16 @@ const scrollToLast = () => {
 
   const condition = getCondition();
   const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
-  if (JSON.stringify(condition) in resultPosition) {
-    const file = resultPosition[JSON.stringify(condition)];
-    const item = $('.result tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
+  if (JSON.stringify(condition) in resultPosition || latestView) {
+    let item;
+    if (JSON.stringify(condition) in resultPosition) {
+      const file = resultPosition[JSON.stringify(condition)];
+      item = resultTable.find('tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
+    } else {
+      item = resultTable.find('tbody>tr').filter(`:has([name="time_view"][sort-value="${latestView}"])`);
+    }
     if (item.length) {
-      item.addClass('trHover');
+      item.eq(0).addClass('trHover');
       scrollTop = item.get(0).offsetTop;
     }
   }
@@ -596,6 +623,7 @@ const main = async () => {
       if (!('resultList' in obj)) obj.resultList = {};
       obj.resultList[JSON.stringify(condition)] = rows.map(i => i.path);
     }, 'store');
+    lastResult = rows;
     showResult(rows);
     updateTitleUrl();
   });
@@ -679,6 +707,7 @@ const main = async () => {
       const files = $('.query>.result tr[path]').toArray().map(i => path.resolve(libraryFolder, $(i).attr('path')));
       const moveMode = path.parse(libraryFolder).root === path.parse(dir).root;
       for (const file of files) {
+        electron.remote.getCurrentWindow().setProgressBar((files.indexOf(file) + 1) / files.length);
         if (!fs.existsSync(file)) continue;
         const fileNew = path.resolve(dir, path.basename(file));
         try {
@@ -698,6 +727,7 @@ const main = async () => {
           }
         }
       }
+      electron.remote.getCurrentWindow().setProgressBar(-1);
       tooltip('移动完成');
     }
   });
@@ -849,7 +879,6 @@ const main = async () => {
     const parent = $(e.target).parentsUntil('tbody').eq(-1);
     const file = parent.attr('path');
     const invisible = (parent.attr('invisible') || parent.attr('raw-invisible')) === '1' ? 0 : 1;
-    console.log(invisible);
     configChange(obj => {
       if (!('invisible' in obj)) obj.invisible = [];
       if (invisible) {
@@ -904,7 +933,6 @@ const main = async () => {
         });
       }
     }
-    console.log(!['delete', 'everything'].includes(name));
     if (!['delete', 'everything'].includes(name)) {
       const rememberHistory = ipcRenderer.sendSync('config', 'get', 'rememberHistory');
       configChange(obj => {

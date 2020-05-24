@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               tooltip
 // @Description:        tooltip
-// @Version:            1.0.2
+// @Version:            1.0.9
 // @Author:             dodying
 // @Created:            2020-03-15 19:57:00
-// @Modified:           2020-3-15 20:00:44
+// @Modified:           2020-4-25 16:35:43
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            null
@@ -15,12 +15,17 @@
 
 let lastTooltip = null;
 
-const main = function tooltip (option, content) {
+const main = function tooltip (option = {}, content) {
   Mousetrap.pause();
   if (lastTooltip) lastTooltip.close();
   if (typeof option === 'string') {
     option = { title: option };
     if (typeof content !== 'undefined') option.content = content;
+  }
+  if (option.theme === 'supervan' || option.autoClose === null || (option.autoClose && option.autoClose.split('|')[0] / 1000 > 1)) {
+
+  } else {
+    Mousetrap.unpause();
   }
   return new Promise((resolve, reject) => {
     lastTooltip = $.confirm(Object.assign({
