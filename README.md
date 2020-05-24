@@ -8,7 +8,7 @@
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[avRenamer](avRenamer/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/avRenamer/index.js) | 1.0.948 | 2020-2-20 22:39:28 |  | 将文件夹下的不可描述视频按规则分类并命名
+[avRenamer](avRenamer/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/avRenamer/index.js) | 1.1.0 | 2020/5/24 19:30:21 |  | 将文件夹下的不可描述视频按规则分类并命名
 [info](avRenamer/info.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/avRenamer/info.js) | 1.0.212 | 2020-3-2 15:53:33 | 2019-09-29 16:30:27 | 根据list.txt生成指定信息
 [rename](avRenamer/rename.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/avRenamer/rename.js) | 1.0.83 | 2019-8-6 13:28:59 |  | 重命名
 
@@ -24,29 +24,35 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[main](comicBrowser/main.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/main.js) | 1.0.909 | 2020-3-30 18:44:45 | 2020-01-28 21:26:56 | main
+[main](comicBrowser/main.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/main.js) | 1.0.932 | 2020-4-26 16:55:13 | 2020-01-28 21:26:56 | main
 
 ##### comicBrowser/src/common
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
 [configChange](comicBrowser/src/common/configChange.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/common/configChange.js) | 1.0.1 | 2020-3-15 20:01:16 | 2020-03-15 20:00:07 | configChange
-[tooltip](comicBrowser/src/common/tooltip.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/common/tooltip.js) | 1.0.2 | 2020-3-15 20:00:44 | 2020-03-15 19:57:00 | tooltip
+[tooltip](comicBrowser/src/common/tooltip.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/common/tooltip.js) | 1.0.9 | 2020-4-25 16:35:43 | 2020-03-15 19:57:00 | tooltip
 
 ##### comicBrowser/src
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
 [config](comicBrowser/src/config.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/config.js) | 1.0.81 | 2020-3-10 10:23:29 | 2020-02-05 13:44:47 | config
-[index](comicBrowser/src/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/index.js) | 1.0.1560 | 2020-3-30 19:11:28 | 2020-02-04 13:54:15 | index
+[index](comicBrowser/src/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/index.js) | 1.0.1681 | 2020-5-19 14:54:21 | 2020-02-04 13:54:15 | index
 [main](comicBrowser/src/main.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/main.js) | 1.0.100 | 2020-3-10 10:23:38 | 2020-02-09 16:15:40 | main
-[viewer](comicBrowser/src/viewer.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/viewer.js) | 1.0.1116 | 2020-3-15 21:55:27 | 2020-02-08 18:17:38 | viewer
+[viewer](comicBrowser/src/viewer.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicBrowser/src/viewer.js) | 1.0.1166 | 2020-4-25 14:14:19 | 2020-02-08 18:17:38 | viewer
 
 ##### comicSort
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[comicSort](comicSort/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/index.js) | 1.0.350 | 2020-3-12 13:19:42 |  | 将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
+[comicSort](comicSort/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/index.js) | 1.0.428 | 2020-5-18 14:27:24 |  | 将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
+
+##### comicSort/js
+
+Name | Raw | Version | Last-Modified | Create-Time | Description
+--- | --- | --- | --- | --- | ---
+[replaceWithDict](comicSort/js/replaceWithDict.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/js/replaceWithDict.js) | 1.0.13 | 2020-4-24 20:37:48 | 2020-04-02 20:57:43 | replaceWithDict
 
 ##### comicSort/tools
 
@@ -56,9 +62,9 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 [changeExt](comicSort/tools/changeExt.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/changeExt.js) | 1.0.67 | 2020-3-6 14:00:53 |  | 修改本子后缀名
 [changeTime](comicSort/tools/changeTime.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/changeTime.js) | 1.0.386 | 2020-3-6 14:07:30 | 2020-01-21 09:57:28 | changeTime
 [check](comicSort/tools/check.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/check.js) | 1.0.153 | 2020-2-27 15:19:51 |  | 检查本地漫画
-[copyInfo](comicSort/tools/copyInfo.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/copyInfo.js) | 1.0.355 | 2020-3-10 10:29:37 | 2020-01-18 15:55:20 | copyInfo
+[copyInfo](comicSort/tools/copyInfo.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/copyInfo.js) | 1.0.358 | 2020-5-18 12:56:21 | 2020-01-18 15:55:20 | copyInfo
 [delete](comicSort/tools/delete.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/delete.js) | 1.0.146 | 2020-1-21 12:23:03 |  | 删除漫画
-[info.txt](comicSort/tools/info.txt.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/info.txt.js) | 1.0.414 | 2020-3-12 13:14:27 | 2020-01-21 12:15:39 | info.txt
+[info.txt](comicSort/tools/info.txt.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/info.txt.js) | 1.0.419 | 2020-4-26 09:10:03 | 2020-01-21 12:15:39 | info.txt
 [watch](comicSort/tools/watch.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/comicSort/tools/watch.js) | 1.0.189 | 2020-3-6 14:02:03 |  | 监控libraryFolder变化
 
 ##### Docsets2Html
@@ -91,13 +97,19 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[makeReadme](makeReadme/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/makeReadme/index.js) | 1.0.24 | 2020-3-15 22:14:30 |  | 根据 Headers 生产 `README.md`
+[makeReadme](makeReadme/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/makeReadme/index.js) | 1.0.26 | 2020-4-27 16:09:41 |  | 根据 Headers 生产 `README.md`
 
 ##### movieFinder
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
 [movieFinder](movieFinder/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/movieFinder/index.js) | 1.0.1 | 2019-1-26 15:13:19 | 2019-1-26 15:13:19 | 根据目录生成html
+
+##### task
+
+Name | Raw | Version | Last-Modified | Create-Time | Description
+--- | --- | --- | --- | --- | ---
+[task](task/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/task/index.js) | 1.0.86 | 2020/5/24 19:37:15 |  | task
 
 ##### Txt2Epub
 
