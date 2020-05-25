@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1681
+// @Version:            1.0.1802
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020-5-19 14:54:21
+// @Modified:           2020/5/25 18:51:22
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -18,7 +18,6 @@
 let scrollElement = $('html').get(0);
 let tagsAlert = null;
 let resultTable = null;
-let latestView = null;
 let lastResult = null;
 
 // 可自定义
@@ -124,27 +123,67 @@ const ipcRenderer = electron.ipcRenderer;
 const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data;
 findData.init(EHT);
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 // Function
-const showResult = (rows = []) => {
+const showResult = (page) => {
+  // page为undefined时，自动跳转到上次阅读，否则跳转到第几页
   const store = ipcRenderer.sendSync('store');
   const condition = encodeURIComponent(JSON.stringify(getCondition()));
-  latestView = 0;
 
-  const html = ['<table>', '<thead>', '<th></th>'];
-  for (const i in showInfo) {
-    if (showInfo[i][0]) html.push(`<th>${showInfo[i][1] || i}</th>`);
+  if (!('time_view' in lastResult[0])) { // 仅在第一次，增加属性time_view，方便后续排序等操作
+    for (const i of lastResult) {
+      i.time_view = store.lastViewTime[i.path] || '';
+    }
   }
-  html.push('</thead>');
 
-  html.push('<tbody>');
+  const html = ['<div class="tableHead">', '<table class="tablesorter-blackice">', '<thead>', '<th class="tablesorter-header" sort="id"></th>'];
+  for (const i in showInfo) {
+    if (showInfo[i][0]) {
+      html.push(`<th ${i in lastResult[0] ? `class="tablesorter-header" sort="${i}"` : ''}>${showInfo[i][1] || i}</th>`);
+    }
+  }
+  html.push('</thead>', '</table>', '</div>');
+
+  html.push('<div class="tableBody">', '<table class="tablesorter-blackice">', '<tbody>');
   let order = 1;
-  for (const row of rows) {
+  let result = lastResult;
+  if (pagerOption.enable && lastResult.length > pagerOption.minCount) { // 分页
+    if (page === undefined) {
+      const condition = getCondition();
+      const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
+      let index = 0;
+      if (JSON.stringify(condition) in resultPosition) {
+        const file = resultPosition[JSON.stringify(condition)];
+        index = lastResult.findIndex(i => i.path === file);
+      } else {
+        const lastViewTimes = lastResult.map(i => i.time_view);
+        const sorted = lastViewTimes.filter(i => i).sort(collator.compare).reverse();
+        index = sorted.length ? lastViewTimes.indexOf(sorted[0]) : 0;
+      }
+      page = Math.floor(index / pagerOption.size) + 1;
+    }
+    if (page <= 0) page = 1;
+    const max = Math.ceil(lastResult.length / pagerOption.size);
+    if (page > max) page = max;
+    result = result.slice((page - 1) * pagerOption.size, page * pagerOption.size);
+
+    $('.pager').show();
+    $('.pager>.first').off('click').on('click', () => { showResult(1); }).removeClass('disabled');
+    $('.pager>.prev').off('click').on('click', () => { showResult(page - 1); }).removeClass('disabled');
+    if (page === 1) $('.pager>.first,.pager>.prev').off('click').addClass('disabled');
+    $('.pager>.next').off('click').on('click', () => { showResult(page + 1); }).removeClass('disabled');
+    $('.pager>.last').off('click').on('click', () => { showResult(max); }).removeClass('disabled');
+    if (page === max) $('.pager>.next,.pager>.last').off('click').addClass('disabled');
+    $('.pager>.pagedisplay').attr('max', max);
+    $('.pager>.pagedisplay>input').val(page).prop('max', max).off('change').on('change', e => { showResult(e.target.value * 1); });
+  }
+  for (const row of result) {
     // tr
     const tagString = encodeURIComponent(JSON.stringify(row.tags));
     const star = store.star && store.star.includes(row.path) ? 1 : 0;
     const invisible = store.invisible && store.invisible.includes(row.path) ? 1 : 0;
-    let tr = `<tr path="${row.path}" star="${star}" tags="${tagString}" invisible="${invisible}">`; // path 用于定位
+    let tr = `<tr class="${order % 2 ? 'even' : 'odd'}" path="${row.path}" star="${star}" tags="${tagString}" invisible="${invisible}">`; // path 用于定位
 
     // td order
     tr += `<td>${order++}</td>`;
@@ -154,16 +193,7 @@ const showResult = (rows = []) => {
         const attr = [`name="${i}"`];
         let text = '';
         if (['time_upload', 'time_download', 'time_view'].includes(i)) {
-          let time;
-          if (['time_view'].includes(i)) {
-            if (store.lastViewTime && store.lastViewTime[row.path]) {
-              time = store.lastViewTime[row.path];
-              const timeNumber = new Date(time).getTime();
-              if (timeNumber > latestView) latestView = timeNumber;
-            }
-          } else {
-            time = row[i];
-          }
+          const time = row[i];
 
           const data = new Date(time);
           attr.push(`datetime="${time}"`, `sort-value="${data.getTime()}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`);
@@ -214,85 +244,34 @@ const showResult = (rows = []) => {
     tr += '</tr>';
     html.push(tr);
   }
-  html.push('</tbody>', '</table>');
+  html.push('</tbody>', '</table>', '</div>');
 
-  $('.result').html(html.join(''));
+  $('.result').html(html.join('')).get(0).scrollIntoView();
+  $('.tableBody').css('height', document.documentElement.clientHeight - 120);
 
-  resultTable = $('.result>table').tablesorter({
-    theme: 'blackice',
-
-    widthFixed: true,
-
-    textAttribute: 'sort-value',
-    widgets: ['zebra', 'filter', 'scroller'],
-    widgetOptions: {
-      filter_defaultAttrib: 'sort-value',
-      filter_saveFilters: false,
-
-      scroller_height: document.documentElement.clientHeight - 150, // - (25 + 25 * getCondition().length)
-      scroller_upAfterSort: true,
-      scroller_jumpToHeader: true
-    }
-  }).on('sortEnd', function (e, t) {
-    const condition = getCondition();
-    const arr = resultTable.find('tbody>tr').toArray().map(i => $(i).attr('path'));
-    configChange(obj => {
-      if (!('resultList' in obj)) obj.resultList = {};
-      obj.resultList[JSON.stringify(condition)] = arr;
-    }, 'store');
-  }).on('filterEnd filterInit sortEnd pagerComplete columnUpdate', e => {
-    setTimeout(() => {
-      scrollToLast();
-    });
+  updateRelativeTime();
+  scrollElement = $('.tableBody').get(0);
+  $(scrollElement).on('scroll', () => {
+    const total = $(scrollElement).prop('scrollHeight');
+    let current = $(scrollElement).prop('scrollTop');
+    current += Math.min(parseInt($(scrollElement).css('height')), document.documentElement.clientHeight);
+    electron.remote.getCurrentWindow().setProgressBar(Math.min(current / total, 1));
   });
+  resultTable = $('.tableBody');
 
-  if (pagerOption.enable && rows.length > pagerOption.minCount) {
-    let page = 0;
-    const condition = getCondition();
-    const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
-    if (JSON.stringify(condition) in resultPosition || latestView) {
-      let item;
-      if (JSON.stringify(condition) in resultPosition) {
-        const file = resultPosition[JSON.stringify(condition)];
-        item = resultTable.find('tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
-      } else {
-        item = resultTable.find('tbody>tr').filter(`:has([name="time_view"][sort-value="${latestView}"])`);
-      }
-      if (item.length) {
-        const index = item.index();
-        page = Math.floor(index / pagerOption.size);
-      }
-    }
-    resultTable.tablesorterPager({
-      container: $('.pager'),
-      savePages: false,
-      page: page,
-      size: pagerOption.size,
-      pageReset: 0,
+  const colgroup = ['<colgroup>'];
 
-      cssNext: '.next',
-      cssPrev: '.prev',
-      cssFirst: '.first',
-      cssLast: '.last',
-      output: '{page:input} / {totalPages}',
-      cssDisabled: 'disabled'
-    });
-    $('.pager').show().get(0).scrollIntoView();
+  const overallWidth = $('.tableBody>table').width();
+  for (const td of $('.tableBody>table>tbody>tr:nth-child(1)>td').toArray()) {
+    const width = $(td).width();
+    const percent = parseInt((width / overallWidth) * 1000, 10) / 10 + '%';
+    colgroup.push(`<col style="width: ${percent};">`);
   }
+  colgroup.push('</colgroup>');
+  $('.tablesorter-blackice').prepend(colgroup.join(''));
+  $('.tableHead').css('width', overallWidth);
 
-  setTimeout(() => {
-    // addRows(rows.slice(0, 20));
-    updateRelativeTime();
-
-    scrollElement = $('.result .tablesorter-scroller-table').get(0);
-
-    $(scrollElement).on('scroll', () => {
-      const total = $(scrollElement).prop('scrollHeight');
-      let current = $(scrollElement).prop('scrollTop');
-      current += Math.min(parseInt($(scrollElement).css('height')), document.documentElement.clientHeight);
-      electron.remote.getCurrentWindow().setProgressBar(Math.min(current / total, 1));
-    });
-  });
+  scrollToLast();
 };
 const showBookmarks = () => {
   const conditions = ipcRenderer.sendSync('config', 'get', 'bookmarkCondition', {});
@@ -426,18 +405,20 @@ const scrollToLast = () => {
 
   const condition = getCondition();
   const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
-  if (JSON.stringify(condition) in resultPosition || latestView) {
-    let item;
-    if (JSON.stringify(condition) in resultPosition) {
-      const file = resultPosition[JSON.stringify(condition)];
-      item = resultTable.find('tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
-    } else {
-      item = resultTable.find('tbody>tr').filter(`:has([name="time_view"][sort-value="${latestView}"])`);
-    }
-    if (item.length) {
-      item.eq(0).addClass('trHover');
-      scrollTop = item.get(0).offsetTop;
-    }
+
+  let file;
+  if (JSON.stringify(condition) in resultPosition) {
+    file = resultPosition[JSON.stringify(condition)];
+  } else {
+    const lastViewTimes = lastResult.map(i => i.time_view);
+    const sorted = lastViewTimes.filter(i => i).sort(collator.compare).reverse();
+    const index = sorted.length ? lastViewTimes.indexOf(sorted[0]) : 0;
+    file = lastResult[index].path;
+  }
+  if (file) {
+    const item = resultTable.find('tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
+    item.eq(0).addClass('trHover');
+    scrollTop = item.get(0).offsetTop;
   }
 
   scrollElement.scrollTop = scrollTop;
@@ -446,7 +427,7 @@ const scrollToLast = () => {
 
 // Main
 const main = async () => {
-  if (electron.remote.getCurrentWindow().id === 1 && ipcRenderer.sendSync('config', 'get', 'rememberLastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs', []).length) {
+  if (window.location.search === '' && electron.remote.getCurrentWindow().id === 1 && ipcRenderer.sendSync('config', 'get', 'rememberLastTabs') && ipcRenderer.sendSync('config', 'get', 'lastTabs', []).length) {
     const confirm = await tooltip({
       title: '是否打开上次保存的网页',
       autoClose: 'cancel|10000',
@@ -624,7 +605,7 @@ const main = async () => {
       obj.resultList[JSON.stringify(condition)] = rows.map(i => i.path);
     }, 'store');
     lastResult = rows;
-    showResult(rows);
+    showResult();
     updateTitleUrl();
   });
 
@@ -889,6 +870,26 @@ const main = async () => {
     }, 'store');
     parent.attr('invisible', invisible);
     parent.attr('raw-invisible', invisible);
+  });
+  $('.result').on('click', 'th[sort]', (e) => { // 排序
+    const key = $(e.target).attr('sort');
+    const isAsc = $(e.target).is('.tablesorter-headerAsc');
+
+    lastResult = lastResult.sort((a, b) => collator.compare(a[key], b[key]));
+    if (isAsc) lastResult = lastResult.reverse();
+
+    configChange(obj => {
+      if (!('resultList' in obj)) obj.resultList = {};
+      const condition = getCondition();
+      obj.resultList[JSON.stringify(condition)] = lastResult.map(i => i.path);
+    }, 'store');
+
+    showResult();
+    if (isAsc) {
+      $('.result').find(`th[sort="${key}"]`).prop('className', 'tablesorter-header tablesorter-headerDesc');
+    } else {
+      $('.result').find(`th[sort="${key}"]`).prop('className', 'tablesorter-header tablesorter-headerAsc');
+    }
   });
 
   // 侧边栏

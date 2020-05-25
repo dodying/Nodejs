@@ -118,6 +118,10 @@ a, .result button, .result input[type="button"] {
   scroll-behavior: smooth;
 }
 
+.tableBody {
+  overflow: auto;
+}
+
 .result table {
   border-spacing: 0;
 }
@@ -227,4 +231,16 @@ a, .result button, .result input[type="button"] {
 
 .pager>.last::before {
   content: ">|"
+}
+
+.pager>.pagedisplay::after {
+  content: " / "attr(max)
+}
+
+.pager>.pagedisplay input {
+  max-width: 1em;
+}
+
+.pager>.pagedisplay input::-webkit-outer-spin-button, input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
 }

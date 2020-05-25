@@ -7,13 +7,9 @@
   <link rel="stylesheet" href="./../src/main.css">
   <link rel="stylesheet" href="./../src/index.css">
   <link rel="stylesheet" href="./../src/lib/jquery-confirm.min.css">
-  <link rel="stylesheet" href="./../src/lib/jquery.tablesorter.theme.blackice.min.css">
+  <link rel="stylesheet" href="./../src/lib/jquery.tablesorter.theme.blackice.css">
   <script>if (typeof module === 'object') { window.module = module; module = undefined; }</script>
   <script src="./../src/lib/jquery.js"></script>
-  <script src="./../src/lib/jquery.tablesorter.min.js"></script>
-  <script src="./../src/lib/jquery.tablesorter.widgets.min.js"></script>
-  <script src="./../src/lib/jquery.tablesorter.pager.min.js"></script>
-  <script src="./../src/lib/widgets/widget-scroller.min.js"></script>
   <script src="./../src/lib/jquery-confirm.min.js"></script>
   <script src="./../src/lib/mousetrap.min.js"></script>
   <script src="./../src/lib/mousetrap-pause.min.js"></script>
@@ -110,7 +106,9 @@
     <div class="pager">
       <span class="first"></span>
       <span class="prev"></span>
-      <span class="pagedisplay"></span>
+      <span class="pagedisplay">
+        <input type="number" min="1">
+      </span>
       <span class="next"></span>
       <span class="last"></span>
     </div>
