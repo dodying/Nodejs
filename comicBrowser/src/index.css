@@ -45,6 +45,11 @@
   /* right: 0; */
 }
 
+.query [name="not-condition"]:checked+span {
+  font-weight: bold;
+  color: red;
+}
+
 .query>.preview {
   display: none;
 }

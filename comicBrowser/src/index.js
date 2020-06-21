@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1802
+// @Version:            1.0.1818
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020/5/25 18:51:22
+// @Modified:           2020/6/3 13:39:44
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -131,7 +131,7 @@ const showResult = (page) => {
   const store = ipcRenderer.sendSync('store');
   const condition = encodeURIComponent(JSON.stringify(getCondition()));
 
-  if (!('time_view' in lastResult[0])) { // 仅在第一次，增加属性time_view，方便后续排序等操作
+  if (lastResult.length && !('time_view' in lastResult[0])) { // 仅在第一次，增加属性time_view，方便后续排序等操作
     for (const i of lastResult) {
       i.time_view = store.lastViewTime[i.path] || '';
     }
@@ -140,7 +140,7 @@ const showResult = (page) => {
   const html = ['<div class="tableHead">', '<table class="tablesorter-blackice">', '<thead>', '<th class="tablesorter-header" sort="id"></th>'];
   for (const i in showInfo) {
     if (showInfo[i][0]) {
-      html.push(`<th ${i in lastResult[0] ? `class="tablesorter-header" sort="${i}"` : ''}>${showInfo[i][1] || i}</th>`);
+      html.push(`<th ${lastResult.length && i in lastResult[0] ? `class="tablesorter-header" sort="${i}"` : ''}>${showInfo[i][1] || i}</th>`);
     }
   }
   html.push('</thead>', '</table>', '</div>');
@@ -177,6 +177,8 @@ const showResult = (page) => {
     if (page === max) $('.pager>.next,.pager>.last').off('click').addClass('disabled');
     $('.pager>.pagedisplay').attr('max', max);
     $('.pager>.pagedisplay>input').val(page).prop('max', max).off('change').on('change', e => { showResult(e.target.value * 1); });
+  } else {
+    $('.pager').hide();
   }
   for (const row of result) {
     // tr
@@ -384,7 +386,7 @@ const calcRelativeTime = (time) => {
   t = Math.round(t);
   const double = ''; // t > 1 ? 's' : ''
   let text = `${t}${suf}${double}`;
-  if (delta <= 1000 * 60 * 60 * 24 * 7 * 2) text = '<span class="highlight">' + text + '</span>';
+  if (delta <= 1000 * 60 * 60 * 24 * 30) text = '<span class="highlight">' + text + '</span>';
   return text;
 };
 const updateRelativeTime = () => {
@@ -413,12 +415,14 @@ const scrollToLast = () => {
     const lastViewTimes = lastResult.map(i => i.time_view);
     const sorted = lastViewTimes.filter(i => i).sort(collator.compare).reverse();
     const index = sorted.length ? lastViewTimes.indexOf(sorted[0]) : 0;
-    file = lastResult[index].path;
+    if (index in lastResult) file = lastResult[index].path;
   }
   if (file) {
     const item = resultTable.find('tbody>tr').filter(`[path="${window.CSS.escape(file)}"]`);
-    item.eq(0).addClass('trHover');
-    scrollTop = item.get(0).offsetTop;
+    if (item.length) {
+      item.eq(0).addClass('trHover');
+      scrollTop = item.get(0).offsetTop;
+    }
   }
 
   scrollElement.scrollTop = scrollTop;
@@ -678,14 +682,14 @@ const main = async () => {
 
   // 按钮-移动结果
   $('.filter').find('[name="move-files"]').on('click', async (e) => {
-    if (!$('.query>.result tr[path]').length) return;
+    if (!lastResult.length) return;
     const result = electron.remote.dialog.showOpenDialogSync({
       properties: ['openDirectory']
     });
     if (result && result.length) {
       const dir = result[0];
       const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
-      const files = $('.query>.result tr[path]').toArray().map(i => path.resolve(libraryFolder, $(i).attr('path')));
+      const files = lastResult.map(i => i.path).map(i => path.resolve(libraryFolder, i));
       const moveMode = path.parse(libraryFolder).root === path.parse(dir).root;
       for (const file of files) {
         electron.remote.getCurrentWindow().setProgressBar((files.indexOf(file) + 1) / files.length);
