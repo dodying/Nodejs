@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               info.txt
 // @Description:        info.txt
-// @Version:            1.0.419
+// @Version:            1.0.421
 // @Author:             dodying
 // @Created:            2020-01-21 12:15:39
-// @Modified:           2020-4-26 09:10:03
+// @Modified:           2020/6/14 16:45:53
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:entities,fs-extra,jszip,readline-sync,request-promise,socks5-https-client
@@ -119,7 +119,7 @@ const digitalRomaji = {
 };
 
 const changeTitle = (text, titleJp) => {
-  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/, ' ').trim();
+  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
 
   // 去除标题中首尾的信息，如作者，组织，原作，语言，翻译组
   let mainTitleJp = removeOtherInfo(titleJp);
@@ -132,7 +132,7 @@ const changeTitle = (text, titleJp) => {
 
   let mainTitle = removeOtherInfo(title);
   mainTitle = removeOtherInfo(mainTitle, true);
-  mainTitle = mainTitle.replace(/[|~].*/, '').replace(/\s+/, ' ').trim();
+  mainTitle = mainTitle.replace(/[|~].*/, '').replace(/\s+/g, ' ').trim();
 
   const index = title.indexOf(mainTitle);
   const prefix = title.substr(0, index).trim();

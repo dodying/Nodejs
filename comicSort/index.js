@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.428
+// @Version:            1.0.441
 // @Author:             dodying
-// @Modified:           2020-5-18 14:27:24
+// @Modified:           2020/6/19 11:54:54
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
@@ -165,7 +165,9 @@ const sortFileBySpecialRule = info => {
       let [key, value] = [].concat(arr);
       if (arr.length === 1) [key, value] = ['artist', key];
       let infoThis = info[key];
-      if (!infoThis) return [null, undefined].includes(value);
+      if (!infoThis) {
+        return typeof value === 'function' ? value([]) : [0, false, null, undefined].includes(value);
+      }
       if (typeof infoThis === 'string') infoThis = [].concat(infoThis);
       infoThis = [].concat(...infoThis.map(i => i.split('|'))).map(i => i.trim());
       // console.log({ infoThis, key, value })
@@ -473,6 +475,11 @@ const main = async () => {
             firstImg = fileList.find(item => item.match(new RegExp(img[1])));
           } else {
             firstImg = fileList.find(item => item.match(/\.(jpg|png|gif|webp)$/));
+          }
+          if (!firstImg) {
+            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, escape(info.title) + '.cbz'));
+            console.log(' ==> ', _.subFolderDelete);
+            return;
           }
           const u8a = await zip.files[firstImg].async('uint8array');
           const targetCover = path.resolve(_.comicFolder, path.parse(target).name + '.jpg');

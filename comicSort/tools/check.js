@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               check
 // @Description:        检查本地漫画
-// @Version:            1.0.153
+// @Version:            1.0.215
 // @Author:             dodying
-// @Modified:           2020-2-27 15:19:51
+// @Modified:           2020/6/21 12:27:45
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express
@@ -16,6 +16,8 @@ const excludes = [
   /\\#\.Tag\\/
 ];
 const thread = 3;
+const esLimit = 2000;
+const resultLimit = 20;
 const _ = require('./../config');
 
 // 导入原生模块
@@ -28,9 +30,37 @@ const express = require('express');
 const bodyParser = require('body-parser');
 
 //
+function diff (t1, t2) { // ignore case
+  t1 = t1.replace(/\s+/g, ' ');
+  t2 = t2.replace(/\s+/g, ' ');
+  const arr1 = t1.split(/([[\](){}\s])/); // 不变
+  const arr2 = t2.split(/([[\](){}\s])/); // 变
+  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/);
+  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/);
+  const result = [];
+  for (let i = 0; i < arr1Up.length; i++) {
+    if (arr1Up[i] === '') continue;
+    if (arr2Up.includes(arr1Up[i])) {
+      const index = arr2Up.indexOf(arr1Up[i]);
+      if (index > 0) { // added
+        arr2Up.splice(0, index);
+        const added = arr2.splice(0, index);
+        result.push([1, added.join('')]);
+      }
+      result.push([0, arr1[i]]);
+      arr2Up.splice(0, 1);
+      arr2.splice(0, 1);
+    } else { // removed
+      result.push([-1, arr1[i]]);
+    }
+  }
+  if (arr2.length) result.push([1, arr2.join('')]);
+
+  return result;
+}
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '');
-const stdout2lst = stdout => {
-  return stdout.split(/[\r\n]+/).filter(i => !i.match(path.basename(_.subFolderTag))).map(i => i.replace(/^\s+/g, '')).filter((item, index, arr) => {
+const stdout2lst = (stdout, name) => {
+  let output = stdout.split(/[\r\n]+/).filter(i => !i.match(path.basename(_.subFolderTag))).map(i => i.replace(/^\s+/g, '')).filter((item, index, arr) => {
     return item && ['.cbz', '.zip'].includes(path.parse(item).ext) && arr.indexOf(item) === index && !excludes.some(filter => item.match(filter));
   }).map(i => {
     let obj = {};
@@ -42,8 +72,18 @@ const stdout2lst = stdout => {
     };
     return obj;
   });
+  if (output.length > resultLimit) {
+    console.log(output.length);
+    name = [].concat(name).join(' ');
+    output = output.sort((a, b) => {
+      const la = diff(a.name, name).map(i => i[0] ? i[1].length : 0).reduce((a, b) => a + b, 0);
+      const lb = diff(b.name, name).map(i => i[0] ? i[1].length : 0).reduce((a, b) => a + b, 0);
+      return Math.abs(la) - Math.abs(lb);
+    }).slice(0, resultLimit);
+  }
+  return output;
 };
-const getExecCommand = arr => `${esPath} -sort-path -parent-path "${libraryFolder}" /a-d -size -date-modified ${[].concat(arr).map(i => `"${escape(i)}"`).join(' ')}`;
+const getExecCommand = arr => `${esPath} -sort-path -parent-path "${libraryFolder}" -max-results ${esLimit} /a-d -size -date-modified ${[].concat(arr).map(i => `"${escape(i)}"`).join(' ')}`;
 const search = async (name) => {
   const list = [].concat(name);
   let out = [];
@@ -52,8 +92,8 @@ const search = async (name) => {
     const outNow = [];
     await new Promise((resolve, reject) => {
       for (let i = 0; i < now.length; i++) {
-        cp.exec(getExecCommand(now[i]), { maxBuffer: 1024 * 1024 }, (err, stdout, stderr) => {
-          outNow[i] = err ? [] : stdout2lst(stdout);
+        cp.exec(getExecCommand(now[i]), { maxBuffer: 1024 * 1024 * 1024 }, (err, stdout, stderr) => {
+          outNow[i] = err ? [] : stdout2lst(stdout, now[i]);
           if (outNow.filter(i => i).length === now.length) resolve();
         });
       }
@@ -96,26 +136,24 @@ app.get('/', async (req, res) => {
 });
 
 app.post('/', async (req, res) => {
+  let lst;
   if ('name' in req.body) {
-    const lst = await search(req.body.name);
-    console.log('POST /', req.body, lst);
-    res.writeHead(200, {
-      'Content-Type': 'application/json;charset=utf-8'
-    });
-    res.end(JSON.stringify(lst, null, 2));
+    console.log('POST /', JSON.stringify(req.body, null, 2));
+    lst = await search(req.body.name);
   } else if ('names' in req.body) {
     let names = JSON.parse(req.body.names);
     names.length = Object.keys(names).length;
     names = Array.from(names);
     names = names.map(i => i.split(','));
+
     console.log('POST /', JSON.stringify(names, null, 2));
-    const lst = await search(names);
-    console.log('RESPONSE /', lst);
-    res.writeHead(200, {
-      'Content-Type': 'application/json;charset=utf-8'
-    });
-    res.end(JSON.stringify(lst, null, 2));
+    lst = await search(names);
   }
+  console.log('RESPONSE /', lst.map(i => i.length));
+  res.writeHead(200, {
+    'Content-Type': 'application/json;charset=utf-8'
+  });
+  res.end(JSON.stringify(lst, null, 2));
 });
 
 app.listen(port);

@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               delete
 // @Description:        删除漫画
-// @Version:            1.0.146
+// @Version:            1.0.164
 // @Author:             dodying
-// @Modified:           2020-1-21 12:23:03
+// @Modified:           2020/6/19 12:55:20
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            iconv-lite,readline-sync
@@ -53,13 +53,14 @@ const main = async () => {
       if (!fs.existsSync(j)) continue;
       console.log((`\nFile:\t${j}`));
       const confirm = readlineSync.keyInYNStrict('Delete it?');
-      if (path.parse(j).name === name && confirm) fs.unlinkSync(j);
-    }
-
-    try {
-      fs.writeFileSync(path.resolve(deletedPath, name + '.cbz'), '');
-    } catch (error) {
-      console.error(error);
+      if (path.parse(j).name === name && confirm) {
+        try {
+          cp.spawnSync('7z', ['d', j, '-xr!*.txt']);
+          fs.renameSync(j, path.resolve(deletedPath, name + '.cbz'));
+        } catch (error) {
+          fs.unlinkSync(j);
+        }
+      }
     }
   }
 };
