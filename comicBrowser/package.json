@@ -4,9 +4,14 @@
   "description": "",
   "author": "dodying",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "electron ./main.js",
-    "update": "electron ./main.js update"
+    "test": "node database.js test",
+    "delete": "node database.js delete",
+    "init": "node database.js init",
+    "update": "node database.js update",
+    "sort": "node database.js sort",
+    "watch": "node database.js watch",
+    "check": "node check.js"
   },
   "main": "main.js",
   "dependencies": {
