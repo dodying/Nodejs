@@ -56,7 +56,7 @@ const walk = function (dir, option = {}) {
     const fullpath = path.join(dir, file);
     const name = option.fullpath ? fullpath : path.relative(option.dir, fullpath);
     if (fs.existsSync(fullpath) && fs.statSync(fullpath).isDirectory()) { // isDirectory
-      const dirname = path.dirname(file);
+      const dirname = path.basename(file);
       if (option.ignoreDir.some(i => dirname.match(i))) return;
       if (option.matchDir && !option.matchDir.some(i => dirname.match(i))) return;
 
