@@ -1,15 +1,15 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1818
+// @Version:            1.0.1821
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020/6/3 13:39:44
+// @Modified:           2020/7/9 16:36:16
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
 // ==/Headers==
-/* global Mousetrap */
+/* global $ Mousetrap */
 
 // query
 // 显示所有列 SHOW COLUMNS FROM files
@@ -562,7 +562,7 @@ const main = async () => {
       html = Array.from(new Set(html));
       $('.datalist>ol').html(html.join(''));
     } else if (showColumns[column][1] === 'text') {
-      const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)} LIMIT ${autoCompleteOption.limit}`;
+      const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/[%_\\]/g, '\\$&')}%`)} LIMIT ${autoCompleteOption.limit}`;
       const [rows] = await ipcRenderer.sendSync('database-query', query);
       const html = [];
       Array.from(new Set(rows.map(i => i[column]))).forEach(i => html.push(`<li>${i}</li>`));
@@ -673,11 +673,6 @@ const main = async () => {
   });
   $('.filter').find('[name="viewer"]').on('click', async (e) => {
     ipcRenderer.send('open', './src/viewer.html');
-  });
-
-  // 按钮-更新数据库
-  $('.filter').find('[name="database-update"]').on('click', async (e) => {
-    ipcRenderer.send('database-connect', undefined, 'update');
   });
 
   // 按钮-移动结果

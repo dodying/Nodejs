@@ -1,15 +1,15 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1166
+// @Version:            1.0.1168
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020-4-25 14:14:19
+// @Modified:           2020/7/9 16:36:16
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
 // ==/Headers==
-/* global Mousetrap */
+/* global $ Mousetrap */
 
 // 全局变量
 let loading = null;
@@ -803,7 +803,7 @@ const main = async () => {
       '<ul>',
       `<li>标题: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"title","LIKE","${title}",null]]`)}" style="margin:0 5px;">${title}</a></li>`,
       `<li>日文标题: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"title_jpn","LIKE","${jTitle}",null]]`)}" style="margin:0 5px;">${jTitle}</a></li>`,
-      `<li>路径: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"path","LIKE","${dirname.replace(/\\/g, '\\\\')}",null]]`)}" style="margin:0 5px;">${dirname}</a></li>`,
+      `<li>路径: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"path","LIKE","${dirname.replace(/[%_\\]/g, '\\$&')}",null]]`)}" style="margin:0 5px;">${dirname}</a></li>`,
       `<li>外部打开: <a name="path" href="${viewInfo.file}">${path.basename(viewInfo.file)}</a></li>`,
       `<li>打开路径: <a name="path" href="${dirname}">${dirname}</a></li>`,
       `<li>web: <a href="${fileInfo.web}">${fileInfo.web}</a></li>`,

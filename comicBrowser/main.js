@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.932
+// @Version:            1.0.940
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020-4-26 16:55:13
+// @Modified:           2020/7/9 16:36:15
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -47,7 +47,6 @@ const columns = {
   time_download: 'timestamp', // 下载时间
   tags: 'json' // 标签
 };
-const args = process.argv.splice(2);
 
 // 导入原生模块
 const path = require('path');
@@ -506,9 +505,9 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
     ].join(', ') + ')';
     await connection.query(queryString);
     event.returnValue = ['Init Success', code];
-  } else if (todo === 'update' && code === 0) {
+  } else if (code === 0) {
     event.returnValue = ['You need to init', code];
-  } else if (todo === 'update' && code === 1) {
+  } else if (todo === 'update') {
     await updateTableFiles(obj);
     event.returnValue = ['Update Success', code];
   }
@@ -576,7 +575,7 @@ ipcMain.on('query-by-condition', async (event, condition) => {
           value = value.match(/^\/(.*)\/$/)[1];
           comparison = 'REGEXP';
         } else {
-          value = `%${value.replace(/\\/g, '\\\\')}%`;
+          value = `%${value.replace(/[%_\\]/g, '\\$&')}%`;
           comparison = 'LIKE';
         }
 
@@ -596,13 +595,13 @@ ipcMain.on('query-by-condition', async (event, condition) => {
       // % 多个字符
       // _ 单个字符
       // [] 【^】
-      str = `${column} ${comparison} ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}%`)}`;
+      str = `${column} ${comparison} ${mysql.escape(`%${value.replace(/[%_\\]/g, '\\$&')}%`)}`;
       // str=`INSTR(${column}, ${mysql.escape(`${value}`)})`
       // str=`NOT(INSTR(${column}, ${mysql.escape(`${value}`)}))`
     } else if (['START WITH'].includes(comparison)) {
-      str = `${column} LIKE ${mysql.escape(`${value.replace(/\\/g, '\\\\')}%`)}`;
+      str = `${column} LIKE ${mysql.escape(`${value.replace(/[%_\\]/g, '\\$&')}%`)}`;
     } else if (['END WITH'].includes(comparison)) {
-      str = `${column} LIKE ${mysql.escape(`%${value.replace(/\\/g, '\\\\')}`)}`;
+      str = `${column} LIKE ${mysql.escape(`%${value.replace(/[%_\\]/g, '\\$&')}`)}`;
     } else if (['REGEXP', 'NOT REGEXP'].includes(comparison)) {
       str = `${column} ${comparison} ${mysql.escape(`${value}`)}`;
     } else if (['Duplicate'].includes(comparison)) {
@@ -655,16 +654,6 @@ app.on('window-all-closed', function () {
 const main = async () => {
   config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
 
-  if (args.includes('update')) {
-    const [status, code] = await createConnection(config);
-    if (code === 1) {
-      await updateTableFiles(config);
-    } else {
-      console.error(status);
-    }
-    app.exit();
-    return;
-  }
   app.on('ready', async function () {
     const urls = ['./src/index.html'];
 
