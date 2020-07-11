@@ -10,6 +10,6 @@
   "main": "main.js",
   "keywords": [],
   "devDependencies": {
-    "electron": "^6.0.10"
+    "electron": "^9.1.0"
   }
 }
