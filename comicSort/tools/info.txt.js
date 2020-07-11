@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               info.txt
 // @Description:        info.txt
-// @Version:            1.0.421
+// @Version:            1.0.496
 // @Author:             dodying
 // @Created:            2020-01-21 12:15:39
-// @Modified:           2020/6/14 16:45:53
+// @Modified:           2020/7/9 20:36:29
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:entities,fs-extra,jszip,readline-sync,request-promise,socks5-https-client
@@ -13,11 +13,14 @@
 // usage: command []file
 
 // command:
-//  reInfo ?no/only:main => re-get info from server
-//  add main:sub
-//  del main:sub
-//  view ?main
-//  "" (empty) re-generate info.txt
+//  reInfo [no/only:main] => 从服务器重新获取信息，生成info.txt (main按,分割)
+//    eg: reInfo
+//    eg: reInfo only:title,jTitle => 只更新标题
+//  add main:sub => 增加标签
+//  del main:sub => 移除标签
+//  view [[no/only:]main] => 查看信息 (main按,分割)
+//  open => 打开网站
+//  "" (empty) => 重新生成 info.txt
 
 // 设置
 const _ = require('./../config');
@@ -37,43 +40,9 @@ const entities = require('entities');
 
 const fullWidth2Half = require('./../../_lib/fullWidth2Half');
 const removeOtherInfo = require('./../js/removeOtherInfo');
+require('./../../_lib/log').hack();
 
 // Function
-const color = {
-  Reset: '\x1b[0m',
-  Bright: '\x1b[1m',
-  Dim: '\x1b[2m',
-  Underscore: '\x1b[4m',
-  Blink: '\x1b[5m',
-  Reverse: '\x1b[7m',
-  Hidden: '\x1b[8m',
-
-  FgBlack: '\x1b[30m',
-  FgRed: '\x1b[31m',
-  FgGreen: '\x1b[32m',
-  FgYellow: '\x1b[33m',
-  FgBlue: '\x1b[34m',
-  FgMagenta: '\x1b[35m',
-  FgCyan: '\x1b[36m',
-  FgWhite: '\x1b[37m',
-
-  BgBlack: '\x1b[40m',
-  BgRed: '\x1b[41m',
-  BgGreen: '\x1b[42m',
-  BgYellow: '\x1b[43m',
-  BgBlue: '\x1b[44m',
-  BgMagenta: '\x1b[45m',
-  BgCyan: '\x1b[46m',
-  BgWhite: '\x1b[47m'
-};
-const colors = {
-  info: text => color.FgGreen + text + color.Reset,
-  help: text => color.FgCyan + text + color.Reset,
-  warn: text => color.FgYellow + text + color.Reset,
-  debug: text => color.FgBlue + text + color.Reset,
-  error: text => color.FgRed + text + color.Reset
-};
-
 const req = async (url, option = {}) => {
   const requestOption = {
     url: url,
@@ -119,7 +88,7 @@ const digitalRomaji = {
 };
 
 const changeTitle = (text, titleJp) => {
-  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>|]/g, '-').replace(/\s+/g, ' ').trim();
+  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>]/g, '-').replace(/\s+/g, ' ').trim();
 
   // 去除标题中首尾的信息，如作者，组织，原作，语言，翻译组
   let mainTitleJp = removeOtherInfo(titleJp);
@@ -186,15 +155,22 @@ const changeTitle = (text, titleJp) => {
 // Main
 const main = async () => {
   const [command, ...files] = process.argv.slice(2);
-  // console.log({ command, files })
+  // command = '';
+  // files = require('./../../_lib/walk')('F:\\H\\###ComicLibrary', {
+  //   nodir: true,
+  //   matchFile: /.cbz$/
+  // });
+  // console.log({ command, files });
 
   const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
   const mainInfo = ['title', 'jTitle', 'web'];
   const otherInfo = ['Category', 'Uploader', 'Posted', 'Parent', 'Visible', 'Language', 'File Size', 'Length', 'Favorited', 'Rating'];
   const toDeleteInfo = ['page', 'length', 'genre', 'lang', 'bw', 'rating', 'tags'];
 
-  for (const file of files) {
-    console.log(file);
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    console.log(`${i}:\t${file}`);
+    process.title = `${i}:\t${file}`;
     const targetDir = path.parse(file).dir;
 
     // 读取数据
@@ -214,7 +190,7 @@ const main = async () => {
 
     // 检测有无info.txt
     if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
-      console.warn(colors.warn('压缩档内不存在info.txt: '), file);
+      console.warn('Warn:\t压缩档内不存在info.txt');
       return new Error('no info.txt');
     }
 
@@ -247,8 +223,9 @@ const main = async () => {
       const infoNew = {};
 
       // infoNew.title = json.title
-      infoNew.title = entities.decode(changeTitle(json.title, json.title_jpn));
       infoNew.jTitle = entities.decode(json.title_jpn);
+      infoNew.title = entities.decode(json.title);
+      infoNew.title = changeTitle(infoNew.title, infoNew.jTitle);
       infoNew.Category = json.category;
       infoNew.Uploader = json.uploader;
 
@@ -319,6 +296,10 @@ const main = async () => {
       console.log(info);
       readlineSync.keyInPause();
       continue;
+    } else if (command.match(/^open/)) {
+      console.log(info.web.replace(/#\d+$/, ''));
+      cp.spawnSync('cmd.exe', ['/c', 'start', info.web.replace(/#\d+$/, '')]);
+      continue;
     }
 
     const infoArr = [];
@@ -355,17 +336,18 @@ const main = async () => {
         cwd: targetDir
       });
     } catch (error) {
-      console.clear();
-      console.log(error);
-      readlineSync.keyInPause();
-      continue;
+      // console.clear();
+      // console.log(error);
+      // readlineSync.keyInPause();
     }
 
     fse.unlinkSync(infoFilePath);
-    if (infoFileDir !== targetDir) fse.removeSync(infoFileDir);
+    if (infoFileDir !== targetDir && fse.readdirSync(infoFileDir).length === 0) fse.removeSync(infoFileDir);
 
-    const mtime = new Date(info.downloadTime);
-    fse.utimesSync(file, mtime, mtime);
+    try {
+      const mtime = new Date(info.downloadTime);
+      fse.utimesSync(file, mtime, mtime);
+    } catch (error) {}
   }
 };
 

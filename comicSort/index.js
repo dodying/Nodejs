@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.441
+// @Version:            1.0.482
 // @Author:             dodying
-// @Modified:           2020/6/19 11:54:54
+// @Modified:           2020/7/10 12:54:21
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
@@ -126,18 +126,24 @@ const symlinkSync = (target, link) => {
 };
 const moveFile = (oldpath, newpath, date = undefined) => {
   const info = date && (date instanceof Date || !isNaN(Number(date))) ? { atime: date, mtime: date } : fse.statSync(oldpath);
+  let tempFile;
   try {
     if (!fse.existsSync(path.dirname(newpath))) fse.mkdirsSync(path.dirname(newpath));
-    if (path.relative(oldpath, newpath) === '') {
-
-    } else if (path.parse(oldpath).root === path.parse(newpath).root) {
+    if (path.relative(oldpath, newpath) === '') return;
+    if (fse.existsSync(newpath)) fse.unlinkSync(newpath);
+    if (path.parse(oldpath).root === path.parse(newpath).root) {
       fse.renameSync(oldpath, newpath);
     } else {
-      fse.writeFileSync(newpath, fse.readFileSync(oldpath));
+      do {
+        tempFile = path.resolve(path.parse(newpath).root, String(new Date().getTime()));
+      } while (fse.existsSync(tempFile));
+      fse.writeFileSync(tempFile, fse.readFileSync(oldpath));
+      fse.renameSync(tempFile, newpath);
       fse.unlinkSync(oldpath);
     }
     fse.utimesSync(newpath, info.atime, info.mtime);
   } catch (error) {
+    if (tempFile && fse.existsSync) fse.unlinkSync(tempFile);
     if (error.code === 'EBUSY') {
       console.error(colors.error('File Locked: ') + oldpath);
     } else {
@@ -203,7 +209,7 @@ const sortFileBySpecialRule = info => {
 const sortFile = info => {
   if (sortFileBySpecialRule(info)) {
     return sortFileBySpecialRule(info);
-  } else if (info.tags.includes('multi-work series')) {
+  } else if (['multi-work series', 'soushuuhen', 'compilation'].some(i => info.tags.includes(i))) {
     if (info.artist || info.group) {
       let value = [].concat(info.artist, info.group).filter(i => i)[0];
       value = findData('artist', value).cname || findData('group', value).cname || value;
@@ -214,7 +220,7 @@ const sortFile = info => {
     }
   } else if (info.genre.match(/^COSPLAY$/i)) {
     return _.subFolder[1];
-  } else if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || (info.tags.includes('artbook'))) {
+  } else if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || ['artbook', 'variant set'].some(i => info.tags.includes(i)) || info.title.match(/\b(pixiv|artist)\b/i)) {
     return _.subFolder[2];
   } else if (info.genre.match(/^(game|artist) ?cg( set)?$/i)) {
     return _.subFolder[3];
@@ -283,8 +289,8 @@ const moveByInfo = (info, target) => {
 
   let targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
 
-  if (targetNew.length > 260 && _.cutLongTitle) { // 文件名 > 260
-    nameNew = nameNew.substr(0, 260 - targetFolderNew.length - 4);
+  if (targetNew.length >= 250 && _.cutLongTitle) { // 文件名 > 250
+    nameNew = nameNew.substr(0, 250 - targetFolderNew.length);
     targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
   }
 
@@ -372,8 +378,12 @@ const main = async () => {
           zip = await jszip.loadAsync(targetData);
         } catch (error) {
           if (error.message === 'End of data reached (data length = 0, asked index = 4). Corrupted zip ?') {
-            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, path.parse(target).base));
-            console.log(' ==> ', _.subFolderDelete);
+            const parsed = path.parse(target);
+            let subdir = parsed.name.match(/[^()[\]_~!\s]/g);
+            if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
+            subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
+            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, ...subdir, parsed.base));
+            console.log(' ==> ', _.subFolderDelete, ...subdir);
             return;
           } else {
             console.error(error);
@@ -477,8 +487,11 @@ const main = async () => {
             firstImg = fileList.find(item => item.match(/\.(jpg|png|gif|webp)$/));
           }
           if (!firstImg) {
-            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, escape(info.title) + '.cbz'));
-            console.log(' ==> ', _.subFolderDelete);
+            let subdir = escape(info.title).match(/[^()[\]_~!\s]/g);
+            if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
+            subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
+            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, ...subdir, escape(info.title) + '.cbz'));
+            console.log(' ==> ', _.subFolderDelete, ...subdir);
             return;
           }
           const u8a = await zip.files[firstImg].async('uint8array');

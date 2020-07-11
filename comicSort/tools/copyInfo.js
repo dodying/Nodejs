@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               copyInfo
 // @Description:        copyInfo
-// @Version:            1.0.358
+// @Version:            1.0.363
 // @Author:             dodying
 // @Created:            2020-01-18 15:55:20
-// @Modified:           2020-5-18 12:56:21
+// @Modified:           2020/6/30 19:48:43
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,fs-extra,jszip,readline-sync
@@ -174,7 +174,7 @@ const main = async () => {
           let value = findData(i, j, true).cname;
           if (value && value.match(kanaRe)) value = null;
 
-          if (i === 'artist' && info[i].length === 1) {
+          if (!value && i === 'artist' && info[i].length === 1) {
             let nameJpn = info.jTitle.match(/\[(.*?)\]/)[1];
             if (nameJpn.match(/\(.*?\)/)) nameJpn = nameJpn.match(/\((.*?)\)/)[1];
             value = nameJpn;

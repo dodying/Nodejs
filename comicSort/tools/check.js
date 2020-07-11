@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               check
 // @Description:        检查本地漫画
-// @Version:            1.0.215
+// @Version:            1.0.219
 // @Author:             dodying
-// @Modified:           2020/6/21 12:27:45
+// @Modified:           2020/7/9 17:01:23
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express
@@ -15,7 +15,7 @@ const esPath = 'es.exe';
 const excludes = [
   /\\#\.Tag\\/
 ];
-const thread = 3;
+const thread = 5;
 const esLimit = 2000;
 const resultLimit = 20;
 const _ = require('./../config');
@@ -33,16 +33,18 @@ const bodyParser = require('body-parser');
 function diff (t1, t2) { // ignore case
   t1 = t1.replace(/\s+/g, ' ');
   t2 = t2.replace(/\s+/g, ' ');
-  const arr1 = t1.split(/([[\](){}\s])/); // 不变
-  const arr2 = t2.split(/([[\](){}\s])/); // 变
-  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/);
-  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/);
+  const arr1 = t1.split(/([[\](){}\s])/).filter(i => i); // 不变
+  const arr2 = t2.split(/([[\](){}\s])/).filter(i => i); // 变
+  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
+  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
   const result = [];
   for (let i = 0; i < arr1Up.length; i++) {
-    if (arr1Up[i] === '') continue;
     if (arr2Up.includes(arr1Up[i])) {
       const index = arr2Up.indexOf(arr1Up[i]);
-      if (index > 0) { // added
+      if (index > 0 && [' '].includes(arr1Up[i])) {
+        result.push([-1, arr1[i]]);
+        continue;
+      } else if (index > 0) { // added
         arr2Up.splice(0, index);
         const added = arr2.splice(0, index);
         result.push([1, added.join('')]);
@@ -87,6 +89,7 @@ const getExecCommand = arr => `${esPath} -sort-path -parent-path "${libraryFolde
 const search = async (name) => {
   const list = [].concat(name);
   let out = [];
+  console.time('search');
   while (list.length) {
     const now = list.splice(0, thread);
     const outNow = [];
@@ -100,6 +103,7 @@ const search = async (name) => {
     });
     out = out.concat(outNow);
   }
+  console.timeEnd('search');
   return out;
 };
 
