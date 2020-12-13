@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               avRenamer
 // @Description:        将文件夹下的不可描述视频按规则分类并命名
-// @Version:            1.1.0
+// @Version:            1.1.295
 // @Author:             dodying
-// @Modified:           2020/5/24 19:30:21
+// @Modified:           2020/10/6 23:11:33
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            cheerio,fs-extra,iconv-lite,readline-sync,request-promise,socks5-http-client,socks5-https-client
@@ -19,6 +19,17 @@ const _ = require('./config');
 
 // 导入原生模块
 const path = require('path');
+const replaceWithDict = require('./../_lib/replaceWithDict');
+require('./../_lib/log').hack();
+
+replaceWithDict.init({}, {
+  ifNotString: (key, value) => {
+    if (!value) return _.emptyStr;
+    if (value instanceof Array) {
+      return value.length ? value.sort().join(',') : _.emptyStr;
+    }
+  }
+});
 
 // 导入第三方模块
 const readlineSync = require('readline-sync');
@@ -32,68 +43,6 @@ const jar = request.jar();
 let uriLast = null;
 jar.setCookie(request.cookie('acc_accept_lang=japanese'), 'https://www.xxx-av.com');
 jar.setCookie(request.cookie('adc=1'), 'https://www.mgstage.com');
-
-// 修改默认console的颜色
-const color = {
-  Reset: '\x1b[0m',
-  Bright: '\x1b[1m',
-  Dim: '\x1b[2m',
-  Underscore: '\x1b[4m',
-  Blink: '\x1b[5m',
-  Reverse: '\x1b[7m',
-  Hidden: '\x1b[8m',
-
-  FgBlack: '\x1b[30m',
-  FgRed: '\x1b[31m',
-  FgGreen: '\x1b[32m',
-  FgYellow: '\x1b[33m',
-  FgBlue: '\x1b[34m',
-  FgMagenta: '\x1b[35m',
-  FgCyan: '\x1b[36m',
-  FgWhite: '\x1b[37m',
-
-  BgBlack: '\x1b[40m',
-  BgRed: '\x1b[41m',
-  BgGreen: '\x1b[42m',
-  BgYellow: '\x1b[43m',
-  BgBlue: '\x1b[44m',
-  BgMagenta: '\x1b[45m',
-  BgCyan: '\x1b[46m',
-  BgWhite: '\x1b[47m'
-};
-const _color = {
-  log: color.FgGreen,
-  warn: color.FgYellow,
-  error: color.BgRed
-
-};
-const logModify = (colorMsg, args) => {
-  return args.map(i => {
-    return typeof i === 'string' ? i.split('\n').map(j => {
-      if (j.match(/^(.*):\t(.*)$/)) {
-        const result = j.match(/^(.*):\t(.*)$/);
-        let space = 16 - result[1].length - 1;
-        if (result[2].match(/^"/)) space = space - 1;
-        return `${color.FgCyan}${result[1]}${color.Reset}:${' '.repeat(space)}${colorMsg}${result[2]}${color.Reset}`;
-      } else {
-        return `${colorMsg}${j}${color.Reset}`;
-      }
-    }).join('\n') : i;
-  });
-};
-const consoleRaw = {};
-for (const i of ['log', 'warn', 'error']) {
-  consoleRaw[i] = console[i];
-  console[i] = (...args) => {
-    args.every(i => typeof i === 'string') ? consoleRaw[i](...logModify(_color[i], args)) : consoleRaw[i](...args);
-  };
-}
-for (const i in readlineSync) {
-  if (!i.match(/^(question|keyIn)/)) continue;
-  if (['keyInSelect', 'keyIn', 'question', 'prompt'].includes(i)) continue;
-  const raw = readlineSync[i];
-  readlineSync[i] = text => raw(logModify(_color.warn, [text]));
-}
 
 // Function
 const libs = [
@@ -117,8 +66,9 @@ const libs = [
        * 顺序为 selector, attribute = 'text', match = /(.*)/[1]
        *
        * function
-       * 参数为 res, $
+       * 参数为 res, $, data
        */
+      // ?getData async function => data
       id: res => JSON.parse(res.body).MovieID, // id
       title: res => JSON.parse(res.body).Title, // 标题
       cover: res => JSON.parse(res.body).ThumbHigh, // 封面
@@ -213,6 +163,7 @@ const libs = [
       title: '#movie>h1',
       cover: ['[property="og:image"]', 'content'],
       preview: async (res, $) => {
+        if (_.image !== 2) return;
         let uris = res.body.match(/document.write\('<img src="(\/contents.*?)"/g);
         if (!uris) return [];
         uris = uris.map(i => i.match(/document.write\('<img src="(\/contents.*?)"/)[1]).map(i => new URL(i.replace('/member/', '/').replace('/thumbnail_', '/'), res.request.uri.href).href);
@@ -224,7 +175,6 @@ const libs = [
           });
           if (res.request.uri.href === 'https://www.heyzo.com/index2.html') return uris.splice(0, i);
         }
-        process.exit();
       },
       censored: () => 'Uncensored',
       actor: '.table-actor a',
@@ -333,7 +283,7 @@ const libs = [
       duration: '.items_article_info'
     }
   },
-  { // AVEntertainments
+  { // AVEntertainments // TODO FIX
     id: 'AVEntertainments',
     name: [/(CWP|DSAM|HEY|LAF|MXX|S2M|SM|SKY|MCB)(BD|HD|PT)?-\d+/i, /([A-Z])\1DV-\d+/i, /MKB?D-S\d+/, /(MC)DV-\d+/],
     censored: 'Uncensored',
@@ -436,10 +386,10 @@ const libs = [
   { // SCute
     id: 'SCute',
     keyword: [/S-?Cute/i],
-    name: [/scute-(\d+_[a-z]+_\d+)/i],
+    name: [/scute-([a-z0-9]+_[a-z]+_\d+)/i],
     censored: 'Censored',
     test: 'scute-438_emiri_01',
-    valid: async name => `https://www.s-cute.com/contents/${name.match(/scute-(\d+_[a-z]+_\d+)/i)[1]}/`,
+    valid: async name => `https://www.s-cute.com/contents/${name.match(/scute-([a-z0-9]+_[a-z]+_\d+)/i)[1]}/`,
     getInfo: {
       id: res => 'scute-' + res.request.uri.href.match(/contents\/(.*?)\//)[1],
       title: '.h1',
@@ -497,7 +447,7 @@ const libs = [
       related: ['#related-waterfall>.movie-box', 'href', /com\/(.*)$/]
     }
   },
-  { // JavSir
+  { // JavSir // TODO FIX
     id: 'JavSir',
     nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
     test: '091915_156',
@@ -565,7 +515,7 @@ const libs = [
   },
   { // JavDB
     id: 'JavDB',
-    nameIgnore: [/(h|c)(4610|0930)-[a-z]+\d+/i],
+    nameIgnore: [/fc2[-_\s]*ppv/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
     test: 'RHJ-199',
     valid: async name => {
       const [, $] = await getRes(`https://javdb.com/search?q=${name}&f=all`);
@@ -627,6 +577,76 @@ const libs = [
       label: '.posts-headline:contains("發行商")+.posts-message',
       studio: '.posts-headline:contains("製作商")+.posts-message',
       director: '.posts-headline:contains("導演")+.posts-message'
+    }
+  },
+  { // Netflav
+    id: 'Netflav',
+    nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
+    test: 'MIAA-152',
+    valid: async name => {
+      const [, $] = await getRes(`https://netflav.com/search?type=title&keyword=${name}`);
+      const results = JSON.parse($('#__NEXT_DATA__').html()).props.initialState.search.docs.map(i => {
+        return {
+          link: `https://netflav.com/video?id=${i.videoId}`,
+          title: i.title,
+          title_en: i.title_en,
+          title_zh: i.title_zh
+        };
+      });
+      const result = results.find(i => i.title.indexOf(name) === 0);
+      return result ? result.link : null;
+    },
+    getInfo: {
+      id: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.code,
+      title: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.title,
+      cover: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.preview,
+      preview: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.previewImages,
+      censored: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.tags.includes('Uncensored') ? 'Uncensored' : 'Censored',
+      actor: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.actors.filter(i => i.match(/^jp:/)).map(i => i.replace(/^jp:/, '')),
+      release: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.videoDate,
+      duration: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.duration,
+      genre: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.tags.filter(i => i.match(/^jp:/)).map(i => i.replace(/^jp:/, '')),
+      label: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.producer
+    }
+  },
+  { // JAVNAP
+    id: 'JAVNAP',
+    nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
+    test: 'ABP-123', // 'GANA-2348',
+    valid: async name => {
+      const [res, $] = await getRes({
+        method: 'POST',
+        uri: 'https://www.javnap.com/search', // https://en.jav321.com/search
+        form: {
+          sn: name
+        }
+      });
+      return $('#vjs_sample_player').length ? res.request.uri.href : null;
+    },
+    getInfo: {
+      getData: (res, $) => {
+        const $1 = $($('.col-md-9').html().split('<br>').map(i => `<div>${i}</div>`).join(''));
+        const data = {};
+        for (let i = 0; i < $1.length; i++) {
+          const root = $1.eq(i);
+          const key = root.find('b').text();
+          if (!key) continue;
+          const value = root.find('a').length ? root.find('a').toArray().map(i => $(i).text()) : root.text().replace(`${key}:`, '').trim();
+          data[key] = value;
+        }
+        return data;
+      },
+      id: (res, $, data) => data.SN.toUpperCase(),
+      title: '.panel-heading>h3',
+      cover: (res, $) => $('body>.row>.col-md-3 .img-responsive').eq(0).attr('src'),
+      preview: (res, $) => $('body>.row>.col-md-3 .img-responsive').slice(1).toArray().map(i => $(i).attr('src')),
+      censored: (res, $) => 'Undefined',
+      actor: (res, $, data) => data.Stars,
+      release: (res, $, data) => data['Release Date'],
+      duration: (res, $, data) => data.minutes,
+      genre: (res, $, data) => data.Genre,
+      studio: (res, $, data) => data.Studio,
+      related: '[href^="/video/"]'
     }
   }
 ];
@@ -839,13 +859,6 @@ const download = async (url, target) => {
   fse.writeFileSync(target, buffer);
 };
 
-const replaceWithDict = (str, dict) => {
-  return str.replace(/\{(.*?)\}/g, matched => {
-    matched = matched.match(/\{(.*?)\}/)[1];
-    return matched in dict ? [].concat(dict[matched]).sort().join(',') : _.emptyStr;
-  });
-};
-
 const findLibInName = async (name) => {
   const arr = [];
   for (const lib of libs) {
@@ -902,7 +915,10 @@ async function getInfo (site, res, $) {
   if (res.statusCode !== 200) return {};
 
   const info = {};
+  const data = typeof site.getInfo.getData === 'function' ? await site.getInfo.getData(res, $) : null;
+
   for (const key in site.getInfo) {
+    if (['getData'].includes(key)) continue;
     let value = site.getInfo[key];
     if (typeof value === 'string' || value instanceof Array) { // ['selector', 'attributes', 'match(1)']
       const arr = [].concat(value);
@@ -917,8 +933,9 @@ async function getInfo (site, res, $) {
       if (arr[2]) value = value.map(i => i.match(arr[2]) ? i.match(arr[2])[1] : null);
     } else if (typeof value === 'function') {
       try {
-        value = await value(res, $);
+        value = await value(res, $, data);
       } catch (error) {
+        // console.log(error);
         value = '';
       }
     } else {
@@ -951,17 +968,17 @@ const args = process.argv.splice(2);
 if (args.length) {
   if (args.includes('-q')) {
     args.splice(args.indexOf('-q'), 1);
-    readlineSync.keyInPause = query => console.warn(`${query} ${color.Reset}(Hit any key)`);
+    readlineSync.keyInPause = query => console.warn(`${query} (Hit any key)`);
     readlineSync.keyInSelect = (list, query) => {
       console.log();
       list.forEach((i, j) => console.warn(`[${j + 1}] ${i}`));
       console.warn('[0] CANCEL');
       console.log();
-      console.warn(`${query} [${list.map((i, j) => j + 1).join(', ')}, 0]: ${color.Reset}1`);
+      console.warn(`${query} [${list.map((i, j) => j + 1).join(', ')}, 0]: 1`);
       return 0;
     };
-    readlineSync.keyInYN = query => console.warn(`${query} ${color.Reset}[y/n]: n`) || false;
-    readlineSync.keyInYNStrict = query => console.warn(`${query} ${color.Reset}[y/n]: n`) || false;
+    readlineSync.keyInYN = query => console.warn(`${query} [y/n]: n`) || false;
+    readlineSync.keyInYNStrict = query => console.warn(`${query} [y/n]: n`) || false;
   }
 }
 
@@ -979,7 +996,9 @@ const main = async () => {
         let uri;
         try {
           uri = await site.valid(site.test);
-        } catch (error) {}
+        } catch (error) {
+          console.log(error);
+        }
         if (!uri) {
           console.error(`Error:\t${site.id} Maybe Changed`);
           continue;
@@ -994,10 +1013,11 @@ const main = async () => {
           continue;
         }
         for (const key in site.getInfo) {
+          if (['getData'].includes(key)) continue;
           if (!(key in info)) {
             console.warn(`Warn:\t${site.id} "${key}" Maybe Changed`);
           } else {
-            [].concat(info[key]).slice(0, 1).forEach(i => console.log(`${key}:\t${i}`));
+            console.log(`${key}${typeof info[key] === 'string' ? '' : `[${info[key].length}]`}:\t[${typeof info[key] === 'string' ? info[key] : info[key].map(i => `"${i}"`).join(', ')}]`);
           }
         }
       }
@@ -1076,14 +1096,31 @@ const main = async () => {
         if (res instanceof Error) continue;
 
         // 获取视频信息
-        const infoThis = await getInfo(site, res, $);
-        infoThis.homepage = uri;
+        let infoThis = await getInfo(site, res, $);
+
+        if (site.name) { // 非通用
+          let [wayback] = await getRes(`https://archive.org/wayback/available?url=${uri}`);
+          wayback = JSON.parse(wayback.body);
+
+          if (!infoThis.id || !infoThis.title) { // 获取信息失败
+            if (wayback.archived_snapshots.closest && wayback.archived_snapshots.closest.status === '200') { // 使用时间机器
+              const [res, $] = await getRes(wayback.archived_snapshots.closest.url);
+              if (res instanceof Error) continue;
+
+              infoThis = await getInfo(site, res, $);
+              if (infoThis.cover) infoThis.cover = infoThis.cover.replace(/^https?:\/\/web.archive.org\/web\/.*?\//, '');
+              if (infoThis.preview) infoThis.preview = [].concat(infoThis.preview).map(i => i.replace(/^https?:\/\/web.archive.org\/web\/.*?\//, ''));
+            }
+          } else if (!wayback.archived_snapshots.closest) {
+            await getRes(`https://web.archive.org/save/${uri}`);
+          }
+        }
 
         // 检测是否获取到主要信息，否则放弃
         if (!infoThis.id || !infoThis.title) {
           continue;
         } else {
-          info = Object.assign(infoThis, { prefix: prefix, suffix: suffix });
+          info = Object.assign(infoThis, { prefix: prefix, suffix: suffix, homepage: uri });
           break;
         }
       }

@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               info
 // @Description:        根据list.txt生成指定信息
-// @Version:            1.0.212
+// @Version:            1.0.218
 // @Author:             dodying
 // @Created:            2019-09-29 16:30:27
-// @Modified:           2020-3-2 15:53:33
+// @Modified:           2020/9/17 14:27:19
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:cheerio,fs-extra,iconv-lite,readline-sync,request-promise,socks5-http-client,socks5-https-client
@@ -18,6 +18,17 @@ const _ = require('./config');
 // 导入原生模块
 const path = require('path');
 const cp = require('child_process');
+const replaceWithDict = require('./../_lib/replaceWithDict');
+require('./../_lib/log').hack();
+
+replaceWithDict.init({}, {
+  ifNotString: (key, value) => {
+    if (!value) return _.emptyStr;
+    if (value instanceof Array) {
+      return value.length ? value.sort().join(',') : _.emptyStr;
+    }
+  }
+});
 
 // 导入第三方模块
 const readlineSync = require('readline-sync');
@@ -237,9 +248,9 @@ const libs = [
       genre: '.detail-info table tr:contains("カテゴリー")>td:nth-child(2)>a'
     }
   },
-  { // FC2-PPV
+  { // FC2PPV
     // https://adult.contents.fc2.com/article_search.php?id=370402
-    id: 'FC2-PPV',
+    id: 'FC2PPV',
     keyword: [/fc2[-_\s]*ppv/i],
     name: [/fc2[-_\s]*ppv/i],
     valid: async name => {
@@ -249,7 +260,7 @@ const libs = [
       return `https://adult.contents.fc2.com/article_search.php?id=${id}`;
     },
     getInfo: {
-      id: res => 'FC2-PPV-' + res.request.uri.href.match(/id=(\d+)/)[1],
+      id: res => 'FC2PPV-' + res.request.uri.href.match(/id=(\d+)/)[1],
       title: '.detail>.title_bar',
       cover: ['.analyticsLinkClick_mainThum', 'href'],
       preview: ['.images a', 'href'],
@@ -314,61 +325,6 @@ const searchLibs = {
     }
   }
 };
-
-const color = {
-  Reset: '\x1b[0m',
-  Bright: '\x1b[1m',
-  Dim: '\x1b[2m',
-  Underscore: '\x1b[4m',
-  Blink: '\x1b[5m',
-  Reverse: '\x1b[7m',
-  Hidden: '\x1b[8m',
-
-  FgBlack: '\x1b[30m',
-  FgRed: '\x1b[31m',
-  FgGreen: '\x1b[32m',
-  FgYellow: '\x1b[33m',
-  FgBlue: '\x1b[34m',
-  FgMagenta: '\x1b[35m',
-  FgCyan: '\x1b[36m',
-  FgWhite: '\x1b[37m',
-
-  BgBlack: '\x1b[40m',
-  BgRed: '\x1b[41m',
-  BgGreen: '\x1b[42m',
-  BgYellow: '\x1b[43m',
-  BgBlue: '\x1b[44m',
-  BgMagenta: '\x1b[45m',
-  BgCyan: '\x1b[46m',
-  BgWhite: '\x1b[47m'
-};
-const _color = {
-  log: color.FgGreen,
-  warn: color.FgYellow,
-  error: color.BgRed
-
-};
-const logModify = (colorMsg, args) => {
-  return args.map(i => {
-    return typeof i === 'string' ? i.split('\n').map(j => {
-      if (j.match(/^(.*):\t(.*)$/)) {
-        const result = j.match(/^(.*):\t(.*)$/);
-        let space = 16 - result[1].length - 1;
-        if (result[2].match(/^"/)) space = space - 1;
-        return `${color.FgCyan}${result[1]}${color.Reset}:${' '.repeat(space)}${colorMsg}${result[2]}${color.Reset}`;
-      } else {
-        return `${colorMsg}${j}${color.Reset}`;
-      }
-    }).join('\n') : i;
-  });
-};
-const consoleRaw = {};
-for (const i of ['log', 'warn', 'error']) {
-  consoleRaw[i] = console[i];
-  console[i] = (...args) => {
-    args.every(i => typeof i === 'string') ? consoleRaw[i](...logModify(_color[i], args)) : consoleRaw[i](...args);
-  };
-}
 
 const req = async option => {
   if (typeof option === 'string') option = { uri: option };
@@ -497,13 +453,6 @@ const download = async (url, target, trytime = 0) => {
 
   const buffer = Buffer.from(res.body, 'utf8');
   fse.writeFileSync(target, buffer);
-};
-
-const replaceWithDict = (str, dict) => {
-  return str.replace(/\{(.*?)\}/g, matched => {
-    matched = matched.match(/\{(.*?)\}/)[1];
-    return matched in dict ? [].concat(dict[matched]).sort().join(',') : _.emptyStr;
-  });
 };
 
 const findLibInName = async (name) => {
