@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               makeReadme
 // @Description:        根据 Headers 生产 `README.md`
-// @Version:            1.0.24
+// @Version:            1.0.30
 // @Author:             dodying
-// @Modified:           2020-3-15 22:14:30
+// @Modified:           2020/12/13 13:22:32
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            glob
@@ -13,7 +13,8 @@
 const _ = {
   'E:\\Desktop\\_\\GitHub\\UserJs': {
     repo: 'https://github.com/dodying/UserJs/tree/master/',
-    ext: ['user.js']
+    ext: ['user.js'],
+    ignore: ['**\\*.private.user.js']
   },
   'E:\\Desktop\\_\\GitHub\\Nodejs': {
     repo: 'https://github.com/dodying/Nodejs/tree/master/',
@@ -27,7 +28,6 @@ const END = ['// ==/UserScript==', '// ==/Headers==', '# ==/Headers=='];
 // 导入原生模块
 const fs = require('fs');
 const path = require('path');
-const Url = require('url');
 
 // 导入第三方模块
 const glob = require('glob');
@@ -41,7 +41,7 @@ Object.keys(_).forEach(i => {
     ignore: _[i].ignore || ''
   });
   // console.log(lst)
-  let md = '';
+  let md = '{content}';
   if (fs.existsSync(path.resolve(i, 'README_RAW.md'))) md = fs.readFileSync(path.resolve(i, 'README_RAW.md'), 'utf-8');
   const info = {};
   lst.forEach(j => {
@@ -68,28 +68,29 @@ Object.keys(_).forEach(i => {
     }
   });
   // console.log(info);
+  let content = '';
   for (const j in info) {
     const folder = j;
     const readme = path.resolve(i, j, 'README.md');
-    md += '\r\n';
-    md += `##### ${folder}\r\n\r\n`;
-    if (fs.existsSync(readme)) md += '[README](' + folder + '/' + 'README.md)\r\n\r\n';
-    md += 'Name | Raw | Version | Last-Modified | Create-Time | Description\r\n';
-    md += '--- | --- | --- | --- | --- | ---\r\n';
+    content += '\r\n';
+    content += `##### ${folder}\r\n\r\n`;
+    if (fs.existsSync(readme)) content += '[README](' + folder + '/' + 'README.md)\r\n\r\n';
+    content += 'Name | Raw | Version | Last-Modified | Create-Time | Description\r\n';
+    content += '--- | --- | --- | --- | --- | ---\r\n';
     for (const k in info[j]) {
       const item = k;
       const _info = info[j][k];
 
       const name = _info['name:zh-CN'] || _info.name;
       const url = folder + '/' + item;
-      const rawUrl = Url.resolve(_[i].repo, folder + '/' + item).replace('/tree/', '/raw/');
+      const rawUrl = new URL(url, _[i].repo).href.replace('/tree/', '/raw/');
       const version = _info.version.replace(/\.\d{13,}$/, '');
       const modified = _info.modified || _info.date || '';
       const created = _info.created || _info.date || '';
       const description = _info['description:zh-CN'] || _info.description || '';
 
-      md += `[${name}](${url}) | [Raw](${rawUrl}) | ${version} | ${modified} | ${created} | ${description}\r\n`;
+      content += `[${name}](${url}) | [Raw](${rawUrl}) | ${version} | ${modified} | ${created} | ${description}\r\n`;
     }
   }
-  fs.writeFileSync(path.resolve(i, 'README.md'), md);
+  fs.writeFileSync(path.resolve(i, 'README.md'), md.replace('{content}', content));
 });
