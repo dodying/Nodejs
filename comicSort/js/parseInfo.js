@@ -27,6 +27,11 @@ const parseInfo = text => {
   for (const i of lines) {
     if (i.match(/^http/)) {
       output.web = i.replace(/http:/, 'https:').replace(/#\d+$/, '').replace(/(g.|)e-hentai.org/, 'exhentai.org');
+      if (output.web.match(/e[x-]hentai.org/)) {
+        [output.gid, output.token] = output.web.split('/').slice(4, 6);
+      } else if (output.web.match(/nhentai.net/)) {
+        output.gid = 'nh-' + output.web.split('/')[4];
+      }
       break;
     }
   }

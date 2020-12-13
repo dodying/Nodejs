@@ -21,8 +21,8 @@ const punctuation = '.?!,,;:""\'\'--~_-_-#…';
 const punctuationJpn = '。？！，、；：“”‘’─－～＿—﹏–#…';
 let numberStr = '\\d０-９百千万佰仟萬' + Object.values(digitalRomaji).map(i => i[1]).map(i => i.slice(2).join('')).join('');
 numberStr = `[${numberStr}]+[-.,\\s]*[${numberStr}]*`;
-const numberPrefixStr = '第|番外|総集|前|後|中|之|続|(^|\\s)(dai|bangai|soushuu|zenpen|kouhen|chuuhen|sareru|zoku|case|episode|ch|vol|i{0,3}(v|x)?|(v|x)?i{0,3})|\\s';
-const numberSuffixStr = 'wa|hanashi|話|hen|編|篇|maku|幕|shou|章|satsume|冊目|hon|本|巻';
+const numberPrefixStr = '第|番外|総集|前|後|中|上|下|之|続|其の|(^|\\s)(dai|bangai|soushuu|zenpen|kouhen|chuu?|jou|je|sareru|zoku|sono|case|episode|ch|vol|i{0,3}(v|x)?|(v|x)?i{0,3})|\\s';
+const numberSuffixStr = 'wa|hanashi|話|hen|編|篇|maku|幕|shou|章|satsume|冊目|[hb]on|本|巻|kaime|回目';
 
 const separatorRe = /(\s|[-_+・.])[-_+・.]|[-_+・.](\s|[-_+・.])|[?!;:|~…]/;
 const reLib = {

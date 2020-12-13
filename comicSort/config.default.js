@@ -1,14 +1,13 @@
 'use strict';
 
 const config = {
-  '7z': 'D:\\GreenSoftware\\_Basis\\7-Zip\\7z.exe', // 7z路径 (仅删除宣传图与压缩info.txt所需)
   loop: true, // 是否一直运行
   proxy: 'socks5://127.0.0.1:2345', // HTTP代理/SOCKS5代理
   comicFolder: 'E:\\Downloads', // 需要整理的文件夹
   libraryFolder: 'F:\\H\\###ComicLibrary', // 整理到哪个文件夹
   moveFile: true, // 是否移动文件
   globRecursive: true, // 是否递归comicFolder
-  jTitle: false, // 是否重命名为日本名称
+  title: '{title}', // 移动文件时，重命名的格式
   cutLongTitle: true, // 当名称过长时，裁剪
   delIntroPic: true, // 是否删除宣传图
   introPicName: [],
@@ -18,8 +17,6 @@ const config = {
   rate: 1, // 图片宽高比的分界，大于则为双页
   size: 780, // 小图的宽度
   cover: false, // 是否创建同名封面
-  artistMinimumItems: 3, // 对于artistTag.js
-  artistTags: 3, // 对于artistTag.js
   subFolder: [ // 子文件夹
     '0.Series',
     '1.Cosplay',
@@ -35,10 +32,6 @@ const config = {
   ],
   subFolderDelete: 'X.Deleted',
   specialFolder: '#Star', // 特殊的子文件夹
-  makeTags: [ // 是否要生成标签文件夹
-    // eg: 'female: lolicon'
-  ],
-  subFolderTag: '#.Tag',
   incestTags: {
     grandmother: ['grandmother'],
     mother: ['mother', 'aunt'],
@@ -65,7 +58,7 @@ const config = {
     /**
      * @example
      * {
-         mode: 1,
+        mode: 1,
         parody: /^fate/i,
         folder: '{language}/同人/{parody:chs}/{character:chs}'
       },
@@ -76,11 +69,15 @@ const config = {
 
     [['mode', 1], ['artist', 'example'], ['mode', 1], ['folder', 'Path to Directory']]
   ],
-  parody: [{
+  commonRule: [
+    // 格式同specialRule
+    // 不同的是，specialRule是竞争性的，而commonRule是非竞争性的
+  ],
+  parody: [{ // 重命名原作名
     name: 'example',
     filter: 'example'
   }],
-  removeCharacter: [
+  removeCharacter: [ // 移除角色名
     'teitoku', // 提督
     'producer' // 制作人
   ]

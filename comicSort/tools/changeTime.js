@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               changeTime
 // @Description:        changeTime
-// @Version:            1.0.386
+// @Version:            1.0.390
 // @Author:             dodying
 // @Created:            2020-01-21 09:57:28
-// @Modified:           2020-3-6 14:07:30
+// @Modified:           2020/7/13 11:15:11
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,jszip,readline-sync
@@ -33,58 +33,10 @@ const JSZip = require('jszip');
 // const readlineSync = require('readline-sync')
 
 const walk = require('./../../_lib/walk');
+const timeFormat = require('./../../_lib/timeFormat');
 const parseInfo = require('./../js/parseInfo');
 
 // Function
-const color = {
-  Reset: '\x1b[0m',
-  Bright: '\x1b[1m',
-  Dim: '\x1b[2m',
-  Underscore: '\x1b[4m',
-  Blink: '\x1b[5m',
-  Reverse: '\x1b[7m',
-  Hidden: '\x1b[8m',
-
-  FgBlack: '\x1b[30m',
-  FgRed: '\x1b[31m',
-  FgGreen: '\x1b[32m',
-  FgYellow: '\x1b[33m',
-  FgBlue: '\x1b[34m',
-  FgMagenta: '\x1b[35m',
-  FgCyan: '\x1b[36m',
-  FgWhite: '\x1b[37m',
-
-  BgBlack: '\x1b[40m',
-  BgRed: '\x1b[41m',
-  BgGreen: '\x1b[42m',
-  BgYellow: '\x1b[43m',
-  BgBlue: '\x1b[44m',
-  BgMagenta: '\x1b[45m',
-  BgCyan: '\x1b[46m',
-  BgWhite: '\x1b[47m'
-};
-const colors = {
-  info: text => color.FgGreen + text + color.Reset,
-  help: text => color.FgCyan + text + color.Reset,
-  warn: text => color.FgYellow + text + color.Reset,
-  debug: text => color.FgBlue + text + color.Reset,
-  error: text => color.FgRed + text + color.Reset
-};
-
-const timeFormat = (time, format = 'yyyy-MM-dd HH:mm:ss') => {
-  const date = new Date(time);
-  const obj = {
-    yyyy: date.getFullYear().toString(),
-    MM: (date.getMonth() + 1).toString().padStart(2, '0'),
-    dd: date.getDate().toString().padStart(2, '0'),
-
-    HH: date.getHours().toString().padStart(2, '0'),
-    mm: date.getMinutes().toString().padStart(2, '0'),
-    ss: date.getSeconds().toString().padStart(2, '0')
-  };
-  const re = new RegExp(`(${Object.keys(obj).join('|')})`, 'g');
-  return format.replace(re, (matched, p1) => obj[p1]);
-};
 const changeTime = async (file, btime, mtime) => {
   try {
     btime = timeFormat(btime);
@@ -147,7 +99,7 @@ const main = async () => {
 
     // 检测有无info.txt
     if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
-      console.warn(colors.warn('压缩档内不存在info.txt: '), file);
+      console.warn('压缩档内不存在info.txt: ', file);
       return new Error('no info.txt');
     }
 

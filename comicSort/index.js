@@ -1,12 +1,12 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.482
+// @Version:            1.0.597
 // @Author:             dodying
-// @Modified:           2020/7/10 12:54:21
+// @Modified:           2020/10/12 14:24:06
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            fs-extra,image-size,jszip,request-promise,socks5-https-client
+// @Require:            fs-extra,image-size,jszip
 // ==/Headers==
 
 // 设置
@@ -22,49 +22,22 @@ _.introPicName = _.introPicName.map(i => {
 
 // 导入原生模块
 const path = require('path');
-const cp = require('child_process');
 
 // 导入第三方模块
 const JSZip = require('jszip');
-const request = require('request-promise');
 const sizeOf = require('image-size');
 const fse = require('fs-extra');
-const Agent = require('socks5-https-client/lib/Agent');
 
 const waitInMs = require('./../_lib/waitInMs');
 const walk = require('./../_lib/walk');
 
-const replaceWithDict = require('./js/replaceWithDict');
+const replaceWithDict = require('./../_lib/replaceWithDict');
 const parseInfo = require('./js/parseInfo');
 const findData = require('./js/findData');
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, 'EHT.json'), 'utf-8')).data;
 findData.init(EHT);
 const tags = ['language', 'reclass', 'artist', 'group', 'parody', 'character', 'female', 'male', 'misc'];
 const tagsChs = tags.map(i => `${i}:chs`);
-
-let tagFolder;
-if (_.makeTags && _.makeTags.length) tagFolder = path.resolve(_.libraryFolder, _.subFolderTag);
-const req = (url, option = {}) => {
-  const requestOption = {
-    url: url,
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Mobile Safari/537.36'
-    },
-    timeout: 30 * 1000,
-    resolveWithFullResponse: true
-  };
-  if (_.proxy.match(/^http:/i)) {
-    requestOption.proxy = _.proxy;
-  } else if (_.proxy.match(/^socks5:/i)) {
-    requestOption.agentClass = Agent;
-    const match = _.proxy.match(/^socks5:\/\/([\d.]+):(\w+)/i);
-    requestOption.agentOptions = {
-      socksHost: match[1],
-      socksPort: match[2]
-    };
-  }
-  return request(Object.assign(requestOption, option));
-};
 
 // Function
 const color = {
@@ -101,29 +74,6 @@ const colors = {
   debug: text => color.FgBlue + text + color.Reset,
   error: text => color.FgRed + text + color.Reset
 };
-const symlinkSync = (target, link) => {
-  let { dir: parentPath, base } = path.parse(link);
-  let children = fse.readdirSync(parentPath);
-  const rawPath = parentPath;
-  let order = 1;
-  while (children.length >= 500) {
-    parentPath = rawPath + '-' + order;
-    if (!fse.existsSync(parentPath)) {
-      fse.mkdirsSync(parentPath);
-      break;
-    }
-    order++;
-    children = fse.readdirSync(parentPath);
-  }
-
-  link = path.join(parentPath, base);
-  try {
-    if (fse.existsSync(link)) fse.unlinkSync(link);
-  } catch (error) {
-  }
-
-  fse.symlinkSync(path.relative(parentPath, target), link);
-};
 const moveFile = (oldpath, newpath, date = undefined) => {
   const info = date && (date instanceof Date || !isNaN(Number(date))) ? { atime: date, mtime: date } : fse.statSync(oldpath);
   let tempFile;
@@ -154,8 +104,8 @@ const moveFile = (oldpath, newpath, date = undefined) => {
 const unique = arr => [...(new Set(arr))];
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
 const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
-const sortFileBySpecialRule = info => {
-  const rules = _.specialRule;
+const sortFileBySpecialRule = (info, rules, root, first) => {
+  const result = [];
   for (let rule of rules) {
     if (!rule.length) rule = Object.keys(rule).map(key => [key, rule[key]]); // 兼容旧版本
     // console.log({ rule })
@@ -193,22 +143,34 @@ const sortFileBySpecialRule = info => {
       if (typeof folder === 'function') {
         folder = folder(info);
       } else if (folder.match(/\{.*\}/)) {
-        folder = replaceWithDict(folder, info, (key, value) => {
-          if (tagsChs.includes(key)) {
-            const main = key.split(':chs')[0];
-            value = main in info ? info[main].map(i => findData(main, i).cname || i) : '';
+        folder = replaceWithDict(folder, info, {
+          ifNotString: (key, value) => {
+            if (tagsChs.includes(key)) {
+              const main = key.split(':chs')[0];
+              value = main in info ? info[main].map(i => findData(main, i).cname || i) : '';
+            }
+            if (value instanceof Array) return value.sort().join(',');
           }
-          if (value instanceof Array) return value.sort().join(',');
         });
       }
-      return path.resolve(_.libraryFolder, _.specialFolder, escape2(folder));
+      folder = (root ? root + '/' : '') + escape2(folder);
+      if (first) {
+        return folder;
+      } else {
+        result.push(folder);
+      }
     }
   }
-  return false;
+  return result.join('/');
 };
-const sortFile = info => {
-  if (sortFileBySpecialRule(info)) {
-    return sortFileBySpecialRule(info);
+const sortFile = (info) => {
+  if (!info.pageCount) {
+    let subdir = escape(info.title).match(/[^()[\]_~!\s]/g);
+    if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
+    subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
+    return _.subFolderDelete + '/' + subdir.join('/');
+  } else if (sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true)) {
+    return sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true);
   } else if (['multi-work series', 'soushuuhen', 'compilation'].some(i => info.tags.includes(i))) {
     if (info.artist || info.group) {
       let value = [].concat(info.artist, info.group).filter(i => i)[0];
@@ -258,15 +220,6 @@ const sortFile = info => {
     if (value === valueRaw) value = value.replace(/[a-z]+/gi, all => all.slice(0, 1).toUpperCase() + all.slice(1).toLowerCase());
     value = escape(value);
 
-    if (_.artistTags) {
-      const parentPath = path.resolve(_.libraryFolder, _.subFolder[9]);
-      if (fse.existsSync(parentPath)) {
-        const siblingFolders = fse.readdirSync(parentPath);
-        const siblingFoldersFilter = siblingFolders.filter(i => i.replace(/^\[.*\]/, '') === value);
-        value = siblingFoldersFilter.length ? siblingFoldersFilter[0] : value;
-      }
-    }
-
     return _.subFolder[9] + '/' + value;
   } else {
     return _.subFolder[10];
@@ -278,13 +231,14 @@ const moveByInfo = (info, target) => {
   let targetFolderNew;
   if (_.moveFile) {
     targetFolderNew = sortFile(info);
-    targetFolderNew = path.resolve(_.libraryFolder, targetFolderNew);
+    const common = sortFileBySpecialRule(info, _.commonRule, '', false);
+    targetFolderNew = path.resolve(_.libraryFolder, targetFolderNew, common);
     if (!fse.existsSync(targetFolderNew)) fse.mkdirsSync(targetFolderNew);
   } else {
     targetFolderNew = path.parse(target).dir;
   }
 
-  let nameNew = escape(_.jTitle ? info.jTitle : info.title);
+  let nameNew = escape(replaceWithDict(_.title || '{title}', info));
   nameNew = nameNew.replace(/\u200B/g, '').trim();
 
   let targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
@@ -294,21 +248,6 @@ const moveByInfo = (info, target) => {
     targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
   }
 
-  const createSymlinkByInfo = (nameNew) => {
-    for (const main in info) {
-      const data = EHT.filter(i => i.namespace === main);
-      if (data.length === 0) continue;
-      for (const sub of info[main]) {
-        const text = `${main}: ${sub}`;
-        if (_.makeTags.some(i => text.match(i))) {
-          const folder = path.resolve(tagFolder, findData(main).cname || main, escape(findData(main, sub).cname || sub));
-          if (!fse.existsSync(folder)) fse.mkdirsSync(folder);
-          symlinkSync(path.resolve(targetFolderNew, nameNew), path.resolve(folder, nameNew));
-        }
-      }
-    }
-  };
-
   const targetShort = path.relative(_.libraryFolder, targetFolderNew);
   let atime;
   if (_.cover) {
@@ -316,25 +255,13 @@ const moveByInfo = (info, target) => {
     const targetCoverNew = path.resolve(targetFolderNew, nameNew + '.jpg');
     if (fse.existsSync(targetCover)) {
       atime = fse.statSync(targetCover).atime;
-      if (_.makeTags.length) createSymlinkByInfo(nameNew + '.jpg');
       moveFile(targetCover, targetCoverNew);
     }
   }
 
-  if (_.makeTags.length) createSymlinkByInfo(nameNew + '.cbz');
   moveFile(target, targetNew, atime);
 
   console.log(' ==> ', colors.info(targetShort), path.parse(target).name === nameNew ? '' : colors.warn(nameNew));
-};
-const deleteInZip = (file, zip, dir) => {
-  console.log(colors.error('Deleted: '), colors.info(file));
-  try {
-    cp.execSync(`${_['7z']} d -tzip -mx9 "${zip}" "${file}"`, { cwd: dir });
-    return true;
-  } catch (error) {
-    console.error(colors.error('Delete error, skipped'));
-    return false;
-  }
 };
 
 // Main
@@ -351,7 +278,6 @@ const main = async () => {
     process.title = d;
     lst = walk(_.comicFolder, {
       matchFile: /.(cbz|zip)$/,
-      ignoreDir: path.basename(_.subFolderTag),
       fullpath: false,
       nodir: true,
       recursive: _.globRecursive
@@ -363,27 +289,27 @@ const main = async () => {
     for (const i of lst) {
       const error = await (async () => {
         const index = lst.indexOf(i);
-        process.title = index + ': ' + i;
-        console.log(colors.info(process.title));
+        process.title = `${(index / lst.length * 100).toFixed(2)}%: ${i}`;
+        console.log(colors.info(`${index}: ${i}`));
 
         // 处理路径
         const target = path.resolve(_.comicFolder, i);
-        const targetDir = path.parse(target).dir;
 
         // 读取数据
-        const targetData = fse.readFileSync(target);
+        let targetData;
+        try {
+          targetData = fse.readFileSync(target);
+        } catch (error) {
+          console.error(error);
+          return error;
+        }
         const jszip = new JSZip();
         let zip;
         try {
           zip = await jszip.loadAsync(targetData);
         } catch (error) {
           if (error.message === 'End of data reached (data length = 0, asked index = 4). Corrupted zip ?') {
-            const parsed = path.parse(target);
-            let subdir = parsed.name.match(/[^()[\]_~!\s]/g);
-            if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
-            subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
-            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, ...subdir, parsed.base));
-            console.log(' ==> ', _.subFolderDelete, ...subdir);
+            moveByInfo({ title: path.parse(target).name }, target);
             return;
           } else {
             console.error(error);
@@ -392,7 +318,7 @@ const main = async () => {
         }
 
         // 查看列表
-        const fileList = Object.keys(zip.files);
+        let fileList = Object.keys(zip.files);
 
         // 检测有无info.txt
         if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
@@ -402,8 +328,9 @@ const main = async () => {
 
         // 读取info.txt
         const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
-        let data = await zip.files[infoFile].async('text');
+        const data = await zip.files[infoFile].async('text');
         const info = parseInfo(data);
+        info.pageCount = fileList.filter(i => !i.match(/(info.txt|\/)$/)).length;
         if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1);
         if (info.parody && info.parody.length === 0) delete info.parody;
         if (info.parody && info.parody.some(i => _.parody.some(j => i.match(j.filter)))) {
@@ -425,11 +352,9 @@ const main = async () => {
               const filter = info.page.filter(p => p.name === name);
               if ((filter.length && _.introPic.includes(filter[0].id)) || _.introPicName.some(k => name.match(k))) {
                 console.log(colors.error('Reason: '), 'IntroPic (Name or ID matched)');
-                if (deleteInZip(imgs[j], target, targetDir)) {
-                  continue;
-                } else {
-                  return new Error('can delete file in zip');
-                }
+                console.log(colors.error('Deleted: '), colors.info(imgs[j]));
+                zip.remove(imgs[j]);
+                continue;
               }
             }
             if (_.checkImageSize) { // 检查图片文件大小
@@ -437,11 +362,9 @@ const main = async () => {
 
               if (img.length <= 8) {
                 console.log(colors.error('Reason: '), 'File Size = 0');
-                if (deleteInZip(imgs[j], target, targetDir)) {
-                  continue;
-                } else {
-                  return new Error('can delete file in zip');
-                }
+                console.log(colors.error('Deleted: '), colors.info(imgs[j]));
+                zip.remove(imgs[j]);
+                continue;
               }
             }
             if (_.checkImageRatio && !info.tags.includes('tankoubon') && !info.tags.includes('anthology')) { // 检查图片宽高
@@ -456,11 +379,9 @@ const main = async () => {
 
               if (size.width < 50 || size.height < 50) {
                 console.log(colors.error('Reason: '), 'Width or Height < 50');
-                if (deleteInZip(imgs[j], target, targetDir)) {
-                  continue;
-                } else {
-                  return new Error('can delete file in zip');
-                }
+                console.log(colors.error('Deleted: '), colors.info(imgs[j]));
+                zip.remove(imgs[j]);
+                continue;
               }
 
               const rate = size.width / size.height;
@@ -477,23 +398,27 @@ const main = async () => {
           }
         }
 
+        if (fileList.length !== Object.keys(zip.files).length) {
+          fileList = Object.keys(zip.files);
+          const content = await zip.generateAsync({
+            type: 'nodebuffer',
+            compression: 'DEFLATE',
+            compressionOptions: {
+              level: 9
+            }
+          });
+          fse.writeFileSync(target, content);
+        }
+
+        const img = data.match(/Image\s+1:\s+(.*)/);
+        let firstImg;
+        if (img && fileList.find(item => item.match(new RegExp(img[1])))) {
+          firstImg = fileList.find(item => item.match(new RegExp(img[1])));
+        } else {
+          firstImg = fileList.find(item => item.match(/\.(jpg|png|gif|webp)$/));
+        }
         // 解压封面
-        if (_.cover) {
-          const img = data.match(/Image\s+1:\s+(.*)/);
-          let firstImg;
-          if (img && fileList.find(item => item.match(new RegExp(img[1])))) {
-            firstImg = fileList.find(item => item.match(new RegExp(img[1])));
-          } else {
-            firstImg = fileList.find(item => item.match(/\.(jpg|png|gif|webp)$/));
-          }
-          if (!firstImg) {
-            let subdir = escape(info.title).match(/[^()[\]_~!\s]/g);
-            if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
-            subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
-            moveFile(target, path.resolve(_.libraryFolder, _.subFolderDelete, ...subdir, escape(info.title) + '.cbz'));
-            console.log(' ==> ', _.subFolderDelete, ...subdir);
-            return;
-          }
+        if (_.cover && firstImg) {
           const u8a = await zip.files[firstImg].async('uint8array');
           const targetCover = path.resolve(_.comicFolder, path.parse(target).name + '.jpg');
           fse.writeFileSync(targetCover, u8a);
@@ -504,42 +429,9 @@ const main = async () => {
 
         // 如果info不存在tags(EHD v1.23之前下载的)
         if (!data.match(/Tags:/) && info.web.match(/e(-|x)hentai.org/)) {
-          const url = info.web.replace(/^.*hentai.org/, 'https://e-hentai.org');
-          const pram = url.split('/');
-          const res = await req('https://e-hentai.org/api.php', {
-            method: 'POST',
-            body: JSON.stringify({
-              method: 'gdata',
-              gidlist: [[pram[4] * 1, pram[5]]],
-              namespace: 1
-            })
-          });
-          const json = JSON.parse(res.body);
-          let infoStr = '\r\nTags:\r\n';
-          const tagsList = json.gmetadata[0].tags;
-          const tags = {};
-          tagsList.forEach(i => {
-            const a = i.split(':');
-            const key = a.length === 2 ? a[0] : 'misc';
-            if (!tags[key]) tags[key] = [];
-            tags[key].push(a[1] || a[0]);
-          });
-          for (const i in tags) {
-            infoStr += `> ${i}: ${tags[i].join(', ')}\r\n`;
-          }
-          data += '\r\n' + infoStr;
-
-          const infoFileDir = path.resolve(targetDir, path.parse(infoFile).dir);
-          fse.mkdirsSync(infoFileDir);
-          const infoFilePath = path.resolve(infoFileDir, 'info.txt');
-          fse.writeFileSync(infoFilePath, data);
-
-          cp.execSync(`${_['7z']} a -tzip -mx9 "${target}" "${infoFile}"`, {
-            cwd: targetDir
-          });
-
-          fse.unlinkSync(infoFilePath);
-          fse.removeSync(infoFileDir);
+          lstIgnore.push(i);
+          console.log('Please use tools\\info.txt.js reInfo');
+          return;
         }
 
         // 整理

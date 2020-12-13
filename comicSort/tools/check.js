@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               check
 // @Description:        检查本地漫画
-// @Version:            1.0.219
+// @Version:            1.0.220
 // @Author:             dodying
-// @Modified:           2020/7/9 17:01:23
+// @Modified:           2020/7/13 10:55:29
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express
@@ -28,38 +28,9 @@ const libraryFolder = cp.execSync(`${esPath} ww:${path.basename(_.libraryFolder)
 // 导入第三方模块
 const express = require('express');
 const bodyParser = require('body-parser');
+const diff = require('./../../_lib/diff');
 
 //
-function diff (t1, t2) { // ignore case
-  t1 = t1.replace(/\s+/g, ' ');
-  t2 = t2.replace(/\s+/g, ' ');
-  const arr1 = t1.split(/([[\](){}\s])/).filter(i => i); // 不变
-  const arr2 = t2.split(/([[\](){}\s])/).filter(i => i); // 变
-  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
-  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
-  const result = [];
-  for (let i = 0; i < arr1Up.length; i++) {
-    if (arr2Up.includes(arr1Up[i])) {
-      const index = arr2Up.indexOf(arr1Up[i]);
-      if (index > 0 && [' '].includes(arr1Up[i])) {
-        result.push([-1, arr1[i]]);
-        continue;
-      } else if (index > 0) { // added
-        arr2Up.splice(0, index);
-        const added = arr2.splice(0, index);
-        result.push([1, added.join('')]);
-      }
-      result.push([0, arr1[i]]);
-      arr2Up.splice(0, 1);
-      arr2.splice(0, 1);
-    } else { // removed
-      result.push([-1, arr1[i]]);
-    }
-  }
-  if (arr2.length) result.push([1, arr2.join('')]);
-
-  return result;
-}
 const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '');
 const stdout2lst = (stdout, name) => {
   let output = stdout.split(/[\r\n]+/).filter(i => !i.match(path.basename(_.subFolderTag))).map(i => i.replace(/^\s+/g, '')).filter((item, index, arr) => {
