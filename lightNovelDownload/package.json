@@ -1,0 +1,19 @@
+{
+  "name": "ligntnoveldownload",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "keywords": [],
+  "author": "dodying",
+  "license": "MIT",
+  "bin": {},
+  "dependencies": {
+    "fs-extra": "^7.0.1",
+    "cheerio": "^1.0.0-rc.2"
+  },
+  "devDependencies": {}
+}
