@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               task
-// @Description:        task
-// @Version:            1.0.86
+// @Description:        自动更新头部信息(Headers)
+// @Version:            1.0.95
 // @Author:             dodying
-// @Modified:           2020/5/24 19:37:15
+// @Modified:           2020/12/13 13:04:58
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,inquirer
@@ -19,6 +19,7 @@ const _ = require('./config');
 const fs = require('fs');
 const cp = require('child_process');
 const path = require('path');
+const replaceWithDict = require('./../_lib/replaceWithDict');
 
 // 导入第三方模块
 // const inquirer = require('inquirer');
@@ -87,6 +88,9 @@ async function init () {
         arr[i] = `${pre}@${key}${space}${_.author}`;
       } else if (key === 'modified') {
         arr[i] = `${pre}@${key}${space}${_.nowStr}`;
+      } else if (key === 'task-next-line') {
+        arr[i + 1] = replaceWithDict(value, _);
+        i = i + 1;
       }
     }
     fs.writeFileSync(item, arr.join(eof));
