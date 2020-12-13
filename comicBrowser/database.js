@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               update
 // @Description:        update
-// @Version:            1.0.113
+// @Version:            1.0.136
 // @Author:             dodying
 // @Created:            2020-07-09 14:13:04
-// @Modified:           2020/7/10 09:31:14
+// @Modified:           2020/11/26 13:33:53
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,jszip,mysql2,sane
@@ -60,6 +60,8 @@ const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist'
 
 // Function
 const updateTableFilesNew = async (obj, files) => {
+  if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config);
+
   let queryString, arr;
 
   const filesLocal = files;
@@ -181,6 +183,11 @@ const createConnection = async (obj) => {
   console.log('re-connection');
 
   try {
+    if (connection && connection.end && typeof connection.end === 'function') connection.end();
+  } catch (error) {
+    console.log({ err: error, msg: error.message });
+  }
+  try {
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
@@ -188,10 +195,16 @@ const createConnection = async (obj) => {
     });
     connectionLastTime = new Date().getTime();
   } catch (error) {
-    connection = null;
-    connecting = false;
-    connectionLastTime = null;
-    return ['Connection Failed, please check info', -1];
+    if (error.message.match('Too many connections')) {
+      connecting = false;
+      return createConnection(obj);
+    } else {
+      console.log({ err: error, msg: error.message });
+      connection = null;
+      connecting = false;
+      connectionLastTime = null;
+      return ['Connection Failed, please check info', -1];
+    }
   }
 
   const [rows] = await connection.query('SHOW DATABASES');
@@ -226,10 +239,30 @@ const updateTableFiles = async (obj) => {
   const filesNew = filesLocal.filter(i => !filesDatabaseUpperCase.includes(i.toUpperCase()));
   console.debug('New Files\t', filesNew.length, '\nDeleted Files:\t', filesDeleted.length);
 
+  let queryString, arr;
+
+  console.time('DELETE INTO');
+  queryString = 'DELETE FROM files WHERE ';
+  arr = [];
+  for (const file of filesDeleted) {
+    if (arr.length >= 100) {
+      const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+      await connection.query(queryString + arr1);
+      arr = [];
+    }
+
+    arr.push(file);
+  }
+  if (arr.length) {
+    const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+    await connection.query(queryString + arr1);
+  }
+  console.timeEnd('DELETE INTO');
+
   console.time('INSERT INTO');
   const column = Object.keys(columns);
-  let queryString = `INSERT INTO files (${column.join(', ')}) values `;
-  let arr = [];
+  queryString = `INSERT INTO files (${column.join(', ')}) values `;
+  arr = [];
   for (const file of filesNew) {
     if (arr.length >= 100) {
       const arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
@@ -297,24 +330,6 @@ const updateTableFiles = async (obj) => {
     await connection.query(queryString + arr);
   }
   console.timeEnd('INSERT INTO');
-
-  console.time('DELETE INTO');
-  queryString = 'DELETE FROM files WHERE ';
-  arr = [];
-  for (const file of filesDeleted) {
-    if (arr.length >= 100) {
-      const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
-      await connection.query(queryString + arr1);
-      arr = [];
-    }
-
-    arr.push(file);
-  }
-  if (arr.length) {
-    const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
-    await connection.query(queryString + arr1);
-  }
-  console.timeEnd('DELETE INTO');
 };
 
 // Main
@@ -355,6 +370,19 @@ const main = async () => {
     await updateTableFiles(config);
     result = ['Update Success', code];
   } else if (args.includes('sort')) {
+    // 移除重复值
+    await connection.query('CREATE TABLE same_web LIKE files;');
+    await connection.query('INSERT INTO same_web SELECT * FROM files WHERE web IN (SELECT web FROM files WHERE web != "" GROUP BY web HAVING COUNT(web) > 1);');
+    await connection.query('CREATE TABLE same_path LIKE files;');
+    await connection.query('INSERT INTO same_path SELECT * FROM same_web WHERE path IN (SELECT path FROM same_web WHERE path != "" GROUP BY path HAVING COUNT(path) > 1);');
+    await connection.query('CREATE TABLE max_id LIKE files;');
+    await connection.query('INSERT INTO max_id SELECT * FROM same_path WHERE id NOT IN ( SELECT MAX(id) FROM same_path GROUP BY path HAVING COUNT(path) > 1 );');
+    await connection.query('DELETE FROM files AS t1 WHERE EXISTS ( SELECT * FROM MAX_id AS T2 where T1.id = T2.id );');
+    await connection.query('DROP TABLE max_id;');
+    await connection.query('DROP TABLE same_path;');
+    await connection.query('DROP TABLE same_web;');
+
+    // 排序
     await connection.query('CREATE TABLE files1 LIKE files;');
     await connection.query('INSERT INTO files1 (path,size,artist,title,title_main,title_number,title_jpn,title_jpn_main,title_jpn_number,category,web,language,pages,time_upload,uploader,rating,favorited,time_download,tags) SELECT path,size,artist,title,title_main,title_number,title_jpn,title_jpn_main,title_jpn_number,category,web,language,pages,time_upload,uploader,rating,favorited,time_download,tags FROM files ORDER BY path;');
     await connection.query('DROP TABLE files;');

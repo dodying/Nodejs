@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1821
+// @Version:            1.0.1844
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020/7/9 16:36:16
+// @Modified:           2020/10/12 14:58:54
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -124,6 +124,7 @@ const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/E
 findData.init(EHT);
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+const randomColor = {};
 
 // Function
 const showResult = (page) => {
@@ -133,7 +134,7 @@ const showResult = (page) => {
 
   if (lastResult.length && !('time_view' in lastResult[0])) { // 仅在第一次，增加属性time_view，方便后续排序等操作
     for (const i of lastResult) {
-      i.time_view = store.lastViewTime[i.path] || '';
+      i.time_view = store.lastViewTime ? store.lastViewTime[i.path] || '' : '';
     }
   }
 
@@ -198,7 +199,7 @@ const showResult = (page) => {
           const time = row[i];
 
           const data = new Date(time);
-          attr.push(`datetime="${time}"`, `sort-value="${data.getTime()}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`);
+          attr.push(`datetime="${time}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`);
         } else if (['rating'].includes(i)) {
           const precent = row.rating / 5 * 100;
           const color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00';
@@ -210,17 +211,22 @@ const showResult = (page) => {
         } else if (['event'].includes(i)) {
           text = [
             `<a href="${row.web}">Web</a>`,
-            '<br>',
             '<button name="star"></button>',
             '<button name="clear"></button>',
+            '<br>',
             `<a href="${row.path}" name="delete"></a>`,
+            `<a href="${row.path}" name="empty"></a>`,
             '<button name="invisible"></button>',
             '<br>',
             `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}">View</a>`,
             `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`
           ].join('');
         } else if (['path'].includes(i)) {
-          text = `<a href="${row.path}" name="item">${path.dirname(row[i])}</a>`;
+          text = `<a href="${row.path}" name="item">${path.dirname(row[i]).replace(/\\(#[^\\]+)/g, (all, m1) => {
+            const random = m1 in randomColor ? randomColor[m1] : Math.floor(Math.random() * 0x1000000);
+            randomColor[m1] = random;
+            return `\\<span style="background-color:#${random.toString(16)};color:#${(0x1000000 - random).toString(16)}">${m1}</span>`;
+          })}</a>`;
         } else if (['title', 'title_main', 'title_jpn', 'title_jpn_main'].includes(i)) {
           const condition = [[false, i, '=', row[i], undefined]];
           text = `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify(condition))}"></a>`;
@@ -846,7 +852,7 @@ const main = async () => {
     e.preventDefault();
     const parent = $(e.target).parentsUntil('tbody').eq(-1);
     const file = parent.attr('path');
-    parent.find('[name="time_view"]').attr('datetime', 'null').attr('sort-value', 0);
+    parent.find('[name="time_view"]').attr('datetime', 'null');
     configChange(obj => {
       if (obj.lastViewPosition && file in obj.lastViewPosition) delete obj.lastViewPosition[file];
       if (obj.lastViewTime && file in obj.lastViewTime) delete obj.lastViewTime[file];
@@ -916,7 +922,7 @@ const main = async () => {
     const href = $(e.target).attr('href');
     const name = $(e.target).attr('name');
     const file = parent.attr('path');
-    // name: native, path, delete, null
+    // name: native, path, delete, empty, everything, null
     if (name === 'native') {
       ipcRenderer.send('open', href);
     } else {
@@ -927,13 +933,13 @@ const main = async () => {
           if (!('lastViewTime' in obj)) obj.lastViewTime = {};
           obj.lastViewTime[file] = date.toLocaleString('zh-CN', { hour12: false });
         }, 'store');
-        parent.find('[name="time_view"]').attr('datetime', date).attr('sort-value', date.getTime());
+        parent.find('[name="time_view"]').attr('datetime', date);
         waitInMs(1000).then(() => {
           updateRelativeTime();
         });
       }
     }
-    if (!['delete', 'everything'].includes(name)) {
+    if ([undefined, 'native', 'path'].includes(name)) {
       const rememberHistory = ipcRenderer.sendSync('config', 'get', 'rememberHistory');
       configChange(obj => {
         if (!name || !rememberHistory) return true;

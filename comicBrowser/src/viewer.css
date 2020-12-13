@@ -84,7 +84,7 @@ body {
   margin: 5px 0;
 }
 
-.content>div>img {
+.content>div>img,.content>div>video {
   width: 100%;
 }
 
@@ -181,6 +181,6 @@ body {
   opacity: 0.6;
 }
 
-.preview img {
+.preview img,.preview video {
   width: 5vw;
 }

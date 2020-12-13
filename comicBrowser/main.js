@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
-// @Description:        main
-// @Version:            1.0.940
+// @Description:        浏览comic
+// @Version:            1.0.962
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020/7/9 16:36:15
+// @Modified:           2020/12/13 13:07:51
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -166,6 +166,11 @@ const createConnection = async (obj) => {
   console.log('re-connection');
 
   try {
+    if (connection && connection.end && typeof connection.end === 'function') connection.end();
+  } catch (error) {
+    console.log({ err: error, msg: error.message });
+  }
+  try {
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
@@ -173,10 +178,16 @@ const createConnection = async (obj) => {
     });
     connectionLastTime = new Date().getTime();
   } catch (error) {
-    connection = null;
-    connecting = false;
-    connectionLastTime = null;
-    return ['Connection Failed, please check info', -1];
+    if (error.message.match('Too many connections')) {
+      connecting = false;
+      return createConnection(obj);
+    } else {
+      console.log({ err: error, msg: error.message });
+      connection = null;
+      connecting = false;
+      connectionLastTime = null;
+      return ['Connection Failed, please check info', -1];
+    }
   }
 
   const [rows] = await connection.query('SHOW DATABASES');
@@ -412,6 +423,22 @@ ipcMain.on('open-external', async (event, url, name) => {
     if (store.lastViewPosition && url in store.lastViewPosition) delete store.lastViewPosition[url];
     if (store.lastViewTime && url in store.lastViewTime) delete store.lastViewTime[url];
     if (store.history && store.history.includes(url)) store.history.splice(store.history.indexOf(url), 1);
+  } else if (name === 'empty') {
+    const fullpath = path.resolve(config.libraryFolder, url);
+    const targetData = fse.readFileSync(fullpath);
+    const zipContent = await new JSZip().loadAsync(targetData);
+    const fileList = Object.keys(zipContent.files).filter(i => !i.match(/(info.txt|\/)$/));
+    for (const i of fileList) zipContent.remove(i);
+    const content = await zipContent.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: 9
+      }
+    });
+    fse.writeFileSync(fullpath, content);
+    const cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg');
+    if (fse.existsSync(cover)) fse.unlinkSync(cover);
   } else if (name === 'everything') {
     if (config.everything && fse.existsSync(config.everything)) cp.execFileSync(config.everything, ['-search', url]);
   } else if (!name) {

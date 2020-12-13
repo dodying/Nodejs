@@ -1,7 +1,7 @@
 'use strict';
 
 const reEscape = require('./../../_lib/reEscape');
-const infoGroup = ['[]', '()', '{}', '【】', '（）'];
+const infoGroup = ['[]', '()', '{}', '【】', '（）', '〈〉', '『』', '《》'];
 
 module.exports = (text, reverse = false) => {
   text = text.replace(/\u200B/g, '');

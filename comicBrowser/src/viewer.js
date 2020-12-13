@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1168
+// @Version:            1.0.1315
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020/7/9 16:36:16
+// @Modified:           2020/10/5 19:39:07
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -15,12 +15,33 @@
 let loading = null;
 let pageAnchor = null;
 let zipContent = null;
-let fileList = null;
-let viewInfo = {
+let fileList = [];
+const viewInfo = new Proxy({
   file: '', // 仅在showFile时修改
   page: '',
   condition: ''
-};
+}, {
+  set: function (target, prop, value, receiver) {
+    target[prop] = value;
+    if (prop === 'file') {
+      target.page = '';
+      target.condition = '';
+    } else if (prop === 'page') {
+      // 仅播放在窗口中的视频
+      $('.content>div>video[playing]').toArray().forEach(i => {
+        $(i).attr('playing', null);
+        i.pause();
+      });
+      if ($(`.content>div[name="${target.page}"]>video:not([playing])`).length) {
+        $(`.content>div[name="${target.page}"]>video:not([playing])`).attr({
+          playing: 1,
+          loop: true
+        }).get(0).play();
+      }
+    }
+    return true;
+  }
+});
 let fileInfo = null;
 let viewTime = null;
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
@@ -61,9 +82,11 @@ const keyHelp = {
   upLeft: '打开上一本',
   upRight: '打开下一本'
 };
+const imageExt = ['.png', '.jpg', '.gif', '.webp'];
+const videoExt = ['.mp4', '.m4v'];
+const supportedExt = [].concat(imageExt, videoExt);
 
 // 设置
-const sevenZip = '7z'; // 7z所在位置，删除当前页面有用
 const viewTimeMin = 10 * 1000; // 最小阅读时间，当停留当前本子时间超过该时间时，才会记录
 const viewPageMin = 3; // 最小阅读页数，当当前页数超过该页数时，才会记录
 const mousemoveDelay = 50; // mousemove时间的延迟
@@ -73,6 +96,8 @@ const scorllMode = 'jquery'; // jquery||auto，jquery时使用jquery.animate来�
 const scrollHeight = 50; // 滚动高度
 const scrollTime = 200; // 仅jquery，每滚动单位高度（可视页面高度）所需时间
 const scrollTimeMax = 2000; // 仅jquery，滚动最大时间
+const maxWidth = 940;
+const maxHeight = 970;
 let zoomPercent = 120; // 缩放百分比
 const zoomPercentStep = 5; // 缩放百分比间隔
 const loadPageHeight = 100; // 距离底部或顶部多高时，读取页面
@@ -119,7 +144,6 @@ const nextPageTop = 1 / 2 * document.documentElement.clientHeight; // 图片距�
 // 导入原生模块
 const fs = require('fs');
 const path = require('path');
-const cp = require('child_process');
 
 // 导入第三方模块
 const electron = require('electron');
@@ -147,17 +171,8 @@ const getCurrentPage = () => {
 
   viewInfo.page = onView.attr('name');
 
-  const img = $(`.content>div[name="${viewInfo.page}"]>img`).attr('src');
-  $('.preview>div:nth-child(2)').attr('name', viewInfo.page).html(`<img src="${img}">`);
-};
-const getNaturalSize = (src) => {
-  return new Promise((resolve, reject) => {
-    const img = new window.Image();
-    img.onload = function () {
-      resolve([this.width, this.height]);
-    };
-    img.src = src;
-  });
+  const html = $(`.content>div[name="${viewInfo.page}"]`).html();
+  $('.preview>div:nth-child(2)').attr('name', viewInfo.page).html(html);
 };
 const loadImage = async (reverse) => {
   $('.content').attr('disable-scroll', 'true');
@@ -171,15 +186,33 @@ const loadImage = async (reverse) => {
     count++;
     const blob = await zipContent.files[name].async('blob');
     const imageUrl = URL.createObjectURL(blob);
-    const [width, height] = await getNaturalSize(imageUrl);
-    const ele = $(`<div name="${name}"><img src="${imageUrl}" /></div>`).css('width', width * zoomPercent / 100);
+    let elem, width, height;
+    await new Promise((resolve, reject) => {
+      const tag = imageExt.includes(path.extname(name)) ? 'img' : 'video';
+      elem = $(`<div name="${name}"><${tag} src="${imageUrl}" /></div>`).hide();
+      elem.find(tag).on('load loadedmetadata', (e) => {
+        width = elem.find(tag).prop(tag === 'img' ? 'naturalWidth' : 'videoWidth');
+        height = elem.find(tag).prop(tag === 'img' ? 'naturalHeight' : 'videoHeight');
+        resolve();
+      }).on('error', () => {
+        width = 0;
+        height = 0;
+        resolve();
+      });
+      elem.appendTo('body');
+    });
+
+    elem.css({
+      width: width * zoomPercent / 100,
+      'max-width': height / width > 1.1 ? maxWidth : maxHeight * width / height
+    }).show();
     // ele.css('width', width / height * document.documentElement.clientHeight * 0.6); // TODO
 
     if (reverse) {
-      ele.prependTo('.content');
+      elem.prependTo('.content');
       i--;
     } else {
-      ele.appendTo('.content');
+      elem.appendTo('.content');
       i++;
     }
   }
@@ -269,7 +302,7 @@ const showFile = async (option = {}) => {
     } else {
       const dirname = path.dirname(file);
       files = fs.readdirSync(path.dirname(fullpath));
-      files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i));
+      files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i)).sort(collator.compare);
     }
     let index = files.indexOf(file);
     if (option.relativeBook === 'prev') {
@@ -320,7 +353,7 @@ const showFile = async (option = {}) => {
   $('.titlebar').html('正在载入，请稍后').show();
   loading = true;
   zipContent = null;
-  fileList = null;
+  fileList = [];
 
   const targetData = fs.readFileSync(fullpath);
   const jszip = new JSZip();
@@ -342,13 +375,13 @@ const showFile = async (option = {}) => {
     fileInfo = parseInfo(data);
   }
 
-  fileList = fileList.filter(i => ['.jpg', '.png', '.gif', '.webp'].includes(path.extname(i))).sort(collator.compare);
+  fileList = fileList.filter(i => supportedExt.includes(path.extname(i))).sort(collator.compare); // 过滤图片
 
   const lastViewPosition = ipcRenderer.sendSync('store', 'get', 'lastViewPosition', {});
   if (!page && lastViewPosition[file]) page = lastViewPosition[file];
   if (!page || !fileList.includes(page)) page = fileList[0];
 
-  viewInfo = { file, page, condition };
+  Object.assign(viewInfo, { file, page, condition });
 
   if (condition) {
     configChange(obj => {
@@ -365,6 +398,8 @@ const showFile = async (option = {}) => {
   $('.content').removeAttr('disable-scroll');
   document.title = path.basename(file) + '\\' + (page || '');
   onLoadEnd();
+
+  // if (fileList.length === 0) return showFile({ relativeBook: 'next' });
 };
 const openFile = async () => {
   const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
@@ -382,7 +417,7 @@ const openFile = async () => {
   if (result && result.length) {
     const fullpath = result[0];
     const file = path.relative(libraryFolder, fullpath);
-    viewInfo = { file };
+    viewInfo.file = file;
     updateTitleUrl();
     await showFile();
   }
@@ -474,7 +509,7 @@ const main = async () => {
   await showFile();
 
   // 内容-点击翻页
-  $('.content').on('click', 'div>img', (e) => {
+  $('.content').on('click', 'div>img,div>video', (e) => {
     scrollTop(scrollElement.clientHeight);
   });
   let lastScrollTop = 0;
@@ -483,7 +518,7 @@ const main = async () => {
     getCurrentPage();
     if ($('.content').attr('disable-scroll')) return;
     const thisScrollTop = scrollElement.scrollTop;
-    if (thisScrollTop > lastScrollTop) {
+    if (thisScrollTop > lastScrollTop) { // 向下滚动
       const scrollHeight = scrollElement.scrollHeight;
       const height = $('.content').height() + thisScrollTop;
       if (height + loadPageHeight >= scrollHeight) {
@@ -695,19 +730,25 @@ const main = async () => {
       }
     });
     if (confirm !== 'ok') return;
+    zipContent.remove(viewInfo.page);
+    const content = await zipContent.generateAsync({
+      type: 'nodebuffer',
+      compression: 'DEFLATE',
+      compressionOptions: {
+        level: 9
+      }
+    });
     const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
     const fullpath = path.resolve(libraryFolder, viewInfo.file);
-    const result = cp.execFileSync(sevenZip, ['d', fullpath, viewInfo.page]);
-    if (result.toString().match('Everything is Ok')) {
-      await tooltip('页面已删除', viewInfo.file + '\\' + viewInfo.page);
-      await configChange(obj => {
-        if (!('delete' in obj)) obj.delete = [];
-        obj.delete.push(viewInfo.file + '\\' + viewInfo.page);
-      }, 'store');
-      viewInfo.page = $(`.content>div[name="${viewInfo.page}"]`).prev().attr('name');
-      await rememberPosition(true);
-      await showFile();
-    }
+    fs.writeFileSync(fullpath, content);
+    await tooltip('页面已删除', viewInfo.file + '\\' + viewInfo.page);
+    await configChange(obj => {
+      if (!('delete' in obj)) obj.delete = [];
+      obj.delete.push(viewInfo.file + '\\' + viewInfo.page);
+    }, 'store');
+    viewInfo.page = $(`.content>div[name="${viewInfo.page}"]`).prev().attr('name');
+    await rememberPosition(true);
+    await showFile();
   });
   Mousetrap.bind(keyMap.deleteFile, async function (e, combo) { // 删除当前文件
     const confirm = await tooltip({
@@ -728,8 +769,9 @@ const main = async () => {
       }
     });
     if (confirm !== 'ok') return;
-    ipcRenderer.send('open-external', viewInfo.file, 'delete');
+    ipcRenderer.send('open-external', viewInfo.file, 'empty');
     await tooltip('文件已删除', viewInfo.file);
+    showFile({ relativeBook: 'next' });
   });
   Mousetrap.bind([].concat(keyMap.up, keyMap.down), async (e, combo) => { // 上下键
     if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
@@ -909,7 +951,7 @@ const main = async () => {
     } else {
       const dirname = path.dirname(file);
       files = fs.readdirSync(path.dirname(fullpath));
-      files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i));
+      files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i)).sort(collator.compare);
     }
 
     showFileList(files, 'Reading List:');
