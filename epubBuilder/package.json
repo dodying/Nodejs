@@ -5,10 +5,16 @@
   "author": "dodying",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ./main.js"
+    "start": "electron ./main.js",
+    "build": "electron-packager . \"epubBuilder\" --platform=win32 --arch=x64 --out=./out --asar --app-version=0.0.1"
   },
   "main": "main.js",
   "keywords": [],
+  "dependencies": {
+    "archiver": "3.1.1",
+    "chardet": "0.8.0",
+    "iconv-lite": "0.5.1"
+  },
   "devDependencies": {
     "electron": "^6.0.10"
   }

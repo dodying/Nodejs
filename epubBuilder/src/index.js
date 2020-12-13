@@ -1,14 +1,15 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1097
+// @Version:            1.0.1262
 // @Author:             dodying
 // @Created:            2020-01-11 13:06:39
-// @Modified:           2020-3-28 16:05:18
+// @Modified:           2020/9/11 21:00:16
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            archiver,chardet,iconv-lite
 // ==/Headers==
+/* global $ */
 /* global tranStr */
 
 var CONFIG = {
@@ -48,6 +49,7 @@ const archiver = require('archiver');
 const chardet = require('chardet');
 const iconv = require('iconv-lite');
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+// const numberFormat = new Intl.NumberFormat();
 
 // Function
 function wordSection (mode, word) { // 文本强制分段-测试功能
@@ -486,6 +488,89 @@ const funcChapter = () => {
     regenChapterElements();
   });
 
+  // 合并重复名称章节
+  // for (let i = 0; i < THIS.chapters.length - 1; i++) {
+  //   if (THIS.chapters[i].title === THIS.chapters[i + 1].title) {
+  //     THIS.chapters[i].content += '\r\n' + THIS.chapters[i + 1].content;
+  //     THIS.chapters.splice(i + 1, 1);
+  //     i--;
+  //   }
+  // }
+
+  $('.tabContent[name="chapter"]').find('[name="combineEmptyChapter2"]').off('click').on('click', (e) => {
+    for (let i = 0; i < THIS.chapters.length - 1; i++) {
+      if (THIS.chapters[i].content.length === 0) {
+        THIS.chapters[i].content = THIS.chapters[i + 1].title + '\r\n' + THIS.chapters[i + 1].content;
+        THIS.chapters.splice(i + 1, 1);
+        i--;
+      }
+    }
+    regenChapterElements();
+  });
+
+  $('.tabContent[name="chapter"]').find('[name="removeTitle"]').off('click').on('click', (e) => {
+    for (let i = 0; i < THIS.chapters.length; i++) {
+      THIS.chapters[i].content = THIS.chapters[i].content.replace(THIS.chapters[i].title, '');
+    }
+    regenChapterElements();
+  });
+
+  $('.tabContent[name="chapter"]').find('[name="autoSplit"]').off('click').on('click', (e) => {
+    const index = $('[name="chapterList"]>.actived:not(.hide)').length ? $('[name="chapterList"]>.actived:not(.hide)').index() : $('[name="chapterList"]>div:not(.hide)').index();
+    if (index === -1) return;
+    const text = THIS.chapters[index].content.substr(0, 10 * 10000);
+    const lib = [
+      // -1 = [\.0-9\.０-９点零一二两三四五六七八九十卅百千万廿卅上中下点點零壹贰叁参肆伍陆柒捌玖拾佰仟萬上中下〇①-⒛]+
+      // [匹配, 至少匹配次数]
+      [/^\s*[〇①-⒛]+/, 1, '^\\s*|①|'],
+
+      [/^\s*第.{0,5}[卷章]/, 2, '^\\s*第|-1|[卷章]'],
+      [/^\s*\d+[、.]/, 2, '^\\s*|\\d+|[、.]'],
+      [/^\s*\d{3,}/, 20, '^\\s*|\\d{3,}|'],
+      [/^\s*☆、/, 1, '^\\s*☆、||'],
+      [/^\s*正文/, 2, '^\\s*正文||'],
+
+      [/^\s*（.*?）\s*$/, 2, '^\\s*（|.*?|）\\s*$'],
+      [/^\s*【.*?】\s*$/, 2, '^\\s*【|.*?|】\\s*$'],
+      [/^\s*《.*?》\s*$/, 2, '^\\s*《|.*?|》\\s*$'],
+      [/^\s*「.*?」\s*$/, 2, '^\\s*「|.*?|」\\s*$'],
+      [/^\s*\[.*?\]\s*$/, 2, '^\\s*\\[|.*?|\\]\\s*$'],
+      [/^\s*\(.*?\}\s*$/, 2, '^\\s*\\(|.*?|\\}\\s*$'],
+
+      [/[（【《(][.0-9０-９点零一二两三四五六七八九十卅百千万廿卅上中下点點零壹贰叁参肆伍陆柒捌玖拾佰仟萬上中下〇①-⒛]+[）】》)]/, 2, '[（【《\\(]-1[）】》\\)]'],
+      [/第.{0,5}[卷章]/, 2, '第|-1|[卷章]'],
+
+      [/^\s*序[章幕]?/, 1, '^\\s*序[章幕]?||'],
+      [/.{0,20}番外/, 1, '||番外'],
+      [/.{0,20}外传/, 1, '||外传'],
+      [/.{0,20}本卷/, 1, '||本卷'],
+      [/.{0,20}后日谈/, 1, '||后日谈'],
+      [/.{0,20}尾声/, 1, '||尾声'],
+      [/.{0,20}幕间/, 1, '||幕间'],
+      [/.{0,20}终章/, 1, '||终章'],
+      [/.{0,20}卷尾/, 1, '||卷尾']
+      // “哟！小哥，你醒了？”忽然一道声音从门外传来，罗凡循声望去，只见一个身着青灰道袍的青年道士端着一碗黑乎乎的药汤走了过来，“小哥你运气真不错，在蒙古人屠村之后居然能活下来，正好我师父路过发现还有活人，于是把你给带了回来。”
+    ];
+    for (const arr of lib) {
+      if (text.match(new RegExp(arr[0], 'gim')) && text.match(new RegExp(arr[0], 'gim')).length >= arr[1]) {
+        if (arr.length === 3) {
+          $('[name="patternGroup"]').val(arr[2]).trigger('change');
+        } else if (arr.length > 3) {
+          $('[name="patternPre"]').val(arr[2] || '');
+          $('[name="patternNumber"]').val(arr[3] || '');
+          $('[name="patternSuf"]').val(arr[4] || '');
+          updateRegExp();
+        }
+        $('[name="chapterList"]>div').eq(index).find('[name="split"]').click();
+        if (THIS.chapters.length >= 500) $('[name="filterChapter"]').click();
+        break;
+      }
+    }
+
+    // regenChapterElements();
+  });
+
+  // 第二行
   $('.tabContent[name="chapter"]').find('[name="removeEmptyLine"]').off('click').on('click', (e) => {
     for (let i = 0; i < THIS.chapters.length; i++) {
       THIS.chapters[i].content = THIS.chapters[i].content.replace(/(\r?\n){2,}/g, '\r\n');
@@ -517,6 +602,7 @@ const funcChapter = () => {
     regenChapterElements();
   });
 
+  // 每章
   $('.tabContent[name="chapter"]').find('[name="chapterList"]').off('click').on('click', 'span', (e) => {
     $('.tabContent[name="chapter"]').find('[name="editable"]').prop('checked', false);
     $('.tabContent[name="chapter"]').find('[name="content"]').attr('disabled', 'disabled');

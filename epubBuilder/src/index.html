@@ -87,7 +87,7 @@
           <option value="①">特殊数字</option>
         </datalist>
         <span>后缀: </span>
-        <input type="text" name="patternSuf" list="patternSufList" value="章">
+        <input type="text" name="patternSuf" list="patternSufList" value="[卷章]">
         <datalist id="patternSufList">
           <option value="-1">通用</option>
           <option value="章">章</option>
@@ -107,7 +107,7 @@
         <datalist id="patternGroupList">
           <option value="||">清空</option>
           <option value="[（【《\(]|-1|[）】》\)]">括号</option>
-          <option value="^\s*[（【《\(]|.*?|[）】》\)]\s$">仅括号</option>
+          <option value="^\s*[（【《\(\[]|.*?|[）】》\)\]]\s*$">仅括号</option>
           <option value="|\n\r\n|">空行</option>
           <option value="|\n\s+\r\n|">空行1</option>
           <option value="^\s*第|-1|章">第.*章</option>
@@ -141,11 +141,14 @@
         <span>章节字数: </span>
         <input type="number" name="chapterCount" value="10" step="1" min="1" max="100">
         <br>
-        <input type="button" key="1" name="filterChapter" value="1过滤章节">
-        <input type="button" key="0" name="resetChapter" value="0重置章节">
-        <input type="button" key="2" name="changeChineseST" value="2简繁转换">
+        <input type="button" key="1" name="filterChapter" value="1过滤" title="过滤章节">
+        <input type="button" key="0" name="resetChapter" value="0重置" title="重置章节">
+        <input type="button" key="2" name="changeChineseST" value="2简繁" title="简繁转换">
         <input type="button" key="3" name="removeEmptyChapter" value="3移除空章">
-        <input type="button" key="4" name="combineEmptyChapter" value="4合并空章">
+        <input type="button" key="4" name="combineEmptyChapter" value="4合并空章(前)">
+        <input type="button" key="5" name="combineEmptyChapter2" value="5合并空章(后)">
+        <input type="button" key="6" name="removeTitle" value="6移除章内标题">
+        <input type="button" key="7" name="autoSplit" value="7自动分割">
         <br>
         <input type="button" key="q" name="removeEmptyLine" value="Q移除空行">
         <input type="button" key="w" name="sectionLine" action="end" value="W处理行(末)">
