@@ -1,8 +1,9 @@
 node_modules
-@*
+@private
 *.temp
 *.doing
 *.redoing
 *.starting
 *.private
 *.backup.js
+build
