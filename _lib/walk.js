@@ -21,6 +21,7 @@ class Option {
     Object.assign(this, {
       fullpath: true,
       nodir: false,
+      nofile: false,
       recursive: true
     }, other);
     this.ignore = getValue(this.ignore, []);
@@ -50,10 +51,10 @@ const walk = function (dir, option = {}) {
   let output = [];
   const list = fs.readdirSync(dir);
   list.forEach(function (file) {
-    if (option.ignore.some(i => file.match(i))) return;
-    if (option.match && !option.match.some(i => file.match(i))) return;
-
     const fullpath = path.join(dir, file);
+    if (option.ignore.some(i => fullpath.match(i))) return;
+    if (option.match && !option.match.some(i => fullpath.match(i))) return;
+
     const name = option.fullpath ? fullpath : path.relative(option.dir, fullpath);
     if (fs.existsSync(fullpath) && fs.statSync(fullpath).isDirectory()) { // isDirectory
       const dirname = path.basename(file);
@@ -68,7 +69,7 @@ const walk = function (dir, option = {}) {
       if (option.matchFile && !option.matchFile.some(i => basename.match(i))) return;
 
       if (option.match && !option.match.some(i => file.match(i))) return;
-      output.push(name);
+      if (!option.nofile) output.push(name);
     }
   });
   return output;

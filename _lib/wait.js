@@ -23,7 +23,10 @@ wait.for = function waitFor (check, timeout) {
         resolve(false);
         return;
       }
-      const checked = await check();
+      let checked = false;
+      try {
+        checked = await check();
+      } catch (error) {}
       if (checked) {
         if (id) clearInterval(id);
         id = null;

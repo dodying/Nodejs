@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               req
 // @Description:        req
-// @Version:            1.0.87
+// @Version:            1.0.156
 // @Author:             dodying
 // @Created:            2020-05-23 20:46:13
-// @Modified:           2020/6/16 15:58:09
+// @Modified:           2020/12/8 21:06:48
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            cheerio,deepmerge,iconv-lite,request,request-promise,socks5-http-client,socks5-https-client
@@ -23,6 +23,7 @@ const merge = require('deepmerge');
 let uriLast = null;
 const retryList = {};
 const proxyList = {};
+const cacheList = {};
 
 let config = {
   request: { // 替换option
@@ -31,24 +32,25 @@ let config = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'
     },
     timeout: 60 * 1000,
-    cookies: request.jar()
+    jar: request.jar()
   },
   retry: 5,
   proxy: '', // 仅http/socks5 格式：http://user:pwd@host:port
   withProxy: ['google.com'], // 总是通过代理
   withoutProxy: ['://127.0.0.1', '://localhost'], // 总是直连
   autoProxy: true, // 自动切换代理（开启后，先直连，直连失败则通过代理，之后再直连
-  setCookie: [],
+  setCookie: [], // eg: [['key=value','example.com']]
   logLevel: ['debug', 'warn', 'error']
 };
 
 const initConfig = (obj) => {
   config = merge(config, obj, {
-    arrayMerge: (destinationArray, sourceArray, options) => sourceArray // 不合并数组
+    arrayMerge: (destinationArray, sourceArray, options) => sourceArray, // 不合并数组
+    clone: false
   });
   if (config.setCookie.length) {
     for (const i of config.setCookie) {
-      config.request.cookies.setCookie(...i);
+      config.request.jar.setCookie(...i);
     }
     config.setCookie = [];
   }
@@ -74,7 +76,7 @@ function reqOption (uriOrOption, optionUser = {}) {
   }, config.request, option, { uri }]); // 不合并数组
 
   uri = option.uri || option.url;
-  uri = encodeURI(uri);
+  if (uri.match(/[^a-zA-Z0-9-_.~!*'();:@&=+$,/?#[\]%]/)) uri = encodeURI(uri);
   delete option.url;
   if (uriLast && !uri.match(/^https?:/i)) uri = new URL(uri, uriLast).href;
   option.uri = uri;
@@ -120,6 +122,7 @@ function reqOption (uriOrOption, optionUser = {}) {
 async function req (uriOrOption, optionUser = {}) {
   const option = reqOption(uriOrOption, optionUser);
   const uri = option.uri || option.url;
+  if (option.cache && uri in cacheList) return cacheList[uri];
 
   const errorHandle = (message) => {
     retryList[uri] = uri in retryList ? retryList[uri] + 1 : 1;
@@ -169,6 +172,7 @@ async function req (uriOrOption, optionUser = {}) {
         } catch (error) {}
       }
       delete retryList[uri];
+      if (option.cache) cacheList[uri] = res;
       return res;
     } else {
       return errorHandle(res.statusCode + ' ' + res.statusMessage);
