@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               webVideo
 // @Description:        根据list.txt下载网页视频（主要是NSFW）
-// @Version:            1.0.0
+// @Version:            1.1.0
 // @Author:             dodying
 // @Created:            2020-10-27 15:58:28
-// @Modified:           2020/12/13 13:04:01
+// @Modified:           2020/12/28 21:03:07
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            cheerio,commander,crypto-js,m3u8-parser,puppeteer
@@ -31,7 +31,7 @@ const config = {
       strictSSL: false
     },
     autoProxy: true,
-    withProxy: ['.*'],
+    withProxy: ['.pornhub.com'], // '.*'
     withoutProxy: ['ph666.me'], // , '.m3u8', '.hls'
     logLevel: ['debug', 'warn', 'error'],
     setCookie: []
@@ -69,6 +69,7 @@ const { program } = require('commander');
 require('./../_lib/log').hack();
 const wait = require('./../_lib/wait');
 const req = require('./../_lib/req');
+const walk = require('./../_lib/walk');
 
 // Function
 const getVideoInfo = async (file, timeout = 10 * 1000) => {
@@ -129,7 +130,7 @@ function spawnSync (...argsForSpwan) {
 const doExit = () => {
   exiting = true;
   // fs.appendFileSync(config.listFiles.succeed, succeedList.join('\n') + '\n');
-  fs.writeFileSync(config.listFiles.list, list.filter(i => !succeedList.includes(i)).join('\n'));
+  if (list) fs.writeFileSync(config.listFiles.list, list.filter(i => !succeedList.includes(i)).join('\n'));
   if (workingHostname) cp.spawnSync('wmic', ['process', 'where', `name='${path.basename(config.executable['N_m3u8DL-CLI'])}' and commandline like '%${workingHostname}%'`, 'Call', 'Terminate']);
   if (browser) browser.close();
   process.exit();
@@ -198,7 +199,7 @@ const getRemoteInfo = async (url, lib) => {
 
     await page.close();
   } else {
-    const res = await req(Object.assign({ uri: url }, lib.request || {}));
+    const res = await req(Object.assign({ uri: url }, lib.request || {}), lib.requestUser || {});
     if (!res || res.statusCode !== 200) {
       if (res) {
         succeedList.push(url);
@@ -208,13 +209,27 @@ const getRemoteInfo = async (url, lib) => {
       info.failed = true;
       return info;
     }
-    const valueToGetInfo = typeof lib.beforeGetInfo === 'function' ? await lib.beforeGetInfo(res) : null;
+    let valueToGetInfo;
+    try {
+      valueToGetInfo = typeof lib.beforeGetInfo === 'function' ? await lib.beforeGetInfo(res) : null;
+    } catch (error) {
+      console.error(`Error:\tbeforeGetInfo Failed when "${url}"`);
+      return info;
+    }
     if (typeof lib.getInfo === 'function') {
-      info = await lib.getInfo(res, valueToGetInfo);
+      try {
+        info = await lib.getInfo(res, valueToGetInfo);
+      } catch (error) {
+        console.error(`Error:\tgetInfo Failed when "${url}"`);
+      }
     } else {
       for (const key in lib.getInfo) {
         if (typeof lib.getInfo[key] === 'function') {
-          info[key] = await lib.getInfo[key](res, valueToGetInfo);
+          try {
+            info[key] = await lib.getInfo[key](res, valueToGetInfo);
+          } catch (error) {
+            console.error(`Error:\tgetInfo "${key}" Failed when "${url}"`);
+          }
         } else if (typeof lib.getInfo[key] === 'string' || lib.getInfo[key] instanceof Array) {
           let [selector, attribute, match, replace] = [].concat(lib.getInfo[key]);
           if (!attribute) attribute = 'text';
@@ -325,8 +340,13 @@ let libs = [
       getInfo: async function(page, url) => Info;
 
       request: object; // 请求时的其他选项（详见https://github.com/request/request/#requestoptions-callback）
+      requestUser: object; // 请求时的其他选项（用户）（详见_lib/req optionUser）
       beforeGetInfo: async function(res); // 在getInfo之前进行，返回任意数
       getInfo: async function | Info;
+
+      // 其他功能
+      link: function(id) => url;
+      test: object;
     }
     interface Info {
       name
@@ -363,6 +383,7 @@ let libs = [
       videoHLS: res => res.body.match(/html5player.setVideoHLS\('(.*?)'\);/)[1],
       videoDirect: res => res.body.match(/html5player.setVideoUrlHigh\('(.*?)'\);/)[1]
     },
+    link: id => `https://www.xvideos.com/video${id}/`,
     test: {
       url: 'https://www.xvideos.com/video59537313/_-_',
       name: 'xvideos',
@@ -376,17 +397,27 @@ let libs = [
   },
   { // papapa.info
     name: 'papapa.info',
-    filter: /papapa.info\/vod\/play\/id\/(\d+)/,
-    beforeGetInfo: res => res.request.uri.href.match(/papapa.info\/vod\/play\/id\/(\d+)/)[1],
+    filter: /(papapa.info|yase1.xyz)\/vod\/play\/id\/(\d+)/,
+    beforeGetInfo: res => res.request.uri.href.match(/(papapa.info|yase1.xyz)\/vod\/play\/id\/(\d+)/)[2],
     getInfo: {
       id: (res, id) => id,
       title: '.video-title>h1',
       uploader: '.hr-director+a[href*="/director/"]',
       videoHLS: async (res, id) => {
-        const res1 = await req(`https://papapa.info/vod/getPlayUrl?id=${id}&is_win=true`);
+        const res1 = await req(`https://papapa.info/vod/getPlayUrl?id=${id}&is_win=true`, {
+          check: res => {
+            try {
+              const json = JSON.parse(res.body);
+              return json.data;
+            } catch (error) {}
+          }
+        });
+        // console.log(res1.json);
+        // process.exit()
         return res1.json.data.url;
       }
     },
+    link: id => `https://papapa.info/vod/play/id/${id}/sid/1/nid/1.html`,
     test: {
       url: 'https://papapa.info/vod/play/id/100/sid/1/nid/1.html',
       name: 'papapa.info',
@@ -400,11 +431,11 @@ let libs = [
   { // pornhub
     name: 'pornhub',
     filter: /pornhub.com\/view_video.php\?viewkey=([a-z0-9]+)/,
-    beforeGetInfo: res => ({
-      url: res.request.uri.href,
-      id: res.request.uri.href.match(/(pornhub.com|pornhubpremium.com|ph666.me)\/view_video.php\?viewkey=([a-z0-9]+)/)[2]
-    }),
-    getInfo: async (res, info) => {
+    getInfo: async (res) => {
+      if (res.request.uri.href.match(/modelhub.com\/video/)) { // TODO modelhub
+        return { failed: true };
+      }
+
       const $ = cheerio.load(res.body);
       const script = $('script').toArray().map(i => $(i).html()).find(i => i.match(/var\s+(flashvars_\d+)\s+=\s+/));
       let flashvars;
@@ -421,10 +452,10 @@ let libs = [
         const url = res.request.uri.href.replace(/[a-z]+\.pornhub\.com/, 'ph666.me');
         console.log(`Try ph666.me:\t${url}`);
         const res1 = await req(Object.assign({ uri: url }, lib.request || {}));
-        return lib.getInfo(res1, info);
+        return lib.getInfo(res1);
       }
       return {
-        id: info.id,
+        id: res.request._rp_options.uri.match(/(pornhub.com|pornhubpremium.com|ph666.me)\/view_video.php\?viewkey=([a-z0-9]+)/)[2],
         name: 'pornhub',
         title: flashvars.video_title,
         uploader: $('.video-detailed-info .userInfo .usernameBadgesWrapper>a').text(),
@@ -433,6 +464,7 @@ let libs = [
         videoDirect: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'mp4').videoUrl
       };
     },
+    link: id => `https://cn.pornhub.com/view_video.php?viewkey=${id}`,
     test: {
       url: 'https://cn.pornhub.com/view_video.php?viewkey=ph5fba7f726d0b5',
       name: 'pornhub',
@@ -452,14 +484,14 @@ let libs = [
         Cookie: 'fanClubInfoPop=1; authToken=2bd7671dcc71be9d; __cfduid=d3f9a622ca3dbf5daf8dc927a4866465e1603711336'
       }
     },
-    beforeGetInfo: res => libs.find(i => i.name === 'pornhub' && i.filter.source.startsWith('pornhub.com')).beforeGetInfo(res),
-    getInfo: async (res, info) => {
+    getInfo: async (res) => {
       const $ = cheerio.load(res.body);
       if (!$('.video-wrapper>#player').length || $('.video-wrapper>#player>.lockedFanclub').length) {
         return { failed: true };
       }
-      return libs.find(i => i.name === 'pornhub' && i.filter.source.startsWith('pornhub.com')).getInfo(res, info);
+      return libs.find(i => i.name === 'pornhub' && i.filter.source.startsWith('pornhub.com')).getInfo(res);
     },
+    link: id => `https://ph666.me/view_video.php?viewkey=${id}`,
     test: {
       url: 'https://ph666.me/view_video.php?viewkey=ph5f1d654ec4d3a',
       name: 'pornhub',
@@ -486,6 +518,7 @@ let libs = [
       duration: ['[property="video:duration"]', 'content'],
       videoDirect: ['#vjsplayer>source:nth-child(1)', 'src']
     },
+    link: id => `https://www.tokyomotion.net/video/${id}/`,
     test: {
       url: 'https://www.tokyomotion.net/video/1563523/ncy-021',
       name: 'tokyomotion',
@@ -495,6 +528,10 @@ let libs = [
       duration: '2311.04',
       videoDirect: /tokyomotion.net\/vsrc\/hd\//
     }
+  },
+  { // osakamotion
+    name: 'osakamotion',
+    link: id => `https://www.osakamotion.net/video/${id}/`
   },
 
   { // 91porn-heiporn
@@ -525,6 +562,7 @@ let libs = [
         };
       });
     },
+    link: id => `https://www.heiporn.com/player-index-${id}.html`,
     test: {
       url: 'https://www.heiporn.com/player-index-7e42283b4f5ab36da134.html',
       name: '91porn',
@@ -564,6 +602,7 @@ let libs = [
         }
       }
     },
+    link: id => `http://91porn.com/view_video.php?viewkey=${id}`,
     test: {
       url: 'http://91porn.com/view_video.php?viewkey=7e42283b4f5ab36da134',
       name: '91porn',
@@ -616,6 +655,7 @@ let libs = [
         }
       }
     },
+    link: id => `https://daftsex.com/watch/${id}`,
     test: {
       url: 'https://daftsex.com/watch/-31257429_456239254',
       name: 'DaftSex',
@@ -647,6 +687,7 @@ let libs = [
       }
       return info;
     },
+    link: id => `https://xhamster.com/videos/${id}`,
     test: {
       url: 'https://xhamster.com/videos/3263960',
       name: 'xHamster',
@@ -686,6 +727,7 @@ let libs = [
       }
       return info;
     },
+    link: id => `https://spankbang.com/${id}/video/`,
     test: {
       url: 'https://spankbang.com/4i12w/video/',
       name: 'SpankBang',
@@ -697,9 +739,35 @@ let libs = [
       videoDirect: /.sb-cd.com\/.*?-1080p.mp4/
     }
   },
+  { // 3atv.cc
+    name: '3atv.cc',
+    filter: /(3atv.cc|3a\d+.com|app\d+.com)\/play\/(\d+)-1-1.html/,
+    getInfo: {
+      id: res => res.request.uri.href.match(/(3atv.cc|3a\d+.com|app\d+.com)\/play\/(\d+)-1-1.html/)[2],
+      title: '.bread>a:last-child',
+      videoHLS: async res => {
+        try {
+          const script = res.$('script[src^="/upload/playdata/"]').attr('src');
+          const res1 = await req(new URL(script, res.request.uri.href).href);
+          const url = eval(`(function (){${res1.body};return mac_url;})();`); // eslint-disable-line no-eval
+          return url;
+        } catch (error) {
+          return null;
+        }
+      }
+    },
+    link: id => `http://3atv.cc/play/${id}-1-1.html`,
+    test: {
+      url: 'http://3atv.cc/play/9921-1-1.html',
+      name: '3atv.cc',
+      id: '9921',
+      title: 'c2020121_6',
+      videoHLS: /index.m3u8/
+    }
+  },
   { // puppeteer-demo
     name: 'puppeteer-demo',
-    filter: /pornhub.com\/view_video.php\?viewkey=([a-z0-9]+)/,
+    // filter: /pornhub.com\/view_video.php\?viewkey=([a-z0-9]+)/,
     puppeteer: true,
     beforeLoad: async page => {
       await page.setCookie(...[
@@ -752,6 +820,7 @@ let libs = [
         videoDirect: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'mp4').videoUrl
       };
     },
+    link: id => `https://cn.pornhub.com/view_video.php?viewkey=${id}`,
     test: {
       url: 'https://cn.pornhub.com/view_video.php?viewkey=ph5fba7f726d0b5',
       name: 'puppeteer-demo',
@@ -783,36 +852,6 @@ const main = async () => {
   program.option('--no-puppeteer', 'DISABLE puppeteer', () => {
     libs = libs.filter(i => !i.puppeteer);
   });
-  program.command('test [names...]', 'test libs').action(async (names) => {
-    const $libs = names.length ? libs.filter(i => names.some(j => i.name.match(j))) : libs;
-    for (const lib of $libs) {
-      if (!lib.test) {
-        console.error(`Error:\tNo "test" in "${lib.name}"`);
-        continue;
-      }
-
-      console.log(`Note:\tChecking ${lib.name}`);
-      const url = lib.test.url;
-      const info = Object.assign({ name: lib.name }, await getRemoteInfo(url, lib));
-      for (const key in info) {
-        const value = info[key];
-        const prefer = lib.test[key];
-        let valid = false;
-        if (typeof value === 'undefined' || typeof prefer === 'undefined') {
-          valid = false;
-        } else if (typeof prefer === 'string' || typeof prefer === 'number') {
-          valid = value === prefer;
-        } else if (prefer instanceof RegExp) {
-          valid = value.match(prefer);
-        }
-        if (!valid) {
-          console.error(`Error:\t"${lib.name}" "${key}" Failed/Changed`);
-          console.error(`Value:\t${value}`);
-          console.error(`Prefer:\t${prefer}`);
-        }
-      }
-    }
-  });
   program.command('run [urls...]', { isDefault: true }).action(async (urls) => {
     list = urls.concat(fs.readFileSync(config.listFiles.list, 'utf-8').split(/\r*\n/));
     if (program.retryExceedLimit && fs.existsSync(config.listFiles.exceedLimit)) {
@@ -837,7 +876,7 @@ const main = async () => {
       console.log(`Url-${i}/${list.length}:\t${url}`);
 
       let info;
-      const $libs = libs.filter(i => url.match(i.filter));
+      const $libs = libs.filter(i => i.filter && url.match(i.filter));
       for (const lib of $libs) {
         const $info = Object.assign({ name: lib.name, tryOtherLib: lib.tryOtherLib }, await getRemoteInfo(url, lib));
         const error = $info.failed || $info.exceedLimit;
@@ -847,6 +886,7 @@ const main = async () => {
           break;
         }
       }
+      info = info || {};
 
       // 检查视频信息完整性
       if (info.failed) {
@@ -907,6 +947,53 @@ const main = async () => {
     }
 
     doExit();
+  });
+  program.command('test [names...]').description('test libs that filtered by names').action(async (names) => {
+    const $libs = names.length ? libs.filter(i => names.some(j => i.name.match(j))) : libs;
+    for (const lib of $libs) {
+      if (!lib.test) {
+        console.error(`Error:\tNo "test" in "${lib.name}"`);
+        continue;
+      }
+
+      console.log(`Note:\tChecking ${lib.name}`);
+      const url = lib.test.url;
+      const info = Object.assign({ name: lib.name }, await getRemoteInfo(url, lib));
+      for (const key in info) {
+        const value = info[key];
+        const prefer = lib.test[key];
+        let valid = false;
+        if (typeof value === 'undefined' || typeof prefer === 'undefined') {
+          valid = false;
+        } else if (typeof prefer === 'string' || typeof prefer === 'number') {
+          valid = value === prefer;
+        } else if (prefer instanceof RegExp) {
+          valid = value.match(prefer);
+        }
+        if (!valid) {
+          console.error(`Error:\t"${lib.name}" "${key}" Failed/Changed`);
+          console.error(`Value:\t${value}`);
+          console.error(`Prefer:\t${prefer}`);
+        }
+      }
+    }
+  });
+  program.command('link <output> <directories...>').description('generator links from files under directories').option('-r, --recursive', 'recursively').action(async (output, directories, cmdObj) => {
+    const list = [];
+    for (const directory of directories) {
+      const files = walk(directory, { recursive: cmdObj.recursive, nodir: true, matchFile: /\.(mp4|ts)$/i });
+      for (const file of files) {
+        const basename = path.basename(file);
+        if (!basename.match(/^\[(?<name>[^[\]]+)\]\[(?<id>[^[\]]+)\]/)) continue;
+        const { name, id } = basename.match(/^\[(?<name>[^[\]]+)\]\[(?<id>[^[\]]+)\]/).groups;
+
+        const lib = libs.find(i => i.name === name);
+        if (!lib.link) continue;
+
+        list.push(lib.link(id));
+      }
+    }
+    fs.appendFileSync(output, '\n' + list.join('\n') + '\n');
   });
   await program.parseAsync(process.argv);
 };
