@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               req
 // @Description:        req
-// @Version:            1.0.156
+// @Version:            1.0.160
 // @Author:             dodying
 // @Created:            2020-05-23 20:46:13
-// @Modified:           2020/12/8 21:06:48
+// @Modified:           2020/12/20 13:41:07
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            cheerio,deepmerge,iconv-lite,request,request-promise,socks5-http-client,socks5-https-client
@@ -133,9 +133,9 @@ async function req (uriOrOption, optionUser = {}) {
 
   let res;
   try {
-    if (!('encoding' in option)) option.encoding = null;
-    res = await requestPromise(option);
-    if (option.encoding === null) {
+    if (!('encoding' in option)) {
+      option.encoding = null;
+      res = await requestPromise(option);
       // 判断网页编码
       let charset = res.headers['content-type'] && res.headers['content-type'].match(/charset=(.*?)(;|$)/) ? res.headers['content-type'].match(/charset=(.*?)(;|$)/i)[1] : 'utf-8';
 
@@ -160,6 +160,8 @@ async function req (uriOrOption, optionUser = {}) {
         }
       }
       res.body = body;
+    } else {
+      res = await requestPromise(option);
     }
     const succeed = typeof optionUser.check === 'function' ? optionUser.check(res) : res.statusCode >= 200 || res.statusCode < 300;
     if (succeed) {
