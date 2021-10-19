@@ -1,5 +1,3 @@
-'use strict';
-
 const config = {
   userAgent: 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36',
   timeout: 60, // 请求超时(单位秒)
@@ -38,9 +36,9 @@ const config = {
    * result: '111222'
    * 说明: 1.替换同组直接的文本 2.替换全局且不分大小写
    */
-    ['（ブルーレイディスク）', '']
+    ['（ブルーレイディスク）', ''],
   ],
-  nfo: true // 是否生成nfo文件(kodi格式)
+  nfo: true, // 是否生成nfo文件(kodi格式)
 };
 
 module.exports = config;

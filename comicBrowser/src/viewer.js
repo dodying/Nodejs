@@ -19,28 +19,28 @@ let fileList = [];
 const viewInfo = new Proxy({
   file: '', // 仅在showFile时修改
   page: '',
-  condition: ''
+  condition: '',
 }, {
-  set: function (target, prop, value, receiver) {
+  set(target, prop, value, receiver) {
     target[prop] = value;
     if (prop === 'file') {
       target.page = '';
       target.condition = '';
     } else if (prop === 'page') {
       // 仅播放在窗口中的视频
-      $('.content>div>video[playing]').toArray().forEach(i => {
+      $('.content>div>video[playing]').toArray().forEach((i) => {
         $(i).attr('playing', null);
         i.pause();
       });
       if ($(`.content>div[name="${target.page}"]>video:not([playing])`).length) {
         $(`.content>div[name="${target.page}"]>video:not([playing])`).attr({
           playing: 1,
-          loop: true
+          loop: true,
         }).get(0).play();
       }
     }
     return true;
-  }
+  },
 });
 let fileInfo = null;
 let viewTime = null;
@@ -80,12 +80,13 @@ const keyHelp = {
   shiftAndUp: '滚动到顶部',
   shiftAndDown: '滚动到底部',
   upLeft: '打开上一本',
-  upRight: '打开下一本'
+  upRight: '打开下一本',
 };
 const imageExt = ['.png', '.jpg', '.gif', '.webp'];
 const videoExt = ['.mp4', '.m4v'];
 const supportedExt = [].concat(imageExt, videoExt);
-let isTopLast, isBottomLast;
+let isTopLast; let
+  isBottomLast;
 let keypressLastTime = 0;
 
 // 设置
@@ -136,10 +137,10 @@ const keyMap = { // 按键事件
   left: ['a', 'left', '4'],
   right: ['d', 'right', '6'],
   upLeft: ['q', '7'],
-  upRight: ['e', '9']
+  upRight: ['e', '9'],
 };
-keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`);
-keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`);
+keyMap.shiftAndUp = keyMap.up.map((i) => `shift+${i}`);
+keyMap.shiftAndDown = keyMap.down.map((i) => `shift+${i}`);
 const pageLoadCount = 5; // 一次载入多少页
 const nextPageTop = 1 / 2 * document.documentElement.clientHeight; // 图片距离顶部多远视为下一页
 
@@ -151,14 +152,15 @@ const path = require('path');
 const electron = require('electron');
 const JSZip = require('jszip');
 
-const waitInMs = require('./../../_lib/waitInMs');
-const parseInfo = require('./../js/parseInfo');
-const findData = require('./../js/findData');
-const removeOtherInfo = require('./../js/removeOtherInfo');
+const waitInMs = require('../../_lib/waitInMs');
+const parseInfo = require('../js/parseInfo');
+const findData = require('../js/findData');
+const removeOtherInfo = require('../js/removeOtherInfo');
 const configChange = require('./common/configChange');
 const tooltip = require('./common/tooltip');
-const ipcRenderer = electron.ipcRenderer;
-const Menu = electron.remote.Menu;
+
+const { ipcRenderer } = electron;
+const { Menu } = electron.remote;
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 // Function
@@ -188,7 +190,8 @@ const loadImage = async (reverse) => {
     count++;
     const blob = await zipContent.files[name].async('blob');
     const imageUrl = URL.createObjectURL(blob);
-    let elem, width, height;
+    let elem; let width; let
+      height;
     await new Promise((resolve, reject) => {
       const tag = imageExt.includes(path.extname(name)) ? 'img' : 'video';
       elem = $(`<div name="${name}"><${tag} src="${imageUrl}" /></div>`).hide();
@@ -206,7 +209,7 @@ const loadImage = async (reverse) => {
 
     elem.css({
       width: width * zoomPercent / 100,
-      'max-width': height / width > 1.1 ? maxWidth : maxHeight * width / height
+      'max-width': height / width > 1.1 ? maxWidth : maxHeight * width / height,
     }).show();
     // ele.css('width', width / height * document.documentElement.clientHeight * 0.6); // TODO
 
@@ -249,7 +252,7 @@ const jumpToImage = async (page) => {
 };
 const rememberPosition = async (noTooltip) => {
   if (!viewInfo.file || isNaN(viewTime) || new Date().getTime() - viewTime < viewTimeMin || fileList.indexOf(viewInfo.page) < viewPageMin) return;
-  await configChange(obj => {
+  await configChange((obj) => {
     if (!('lastViewPosition' in obj)) obj.lastViewPosition = {};
     obj.lastViewPosition[viewInfo.file] = viewInfo.page;
 
@@ -281,7 +284,7 @@ const showFile = async (option = {}) => {
     return;
   }
   const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
-  let page = option.page;
+  let { page } = option;
   const condition = params.get('condition');
 
   let fullpath = path.resolve(libraryFolder, file);
@@ -295,8 +298,8 @@ const showFile = async (option = {}) => {
       } else {
         const conditionArr = JSON.parse(condition);
         const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
-        files = rows.map(i => i.path);
-        configChange(obj => {
+        files = rows.map((i) => i.path);
+        configChange((obj) => {
           if (!('resultList' in obj)) obj.resultList = {};
           obj.resultList[condition] = files;
         }, 'store');
@@ -304,7 +307,7 @@ const showFile = async (option = {}) => {
     } else {
       const dirname = path.dirname(file);
       files = fs.readdirSync(path.dirname(fullpath));
-      files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i)).sort(collator.compare);
+      files = files.filter((i) => ['.cbz', '.zip'].includes(path.extname(i))).map((i) => path.join(dirname, i)).sort(collator.compare);
     }
     let index = files.indexOf(file);
     if (option.relativeBook === 'prev') {
@@ -336,9 +339,8 @@ const showFile = async (option = {}) => {
         await tooltip('本书籍为最后一本', fullpath);
         onLoadEnd();
         return;
-      } else {
-        fullpath = path.resolve(libraryFolder, files[index + 1]);
       }
+      fullpath = path.resolve(libraryFolder, files[index + 1]);
     }
     rememberPosition();
   }
@@ -369,15 +371,15 @@ const showFile = async (option = {}) => {
   fileList = Object.keys(zipContent.files);
 
   // 检测有无info.txt
-  if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+  if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
     fileInfo = null;
   } else {
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zipContent.files[infoFile].async('text');
     fileInfo = parseInfo(data);
   }
 
-  fileList = fileList.filter(i => supportedExt.includes(path.extname(i))).sort(collator.compare); // 过滤图片
+  fileList = fileList.filter((i) => supportedExt.includes(path.extname(i))).sort(collator.compare); // 过滤图片
 
   const lastViewPosition = ipcRenderer.sendSync('store', 'get', 'lastViewPosition', {});
   if (!page && lastViewPosition[file]) page = lastViewPosition[file];
@@ -386,7 +388,7 @@ const showFile = async (option = {}) => {
   Object.assign(viewInfo, { file, page, condition });
 
   if (condition) {
-    configChange(obj => {
+    configChange((obj) => {
       if (!('resultPosition' in obj)) obj.resultPosition = {};
       obj.resultPosition[condition] = file;
     }, 'store');
@@ -398,7 +400,7 @@ const showFile = async (option = {}) => {
   await jumpToImage(page);
 
   $('.content').removeAttr('disable-scroll');
-  document.title = path.basename(file) + '\\' + (page || '');
+  document.title = `${path.basename(file)}\\${page || ''}`;
   onLoadEnd();
 
   // if (fileList.length === 0) return showFile({ relativeBook: 'next' });
@@ -409,12 +411,12 @@ const openFile = async () => {
     defaultPath: path.resolve(libraryFolder, viewInfo.file ? path.dirname(viewInfo.file) : ''),
     filters: [{
       name: '漫画压缩包',
-      extensions: ['cbz', 'zip']
+      extensions: ['cbz', 'zip'],
     }, {
       name: '所有类型',
-      extensions: ['*']
+      extensions: ['*'],
     }],
-    properties: ['openFile']
+    properties: ['openFile'],
   });
   if (result && result.length) {
     const fullpath = result[0];
@@ -453,8 +455,8 @@ const updateTitleUrl = () => {
     for (const key in viewInfo) {
       if (viewInfo[key] && !(['page'].includes(key))) params.set(key, viewInfo[key]);
     }
-    url = '?' + params.toString();
-    title = path.basename(viewInfo.file) + '\\' + (viewInfo.page || '');
+    url = `?${params.toString()}`;
+    title = `${path.basename(viewInfo.file)}\\${viewInfo.page || ''}`;
   }
   document.title = title;
   window.history.pushState(null, title, url);
@@ -462,7 +464,7 @@ const updateTitleUrl = () => {
 const showFileList = (files, title) => {
   const html = [
     '<div style="text-align:justify;">',
-    '<ul>'
+    '<ul>',
   ];
   for (const file of files) {
     html.push(`<li><span name="${file}" style="cursor:pointer;">${file}</span></li>`);
@@ -474,7 +476,7 @@ const showFileList = (files, title) => {
     title: title || 'File List:',
     content: html.join(''),
     autoClose: null,
-    onContentReady: function () {
+    onContentReady() {
       const fileThis = $(this.$content).find(`li:has(span[name="${window.CSS.escape(viewInfo.file)}"])`);
       if (fileThis.length) fileThis.css('color', 'red').get(0).scrollIntoView();
       $(this.$content).find('li>span[name]').on('click', async (e) => {
@@ -485,7 +487,7 @@ const showFileList = (files, title) => {
         updateTitleUrl();
         await showFile();
       });
-    }
+    },
   });
 };
 const scrollTop = (top, left = 0, speed, absolute = false) => {
@@ -497,7 +499,7 @@ const scrollTop = (top, left = 0, speed, absolute = false) => {
     }
     $(scrollElement).finish().animate({
       scrollTop: absolute ? top : scrollElement.scrollTop + top,
-      scrollLeft: absolute ? left : scrollElement.scrollLeft + left
+      scrollLeft: absolute ? left : scrollElement.scrollLeft + left,
     }, speed);
   } else {
     $(scrollElement).css('scroll-behavior', 'smooth');
@@ -539,30 +541,28 @@ const main = async () => {
     if ($('.content').attr('disable-scroll')) return;
     const thisScrollTop = scrollElement.scrollTop;
     if (thisScrollTop > lastScrollTop) { // 向下滚动
-      const scrollHeight = scrollElement.scrollHeight;
+      const { scrollHeight } = scrollElement;
       const height = $('.content').height() + thisScrollTop;
       if (height + loadPageHeight >= scrollHeight) {
         await loadImage();
       }
-    } else {
-      if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
-        lastScrollEnd = false;
-        const page = viewInfo.page;
-        await loadImage(true);
-        await waitInMs(500);
-        $('.content').attr('disable-scroll', 'true');
-        const preferTop = scrollElement.scrollTop + $(`.content>div[name="${page}"]`).offset().top;
-        scrollTop(preferTop, 0, 100, true);
-        let scrollEnd;
-        scrollEnd = setInterval(() => {
-          if (Math.abs(preferTop - scrollElement.scrollTop) <= fixHeight) {
-            clearInterval(scrollEnd);
-            $('.content').removeAttr('disable-scroll');
-            lastScrollEnd = true;
-            scrollEnd = null;
-          }
-        }, 200);
-      }
+    } else if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
+      lastScrollEnd = false;
+      const { page } = viewInfo;
+      await loadImage(true);
+      await waitInMs(500);
+      $('.content').attr('disable-scroll', 'true');
+      const preferTop = scrollElement.scrollTop + $(`.content>div[name="${page}"]`).offset().top;
+      scrollTop(preferTop, 0, 100, true);
+      let scrollEnd;
+      scrollEnd = setInterval(() => {
+        if (Math.abs(preferTop - scrollElement.scrollTop) <= fixHeight) {
+          clearInterval(scrollEnd);
+          $('.content').removeAttr('disable-scroll');
+          lastScrollEnd = true;
+          scrollEnd = null;
+        }
+      }, 200);
     }
     lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
 
@@ -584,7 +584,7 @@ const main = async () => {
     if (leftPercent >= 80 && topPercent >= 80) {
       $('.preview').show();
     } else if (topPercent <= 10 && leftPercent >= 20 && leftPercent <= 80) {
-      $('.titlebar').html(viewInfo.file + '\\' + (viewInfo.page || '')).show();
+      $('.titlebar').html(`${viewInfo.file}\\${viewInfo.page || ''}`).show();
       updateTitleUrl();
     } else if (topPercent >= 90 && leftPercent >= 20 && leftPercent <= 80) {
       $('.statusbar').show();
@@ -602,7 +602,7 @@ const main = async () => {
     }, 1000);
     mousemoveLastTime = new Date().getTime();
   });
-  $('.statusbar>[name="range"]').on('change', async e => {
+  $('.statusbar>[name="range"]').on('change', async (e) => {
     const value = $(e.target).val();
     await jumpToImage(fileList[value - 1]);
     $(e.target).val(value);
@@ -612,7 +612,7 @@ const main = async () => {
     const target = $('.preview>div:nth-child(2)');
     $('.preview>.coverBox').css({
       top: e.pageY - target.offset().top + 20,
-      left: e.pageX - target.offset().left
+      left: e.pageX - target.offset().left,
     }).show();
   });
   $('.preview>div:nth-child(2)').on('mousemove', (e) => {
@@ -621,7 +621,7 @@ const main = async () => {
     const y = (e.pageY - target.offset().top) / target.height();
     $('.preview>.coverBox').css({
       top: target.height() * y + 20,
-      left: target.width() * x
+      left: target.width() * x,
     }).show();
   });
   $('.preview>div:nth-child(1)').on('click', async (e) => {
@@ -643,23 +643,17 @@ const main = async () => {
     if ($(e.target).is('.side-left')) {
       if (isTopNow() && isTopLast) {
         await showFile({ relativeBook: 'prev' });
+      } else if (elem.prev().length) {
+        scrollTop(elem.prev().offset().top);
       } else {
-        if (elem.prev().length) {
-          scrollTop(elem.prev().offset().top);
-        } else {
-          scrollTop(-parseFloat(window.getComputedStyle(elem.parent().get(0), ':before').height) - parseFloat(elem.css('margin-top')) - parseFloat(elem.css('padding-top')));
-        }
+        scrollTop(-parseFloat(window.getComputedStyle(elem.parent().get(0), ':before').height) - parseFloat(elem.css('margin-top')) - parseFloat(elem.css('padding-top')));
       }
+    } else if (isBottomNow() && isBottomLast) {
+      await showFile({ relativeBook: 'next' });
+    } else if (elem.next().length) {
+      scrollTop(elem.next().offset().top);
     } else {
-      if (isBottomNow() && isBottomLast) {
-        await showFile({ relativeBook: 'next' });
-      } else {
-        if (elem.next().length) {
-          scrollTop(elem.next().offset().top);
-        } else {
-          scrollTop(elem.offset().top + elem.height());
-        }
-      }
+      scrollTop(elem.offset().top + elem.height());
     }
   });
 
@@ -675,13 +669,13 @@ const main = async () => {
       label: '打开文件夹',
       click: () => {
         ipcRenderer.send('open-external', viewInfo.file, 'item');
-      }
+      },
     },
     {
       label: '外部浏览',
       click: () => {
         ipcRenderer.send('open-external', viewInfo.file, 'path');
-      }
+      },
     },
     { type: 'separator' },
     {
@@ -689,8 +683,8 @@ const main = async () => {
       click: () => {
         electron.remote.getCurrentWindow().openDevTools();
         console.log(rightEvent);
-      }
-    }
+      },
+    },
   ];
   const contextMenu = Menu.buildFromTemplate(menuItem);
   $('.content').on('contextmenu', (e) => {
@@ -716,22 +710,22 @@ const main = async () => {
   });
 
   // 全局快捷键
-  Mousetrap.bind(keyMap.openFile, function (e, combo) { // 打开另一本书
+  Mousetrap.bind(keyMap.openFile, (e, combo) => { // 打开另一本书
     openFile();
     return false;
   });
-  Mousetrap.bind(keyMap.closeAndSave, async function (e, combo) { // 关闭并保存本书记录
+  Mousetrap.bind(keyMap.closeAndSave, async (e, combo) => { // 关闭并保存本书记录
     await rememberPosition();
     $('.content').attr('disable-scroll', 'true').empty();
     $('.openfile').show();
     return false;
   });
-  Mousetrap.bind(keyMap.closeAndClear, async function (e, combo) { // 关闭并清除本书记录
+  Mousetrap.bind(keyMap.closeAndClear, async (e, combo) => { // 关闭并清除本书记录
     $('.content').attr('disable-scroll', 'true').empty();
     $('.openfile').show();
 
-    const file = viewInfo.file;
-    configChange(obj => {
+    const { file } = viewInfo;
+    configChange((obj) => {
       if (obj.lastViewPosition && file in obj.lastViewPosition) delete obj.lastViewPosition[file];
       if (obj.lastViewTime && file in obj.lastViewTime) delete obj.lastViewTime[file];
       if (obj.history && obj.history.includes(file)) obj.history.splice(obj.history.indexOf(file), 1);
@@ -740,10 +734,10 @@ const main = async () => {
     await tooltip('记录已清除', viewInfo.file);
     return false;
   }, 'keyup');
-  Mousetrap.bind(keyMap.jumpToPageTop, function (e, combo) { // 对位到当前页顶部
+  Mousetrap.bind(keyMap.jumpToPageTop, (e, combo) => { // 对位到当前页顶部
     scrollTop($(`.content>div[name="${viewInfo.page}"]`).offset().top);
   });
-  Mousetrap.bind(keyMap.deletePage, async function (e, combo) { // 删除当前页
+  Mousetrap.bind(keyMap.deletePage, async (e, combo) => { // 删除当前页
     const confirm = await tooltip({
       title: '是否删除当前页',
       content: viewInfo.page,
@@ -753,13 +747,13 @@ const main = async () => {
         ok: {
           text: 'OK',
           keys: ['enter'],
-          btnClass: 'btn-red'
+          btnClass: 'btn-red',
         },
         cancel: {
           text: 'Cancel',
-          btnClass: 'btn-blue'
-        }
-      }
+          btnClass: 'btn-blue',
+        },
+      },
     });
     if (confirm !== 'ok') return;
     zipContent.remove(viewInfo.page);
@@ -767,22 +761,22 @@ const main = async () => {
       type: 'nodebuffer',
       compression: 'DEFLATE',
       compressionOptions: {
-        level: 9
-      }
+        level: 9,
+      },
     });
     const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
     const fullpath = path.resolve(libraryFolder, viewInfo.file);
     fs.writeFileSync(fullpath, content);
-    await tooltip('页面已删除', viewInfo.file + '\\' + viewInfo.page);
-    await configChange(obj => {
+    await tooltip('页面已删除', `${viewInfo.file}\\${viewInfo.page}`);
+    await configChange((obj) => {
       if (!('delete' in obj)) obj.delete = [];
-      obj.delete.push(viewInfo.file + '\\' + viewInfo.page);
+      obj.delete.push(`${viewInfo.file}\\${viewInfo.page}`);
     }, 'store');
     viewInfo.page = $(`.content>div[name="${viewInfo.page}"]`).prev().attr('name');
     await rememberPosition(true);
     await showFile();
   });
-  Mousetrap.bind(keyMap.deleteFile, async function (e, combo) { // 删除当前文件
+  Mousetrap.bind(keyMap.deleteFile, async (e, combo) => { // 删除当前文件
     const confirm = await tooltip({
       title: '是否删除文件',
       content: viewInfo.file,
@@ -792,13 +786,13 @@ const main = async () => {
         ok: {
           text: 'OK',
           keys: ['enter'],
-          btnClass: 'btn-red'
+          btnClass: 'btn-red',
         },
         cancel: {
           text: 'Cancel',
-          btnClass: 'btn-blue'
-        }
-      }
+          btnClass: 'btn-blue',
+        },
+      },
     });
     if (confirm !== 'ok') return;
     ipcRenderer.send('open-external', viewInfo.file, 'empty');
@@ -844,7 +838,7 @@ const main = async () => {
     return false;
   });
   Mousetrap.bind([].concat(keyMap.plus, keyMap.minus), async (e, combo) => { // 放大缩小
-    zoomPercent += (keyMap.plus.includes(combo) ? zoomPercentStep : -zoomPercentStep);
+    zoomPercent = zoomPercent + (keyMap.plus.includes(combo) ? zoomPercentStep : -zoomPercentStep);
     tooltip(`当前缩放: ${zoomPercent}%`, viewInfo.file);
     for (const ele of $('.content>div').toArray()) {
       const width = $(ele).find('img').prop('naturalWidth');
@@ -853,7 +847,7 @@ const main = async () => {
     await jumpToImage(viewInfo.page);
     return false;
   });
-  Mousetrap.bind(keyMap.findByTags, function (e, combo) { // 快速查找相同本子
+  Mousetrap.bind(keyMap.findByTags, (e, combo) => { // 快速查找相同本子
     let title = removeOtherInfo(fileInfo.title);
     title = removeOtherInfo(title, true);
     let jTitle = removeOtherInfo(fileInfo.jTitle);
@@ -868,7 +862,7 @@ const main = async () => {
       `<li>外部打开: <a name="path" href="${viewInfo.file}">${path.basename(viewInfo.file)}</a></li>`,
       `<li>打开路径: <a name="path" href="${dirname}">${dirname}</a></li>`,
       `<li>web: <a href="${fileInfo.web}">${fileInfo.web}</a></li>`,
-      `<li>Uploader: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"uploader","=","${fileInfo.Uploader}",null]]`)}" style="margin:0 5px;">${fileInfo.Uploader}</a></li>`
+      `<li>Uploader: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"uploader","=","${fileInfo.Uploader}",null]]`)}" style="margin:0 5px;">${fileInfo.Uploader}</a></li>`,
     ];
     for (const main of mainTag) {
       if (!(main in fileInfo)) continue;
@@ -877,9 +871,9 @@ const main = async () => {
       for (const sub of fileInfo[main]) {
         const subChs = findData(main, sub).cname || sub;
         const condition = encodeURIComponent(`[[false,"tags","tags:${main}","${sub}",null]]`);
-        htmlLine += `<a name="native" href="./src/index.html?condition=${condition}" style="margin:0 5px;">${subChs}</a>`;
+        htmlLine = `${htmlLine}<a name="native" href="./src/index.html?condition=${condition}" style="margin:0 5px;">${subChs}</a>`;
       }
-      html.push(htmlLine + '</li>');
+      html.push(`${htmlLine}</li>`);
     }
     html.push('</ul>', '</div>');
     tooltip({
@@ -887,20 +881,20 @@ const main = async () => {
       boxWidth: '50%',
       title: 'Search:',
       content: html.join(''),
-      autoClose: null
+      autoClose: null,
     });
   });
-  Mousetrap.bind(keyMap.help, function (e, combo) { // 显示所有快捷键
+  Mousetrap.bind(keyMap.help, (e, combo) => { // 显示所有快捷键
     const html = [
       '<div style="display:flex;">',
-      '<table style="flex:1;"><tbody>'
+      '<table style="flex:1;"><tbody>',
     ];
     const table2 = [];
     let nextTable = false;
     for (const key in keyHelp) {
       if (key === 'separator') nextTable = true;
-      const bindings = keyMap[key].map(i => `<span>${i}</span>`).join('')
-        ; (nextTable ? table2 : html).push(`<tr><td class="keyBindings">${bindings}</td><td class="helpDescription">${keyHelp[key]}</td></tr>`);
+      const bindings = keyMap[key].map((i) => `<span>${i}</span>`).join('');
+      (nextTable ? table2 : html).push(`<tr><td class="keyBindings">${bindings}</td><td class="helpDescription">${keyHelp[key]}</td></tr>`);
     }
     html.push('</tbody></table>', '<table style="flex:1;"><tbody>', ...table2, '</tbody></table>', '</div>');
     tooltip({
@@ -908,25 +902,25 @@ const main = async () => {
       boxWidth: '60%',
       title: null,
       content: html.join(''),
-      autoClose: null
+      autoClose: null,
     });
   });
-  Mousetrap.bind(keyMap.reload, async function (e, combo) { // 重载页面
+  Mousetrap.bind(keyMap.reload, async (e, combo) => { // 重载页面
     window.onbeforeunload = null;
     await rememberPosition(true);
     window.location.reload();
   });
-  Mousetrap.bind(keyMap.starFile, async function (e, combo) { // 星标书籍
-    await configChange(obj => {
+  Mousetrap.bind(keyMap.starFile, async (e, combo) => { // 星标书籍
+    await configChange((obj) => {
       if (!('star' in obj)) obj.star = [];
       if (!obj.star.includes(viewInfo.file)) obj.star.push(viewInfo.file);
     }, 'store');
     tooltip('书籍已收藏', viewInfo.file);
   });
-  Mousetrap.bind(keyMap.showFileList, function (e, combo) { // 显示文件列表并跳转
+  Mousetrap.bind(keyMap.showFileList, (e, combo) => { // 显示文件列表并跳转
     const html = [
       '<div style="text-align:justify;">',
-      '<ul>'
+      '<ul>',
     ];
     for (const file of fileList) {
       html.push(`<li><span name="${file}" style="cursor:pointer;">${file}</span></li>`);
@@ -938,19 +932,20 @@ const main = async () => {
       title: 'File List:',
       content: html.join(''),
       autoClose: null,
-      onContentReady: function () {
-        $(this.$content).find(`li:has(span[name="${window.CSS.escape(viewInfo.page)}"])`).css('color', 'red').get(0).scrollIntoView();
+      onContentReady() {
+        $(this.$content).find(`li:has(span[name="${window.CSS.escape(viewInfo.page)}"])`).css('color', 'red').get(0)
+          .scrollIntoView();
         $(this.$content).find('li>span[name]').on('click', async (e) => {
           this.close();
           await jumpToImage($(e.target).attr('name'));
         });
-      }
+      },
     });
   });
-  Mousetrap.bind(keyMap.readingList, async function (e, combo) { // 显示阅读列表
+  Mousetrap.bind(keyMap.readingList, async (e, combo) => { // 显示阅读列表
     const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
-    const condition = viewInfo.condition;
-    const file = viewInfo.file;
+    const { condition } = viewInfo;
+    const { file } = viewInfo;
     const fullpath = path.resolve(libraryFolder, file);
 
     let files;
@@ -961,8 +956,8 @@ const main = async () => {
       } else {
         const conditionArr = JSON.parse(condition);
         const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
-        files = rows.map(i => i.path);
-        configChange(obj => {
+        files = rows.map((i) => i.path);
+        configChange((obj) => {
           if (!('resultList' in obj)) obj.resultList = {};
           obj.resultList[condition] = files;
         }, 'store');
@@ -970,20 +965,20 @@ const main = async () => {
     } else {
       const dirname = path.dirname(file);
       files = fs.readdirSync(path.dirname(fullpath));
-      files = files.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.join(dirname, i)).sort(collator.compare);
+      files = files.filter((i) => ['.cbz', '.zip'].includes(path.extname(i))).map((i) => path.join(dirname, i)).sort(collator.compare);
     }
 
     showFileList(files, 'Reading List:');
   });
-  Mousetrap.bind(keyMap.starList, async function (e, combo) { // 显示星标列表
+  Mousetrap.bind(keyMap.starList, async (e, combo) => { // 显示星标列表
     const files = ipcRenderer.sendSync('store', 'get', 'star', []);
 
     showFileList(files, 'Star List:');
   });
-  Mousetrap.bind(keyMap.historyList, async function (e, combo) { // 显示历史列表
+  Mousetrap.bind(keyMap.historyList, async (e, combo) => { // 显示历史列表
     const lastViewTime = ipcRenderer.sendSync('store', 'get', 'lastViewTime', {});
-    let files = Object.keys(lastViewTime).map(key => ({ key, value: lastViewTime[key] }));
-    files = files.sort((a, b) => new Date(a.value).getTime() > new Date(b.value).getTime() ? -1 : 1).map(i => i.key);
+    let files = Object.keys(lastViewTime).map((key) => ({ key, value: lastViewTime[key] }));
+    files = files.sort((a, b) => (new Date(a.value).getTime() > new Date(b.value).getTime() ? -1 : 1)).map((i) => i.key);
 
     showFileList(files, 'History List:');
   });
@@ -1004,7 +999,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

@@ -1,5 +1,3 @@
-'use strict';
-
 const config = {
   loop: true, // 是否一直运行
   proxy: 'socks5://127.0.0.1:2345', // HTTP代理/SOCKS5代理
@@ -28,7 +26,7 @@ const config = {
     '7.Story arc',
     '8.Anthology',
     '9.Artist',
-    '10.Other'
+    '10.Other',
   ],
   subFolderDelete: 'X.Deleted',
   specialFolder: '#Star', // 特殊的子文件夹
@@ -37,7 +35,7 @@ const config = {
     mother: ['mother', 'aunt'],
     sister: ['sister', 'cousin', 'brother'],
     daughter: ['daughter', 'niece', 'father'],
-    granddaughter: ['granddaughter', 'grandfather']
+    granddaughter: ['granddaughter', 'grandfather'],
   },
   specialRule: [
     { // 旧版本(兼容)
@@ -51,7 +49,7 @@ const config = {
        * @when {string} => string
        * @when {function} => func(info)
        */
-      folder: 'Path to Directory' // empty or undefined means move to specialFolder, else move to a folder named this under specialFolder // when function(info) => string
+      folder: 'Path to Directory', // empty or undefined means move to specialFolder, else move to a folder named this under specialFolder // when function(info) => string
     },
 
     /**
@@ -66,7 +64,7 @@ const config = {
       result: move to "chinese,translated\同人\Fate\BB,Shielder,冲田总司,刑部姬,南丁格尔,圣女贞德,宫本武藏,斯卡哈,牛若丸,葛饰北斋,阿尔托莉雅·潘德拉贡"
      */
 
-    [['mode', 1], ['artist', 'example'], ['mode', 1], ['folder', 'Path to Directory']]
+    [['mode', 1], ['artist', 'example'], ['mode', 1], ['folder', 'Path to Directory']],
   ],
   commonRule: [
     // 格式同specialRule
@@ -74,11 +72,11 @@ const config = {
   ],
   parody: [{ // 重命名原作名
     name: 'example',
-    filter: 'example'
+    filter: 'example',
   }],
   removeCharacter: [ // 移除角色名
     'teitoku', // 提督
-    'producer' // 制作人
-  ]
+    'producer', // 制作人
+  ],
 };
 module.exports = config;

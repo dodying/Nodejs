@@ -13,7 +13,6 @@
 // usage: text []file
 
 // 设置
-const _ = require('./../config');
 
 // 导入原生模块
 // const path = require('path')
@@ -23,14 +22,15 @@ const JSZip = require('jszip');
 const fse = require('fs-extra');
 const readlineSync = require('readline-sync');
 const clipboardy = require('clipboardy');
+const _ = require('../config');
 
-const getTitleMain = require('./../js/getTitleMain');
-const parseInfo = require('./../js/parseInfo');
-const findData = require('./../js/findData');
+const getTitleMain = require('../js/getTitleMain');
+const parseInfo = require('../js/parseInfo');
+const findData = require('../js/findData');
 
 // Function
-const unique = arr => [...(new Set(arr))];
-const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
+const unique = (arr) => [...(new Set(arr))];
+const escape = (text) => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
 // const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '')
 
 // Main
@@ -49,7 +49,7 @@ const main = async () => {
     '[Group]Series-Parody-NoTitle': '\n[[\'folder\', \'./../0.Series/【#同人-!{parody:chs}】!{group:chs}\'], [\'mode\', 1], [\'parody\', \'!{parody}\'], [\'group\', \'!{group}\']],',
 
     Artist: '\n[[\'folder\', \'[#Artist]/!{artist:chs}\'], [\'!{artist}\']],',
-    '[Group]Artist': '\n[[\'folder\', \'[#Artist]/!{group:chs}\'], [\'group\', \'!{group}\']],'
+    '[Group]Artist': '\n[[\'folder\', \'[#Artist]/!{group:chs}\'], [\'group\', \'!{group}\']],',
   };
 
   const parodyAlias = [
@@ -79,7 +79,7 @@ const main = async () => {
     ['Free! 男子游泳部', 'Free'],
     ['请问您今天要来点兔子吗？', '点兔'],
     [/高达/, '高达'],
-    ['我的青春恋爱物语果然有问题', '俺春物']
+    ['我的青春恋爱物语果然有问题', '俺春物'],
   ];
 
   const varsRe = /!{(.*?)}/;
@@ -109,19 +109,19 @@ const main = async () => {
     const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
-    if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+    if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('压缩档内不存在info.txt: ', file);
       return new Error('no info.txt');
     }
 
     // 读取info.txt
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
     if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1);
     if (info.parody && info.parody.length === 0) delete info.parody;
-    if (info.parody && info.parody.some(i => _.parody.some(j => i.match(j.filter)))) {
-      info.parody = info.parody.map(i => {
+    if (info.parody && info.parody.some((i) => _.parody.some((j) => i.match(j.filter)))) {
+      info.parody = info.parody.map((i) => {
         for (let j = 0; j < _.parody.length; j++) {
           if (i.match(_.parody[j].filter)) return _.parody[j].name;
         }
@@ -130,9 +130,9 @@ const main = async () => {
       info.parody = unique(info.parody);
     }
 
-    toDeleteInfo.forEach(i => delete info[i]);
+    toDeleteInfo.forEach((i) => delete info[i]);
 
-    mainTag.forEach(i => {
+    mainTag.forEach((i) => {
       if (info[i]) {
         let arr = [];
         for (const j of info[i]) {
@@ -148,12 +148,12 @@ const main = async () => {
 
           if (!value) {
             value = j.split('|')[0].trim();
-            value = value.split(' ').map(i => `${i[0] ? i[0].toUpperCase() : ''}${i.slice(1)}`).join(' ');
-            value = value.split('-').map(i => `${i[0] ? i[0].toUpperCase() : ''}${i.slice(1)}`).join('-');
+            value = value.split(' ').map((i) => `${i[0] ? i[0].toUpperCase() : ''}${i.slice(1)}`).join(' ');
+            value = value.split('-').map((i) => `${i[0] ? i[0].toUpperCase() : ''}${i.slice(1)}`).join('-');
           }
           arr.push(value);
         }
-        info[i + ':chs'] = arr;
+        info[`${i}:chs`] = arr;
 
         arr = [];
         for (const j of info[i]) {
@@ -187,11 +187,11 @@ const main = async () => {
 
     if (!textCopy) {
       textCopy = '';
-      if (!info.artist || (info.artist.length >= 2 && info.group && info.group.length === 1)) textCopy += '[Group]';
-      textCopy += 'Series';
+      if (!info.artist || (info.artist.length >= 2 && info.group && info.group.length === 1)) textCopy = `${textCopy}[Group]`;
+      textCopy = `${textCopy}Series`;
       if (info.parody) {
         if (info.parody.length >= 2) info['parody:chs'] = 'Various';
-        textCopy += '-Parody';
+        textCopy = `${textCopy}-Parody`;
       }
     }
     if (textCopy in textLib) textCopy = textLib[textCopy];
@@ -217,7 +217,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

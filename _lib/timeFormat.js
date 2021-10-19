@@ -10,8 +10,6 @@
 // @Require:            null
 // ==/Headers==
 
-'use strict';
-
 module.exports = (time, format = 'yyyy-MM-dd HH:mm:ss') => {
   const date = new Date(time);
   const obj = {
@@ -21,7 +19,7 @@ module.exports = (time, format = 'yyyy-MM-dd HH:mm:ss') => {
 
     HH: date.getHours().toString().padStart(2, '0'),
     mm: date.getMinutes().toString().padStart(2, '0'),
-    ss: date.getSeconds().toString().padStart(2, '0')
+    ss: date.getSeconds().toString().padStart(2, '0'),
   };
   const re = new RegExp(`(${Object.keys(obj).join('|')})`, 'g');
   return format.replace(re, (matched, p1) => obj[p1]);

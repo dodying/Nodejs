@@ -32,9 +32,9 @@ const fse = require('fs-extra');
 const JSZip = require('jszip');
 // const readlineSync = require('readline-sync')
 
-const walk = require('./../../_lib/walk');
-const timeFormat = require('./../../_lib/timeFormat');
-const parseInfo = require('./../js/parseInfo');
+const walk = require('../../_lib/walk');
+const timeFormat = require('../../_lib/timeFormat');
+const parseInfo = require('../js/parseInfo');
 
 // Function
 const changeTime = async (file, btime, mtime) => {
@@ -66,16 +66,16 @@ const main = async () => {
   let [command, ...files] = process.argv.slice(2);
   // console.log({ command, files })
 
-  files = files.map(file => fse.statSync(file).isDirectory() ? [file].concat(walk(file)) : [file]);
+  files = files.map((file) => (fse.statSync(file).isDirectory() ? [file].concat(walk(file)) : [file]));
   files = [].concat(...files).filter((item, index, array) => array.indexOf(item) === index);
 
-  const folders = files.filter(file => fse.statSync(file).isDirectory()).sort((a, b) => a.split('\\').length > b.split('\\').length ? -1 : a.split('\\').length === b.split('\\').length ? 0 : 1).map(i => i.replace(/\\+$/, ''));
-  files = files.filter(file => fse.statSync(file).isFile() && ['.jpg', '.cbz'].includes(path.extname(file))).sort((a, b) => path.extname(a) === '.cbz' ? -1 : 1);
+  const folders = files.filter((file) => fse.statSync(file).isDirectory()).sort((a, b) => (a.split('\\').length > b.split('\\').length ? -1 : a.split('\\').length === b.split('\\').length ? 0 : 1)).map((i) => i.replace(/\\+$/, ''));
+  files = files.filter((file) => fse.statSync(file).isFile() && ['.jpg', '.cbz'].includes(path.extname(file))).sort((a, b) => (path.extname(a) === '.cbz' ? -1 : 1));
 
   for (const file of files) {
     if (path.extname(file) === '.jpg') {
       const info = path.parse(file);
-      const cbzFile = path.join(info.dir, info.name + '.cbz');
+      const cbzFile = path.join(info.dir, `${info.name}.cbz`);
       if (!fse.existsSync(cbzFile)) continue;
       const cbzFileInfo = fse.statSync(cbzFile);
       await changeTime(file, cbzFileInfo.birthtime, cbzFileInfo.mtime);
@@ -98,13 +98,13 @@ const main = async () => {
     const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
-    if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+    if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('压缩档内不存在info.txt: ', file);
       return new Error('no info.txt');
     }
 
     // 读取info.txt
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
 
@@ -112,20 +112,20 @@ const main = async () => {
   }
 
   for (const folder of folders) {
-    const files = fse.readdirSync(folder).map(file => path.join(folder, file)).filter(file => ['.cbz'].includes(path.extname(file)));
+    const files = fse.readdirSync(folder).map((file) => path.join(folder, file)).filter((file) => ['.cbz'].includes(path.extname(file)));
     if (files.length === 0) {
       await changeTime(folder, '2010-01-01 00:00:00', '2010-01-01 00:00:00');
       continue;
     }
 
-    const infos = files.map(file => fse.statSync(file));
-    const btime = infos.map(info => info.birthtimeMs).sort().reverse()[0];
+    const infos = files.map((file) => fse.statSync(file));
+    const btime = infos.map((info) => info.birthtimeMs).sort().reverse()[0];
     let mtime;
 
     if (command === 'now') {
       mtime = new Date();
     } else if (command === 'dl') {
-      mtime = infos.map(info => info.mtimeMs).sort().reverse()[0];
+      mtime = infos.map((info) => info.mtimeMs).sort().reverse()[0];
     } else if (command === 'old') {
       mtime = '2010-01-01 00:00:00';
     } else {
@@ -137,7 +137,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

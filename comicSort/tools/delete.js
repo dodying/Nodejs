@@ -12,7 +12,8 @@
 // usage: []file
 
 // 设置
-const _ = require('./../config');
+const _ = require('../config');
+
 const extensions = ['.cbz', '.jpg', '.zip', '.png'];
 
 // 导入原生模块
@@ -30,10 +31,10 @@ const JSZip = require('jszip');
 
 // Main
 const main = async () => {
-  const list = process.argv.splice(2).filter(i => extensions.includes(path.parse(i).ext));
+  const list = process.argv.splice(2).filter((i) => extensions.includes(path.parse(i).ext));
   for (const i of list) {
     const fullpath = path.resolve(process.cwd(), i);
-    const name = path.parse(fullpath).name;
+    const { name } = path.parse(fullpath);
 
     if (!fullpath.match('ComicLibrary') && !readlineSync.keyInYNStrict('Continue to delete?')) continue;
 
@@ -42,19 +43,19 @@ const main = async () => {
     const confirm = readlineSync.keyInYNStrict('Delete it?');
     if (confirm) {
       if (['.zip', '.cbz'].includes(path.extname(fullpath))) {
-        const pathnew = path.resolve(deletedPath, name + '.cbz');
+        const pathnew = path.resolve(deletedPath, `${name}.cbz`);
         try {
           const targetData = fs.readFileSync(fullpath);
           const jszip = new JSZip();
           const zip = await jszip.loadAsync(targetData);
-          const fileList = Object.keys(zip.files).filter(i => !i.match(/(info.txt|\/)$/));
+          const fileList = Object.keys(zip.files).filter((i) => !i.match(/(info.txt|\/)$/));
           for (const i of fileList) zip.remove(i);
           const content = await zip.generateAsync({
             type: 'nodebuffer',
             compression: 'DEFLATE',
             compressionOptions: {
-              level: 9
-            }
+              level: 9,
+            },
           });
           fs.writeFileSync(pathnew, content);
         } catch (error) {
@@ -69,7 +70,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   readlineSync.keyInPause();
   process.exit();

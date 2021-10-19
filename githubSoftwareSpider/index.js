@@ -10,17 +10,18 @@
 // @Require:            null
 // ==/Headers==
 
+const fs = require('fs');
 const config = require('./config');
 
 // 导入原生模块
-const fs = require('fs');
 // const url = require('fs')
 // const path = require('path');
 
 // 导入第三方模块
-const req = require('./../_lib/req');
+const req = require('../_lib/req');
+
 req.config.init(config.req);
-require('./../_lib/log').hack();
+require('../_lib/log').hack();
 
 // Main
 let database;
@@ -51,13 +52,13 @@ const main = async () => {
       wait: {
         repo: [],
         user: [],
-        star: ['dodying']
+        star: ['dodying'],
       },
       done: {
         repo: [],
         user: [],
-        star: []
-      }
+        star: [],
+      },
     };
   }
 
@@ -69,7 +70,7 @@ const main = async () => {
     if (database.wait.repo.length) {
       const repos = database.wait.repo.slice(0, config.thread);
       console.time('request');
-      const reses = await Promise.allSettled(repos.map(repo => {
+      const reses = await Promise.allSettled(repos.map((repo) => {
         if (database.done.repo.includes(repo)) return true;
         return req(`https://api.github.com/repos/${repo}/releases`);
       }));
@@ -91,12 +92,10 @@ const main = async () => {
             exit = true;
             continue;
           }
+        } else if (config.releaseFilter) {
+          if (res.json.some(config.releaseFilter)) fs.appendFileSync('repo.txt', `\n${repo}`);
         } else {
-          if (config.releaseFilter) {
-            if (res.json.some(config.releaseFilter)) fs.appendFileSync('repo.txt', `\n${repo}`);
-          } else {
-            fs.appendFileSync('repo.txt', `\n${repo}`);
-          }
+          fs.appendFileSync('repo.txt', `\n${repo}`);
         }
         database.done.repo.push(repo);
         if (database.wait.repo.includes(repo)) database.wait.repo.splice(database.wait.repo.indexOf(repo), 1);
@@ -114,7 +113,7 @@ const main = async () => {
           } else {
             let repos = res.json;
             if (config.repoFilter) repos = repos.filter(config.repoFilter);
-            database.wait.repo.push(...repos.map(i => i.full_name));
+            database.wait.repo.push(...repos.map((i) => i.full_name));
             if (res.json.length >= 100) {
               page++;
             } else {
@@ -138,9 +137,9 @@ const main = async () => {
           } else {
             let repos = res.json;
             if (config.repoFilter) repos = repos.filter(config.repoFilter);
-            database.wait.repo.push(...repos.map(i => i.full_name));
+            database.wait.repo.push(...repos.map((i) => i.full_name));
 
-            const users = res.json.map(i => i.owner.login);
+            const users = res.json.map((i) => i.owner.login);
             database.wait.user.push(...users);
             database.wait.star.push(...users);
             if (res.json.length >= 100) {
@@ -159,7 +158,7 @@ const main = async () => {
 };
 
 try {
-  process.once('SIGINT', function () {
+  process.once('SIGINT', () => {
     doExit(false);
     console.log('SIGINT');
     process.exit();
@@ -167,7 +166,7 @@ try {
 
   main().then(async () => {
     doExit();
-  }, async err => {
+  }, async (err) => {
     console.error(err);
 
     doExit();

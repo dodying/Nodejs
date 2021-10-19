@@ -21,23 +21,23 @@ const { app, BrowserWindow } = require('electron');
 // require('electron-reload')(path.join(__dirname, 'src'))
 
 // Function
-var mainWindow = null;
+let mainWindow = null;
 app.allowRendererProcessReuse = false;
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
 });
 
-app.on('ready', function () {
+app.on('ready', () => {
   mainWindow = new BrowserWindow({
     width: 800,
     height: 600,
     show: false,
     webPreferences: {
-      nodeIntegration: true
-    }
+      nodeIntegration: true,
+    },
   });
 
   mainWindow.loadURL(path.resolve(__dirname, './src/index.html'));
@@ -49,7 +49,7 @@ app.on('ready', function () {
     mainWindow.show();
   });
 
-  mainWindow.on('closed', function () {
+  mainWindow.on('closed', () => {
     mainWindow = null;
   });
 });

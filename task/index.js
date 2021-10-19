@@ -13,17 +13,17 @@
 //   mode: one of "userjs"/"nodejs"/"deno"/"bookmarklet"
 
 // 设置
-const _ = require('./config');
 
 // 导入原生模块
 const fs = require('fs');
 const cp = require('child_process');
 const path = require('path');
-const replaceWithDict = require('./../_lib/replaceWithDict');
+const clipboardy = require('clipboardy');
+const replaceWithDict = require('../_lib/replaceWithDict');
 
 // 导入第三方模块
 // const inquirer = require('inquirer');
-const clipboardy = require('clipboardy');
+const _ = require('./config');
 
 // Function
 // const getVar = async name => {
@@ -39,26 +39,24 @@ const clipboardy = require('clipboardy');
 //   }
 //   return _[name];
 // };
-const spawnSync = (...argsForSpwan) => {
-  return new Promise(resolve => {
-    const child = cp.spawn(...argsForSpwan);
-    child.stdout.pipe(process.stdout);
-    child.stderr.pipe(process.stderr);
-    child.on('exit', function (code) {
-      let end;
-      if (code.toString() !== '0') {
-        end = 'error';
-        console.error(`Command:\t${argsForSpwan[0]}\nCommand Args:${argsForSpwan[1].map(i => `{${i}}`).join(', ')}\nExit Code:\t${code.toString()}`);
-      } else {
-        end = true;
-      }
-      resolve(end);
-    });
+const spawnSync = (...argsForSpwan) => new Promise((resolve) => {
+  const child = cp.spawn(...argsForSpwan);
+  child.stdout.pipe(process.stdout);
+  child.stderr.pipe(process.stderr);
+  child.on('exit', (code) => {
+    let end;
+    if (code.toString() !== '0') {
+      end = 'error';
+      console.error(`Command:\t${argsForSpwan[0]}\nCommand Args:${argsForSpwan[1].map((i) => `{${i}}`).join(', ')}\nExit Code:\t${code.toString()}`);
+    } else {
+      end = true;
+    }
+    resolve(end);
   });
-};
+});
 
 // Main
-async function init () {
+async function init() {
   const argv = process.argv.splice(2);
   console.log(argv);
   const mode = argv[0];
@@ -121,7 +119,7 @@ async function init () {
         } else if (key === 'Modified') {
           arr[i] = `${pre}@${key}:${space}${_.nowStr}`;
         } else if (key === 'Require') {
-          let libs = arr.map(i => {
+          let libs = arr.map((i) => {
             if (i.match(/require\(.*?\)/)) {
               i = i.match(/require\((.*?)\)/)[1];
             } else {
@@ -134,15 +132,14 @@ async function init () {
             }
             if (i.match(/\.\//)) {
               return null;
-            } else if (i.match('/')) {
+            } if (i.match('/')) {
               i = i.split('/')[0];
             }
             if (_.nativeModule.includes(i)) {
               return null;
-            } else {
-              return i;
             }
-          }).filter(i => i);
+            return i;
+          }).filter((i) => i);
           if (libs.length === 0) libs = ['null'];
           arr[i] = `${pre}@${key}:${space}${libs.sort().join(',')}`;
         } else if (key === 'task-next-line') {
@@ -158,11 +155,11 @@ async function init () {
     }
   } else if (mode === 'bookmarklet') {
     const { dir, name } = path.parse(item);
-    const minified = path.join(dir, name + '.min.js');
+    const minified = path.join(dir, `${name}.min.js`);
 
     // 使用encodeURIComponent压缩
     const content = fs.readFileSync(item);
-    const minifiedContent = 'javascript:' + encodeURIComponent('(function (){' + content + '})()');
+    const minifiedContent = `javascript:${encodeURIComponent(`(function (){${content}})()`)}`;
     fs.writeFileSync(minified, minifiedContent);
 
     clipboardy.writeSync(minifiedContent);

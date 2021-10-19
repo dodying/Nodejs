@@ -19,54 +19,55 @@ const _ = {
   nocover: 'E:\\Desktop\\_\\GitHub\\Nodejs\\movieFinder\\nocover.svg',
   datalist: ['女仆', '妹妹', '乱伦', '美少女', '高中女生', '艺人', '内衣', '角色扮演', '三上悠亜',
     '明里つむぎ', '橋本ありな', '佐々波綾'],
-  reserve: ['rating', 'tag', 'actor']
-}
+  reserve: ['rating', 'tag', 'actor'],
+};
 
 // 导入原生模块
-const fs = require('fs')
-const path = require('path')
+const fs = require('fs');
+const path = require('path');
 
 // 导入第三方模块
-const glob = require('glob')
-const XML = require('pixl-xml')
+const glob = require('glob');
+const XML = require('pixl-xml');
 
 //
-const infoParse = text => {
-  let info = XML.parse(text)
-  for (let i in info) {
-    if (!_['reserve'].includes(i)) {
-      delete info[i]
+const infoParse = (text) => {
+  const info = XML.parse(text);
+  for (const i in info) {
+    if (!_.reserve.includes(i)) {
+      delete info[i];
     } else if (i === 'actor') {
       if (info[i] instanceof Array) {
-        info[i] = info[i].map(i => i.name)
+        info[i] = info[i].map((i) => i.name);
       } else if (info[i] instanceof Object) {
-        info[i] = info[i].name
+        info[i] = info[i].name;
       }
     }
   }
-  return info
-}
+  return info;
+};
 
-let lst = []
-_['database'].forEach(i => {
-  lst = lst.concat(glob.sync('**\\*.@(' + _['video'].join('|') + ')'), {
-    cwd: path.resolve(i)
-  })
-})
-console.log(lst.length)
+let lst = [];
+_.database.forEach((i) => {
+  lst = lst.concat(glob.sync(`**\\*.@(${_.video.join('|')})`), {
+    cwd: path.resolve(i),
+  });
+});
+console.log(lst.length);
 lst = lst
-  .map(i => path.parse(i))
-  .map(i => Object.assign({
+  .map((i) => path.parse(i))
+  .map((i) => ({
     file: path.resolve(i.dir, i.base),
-    cover: path.resolve(i.dir, i.name + '.jpg'),
-    info: path.resolve(i.dir, i.name + '.nfo')
-  }, i))
-  .map(i => fs.existsSync(i['info']) ? Object.assign(infoParse(fs.readFileSync(i['info'], 'utf-8')), i) : i)
+    cover: path.resolve(i.dir, `${i.name}.jpg`),
+    info: path.resolve(i.dir, `${i.name}.nfo`),
+    ...i,
+  }))
+  .map((i) => (fs.existsSync(i.info) ? Object.assign(infoParse(fs.readFileSync(i.info, 'utf-8')), i) : i));
 
-let info = lst.map(i => `<li info="${JSON.stringify(i, ['rating', 'tag', 'actor', 'name']).replace(/"/g, '\'')}"><span><img class="cover" data-src="${fs.existsSync(i['cover']) ? `${i['cover']}` : _['nocover']}"></img><input class="copy" value="${i['sorttitle'] || i['name']}" type="text"></span></li>`).join('')
-let datalist = _['datalist'].map(i => `<option>${i}</option>`)
+const info = lst.map((i) => `<li info="${JSON.stringify(i, ['rating', 'tag', 'actor', 'name']).replace(/"/g, '\'')}"><span><img class="cover" data-src="${fs.existsSync(i.cover) ? `${i.cover}` : _.nocover}"></img><input class="copy" value="${i.sorttitle || i.name}" type="text"></span></li>`).join('');
+const datalist = _.datalist.map((i) => `<option>${i}</option>`);
 
-let html = `<!DOCTYPE html><html>
+const html = `<!DOCTYPE html><html>
 <head>
   <title>movieFinder</title>
   <script src="https://rawgit.com/tuupola/jquery_lazyload/2.x/lazyload.js"></script>
@@ -186,5 +187,5 @@ let html = `<!DOCTYPE html><html>
     });
   </script>
 </body>
-</html>`
-fs.writeFileSync(_['output'], html)
+</html>`;
+fs.writeFileSync(_.output, html);

@@ -23,27 +23,28 @@
 //  "" (empty) => 重新生成 info.txt
 
 // 设置
-const _ = require('./../config');
 
 // 导入原生模块
 const fs = require('fs');
 const cp = require('child_process');
-const parseInfo = require('./../js/parseInfo');
 const path = require('path');
 
 // 导入第三方模块
 const JSZip = require('jszip');
 const readlineSync = require('readline-sync');
 const entities = require('entities');
+const parseInfo = require('../js/parseInfo');
+const _ = require('../config');
 
-const req = require('./../../_lib/req');
+const req = require('../../_lib/req');
+
 req.config.init({
   proxy: _.proxy,
-  withProxy: ['://e[x-]hentai.org']
+  withProxy: ['://e[x-]hentai.org'],
 });
-const fullWidth2Half = require('./../../_lib/fullWidth2Half');
-const removeOtherInfo = require('./../js/removeOtherInfo');
-require('./../../_lib/log').hack();
+const fullWidth2Half = require('../../_lib/fullWidth2Half');
+const removeOtherInfo = require('../js/removeOtherInfo');
+require('../../_lib/log').hack();
 
 // Function
 const digitalRomaji = {
@@ -57,17 +58,18 @@ const digitalRomaji = {
   7: [['nana', 'shichi', 'vii'], ['7', '７', '七', '柒', '漆']],
   8: [['hachi', 'viii'], ['8', '８', '八', '捌']],
   9: [['kyuu', 'kyu', 'ix'], ['9', '９', '九', '玖']],
-  10: [['jyuu', 'jyu', 'juu', 'ju', 'x'], ['10', '１０', '十', '拾']]
+  10: [['jyuu', 'jyu', 'juu', 'ju', 'x'], ['10', '１０', '十', '拾']],
 };
 
 const changeTitle = (text, titleJp) => {
-  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>]/g, '-').replace(/\s+/g, ' ').trim();
+  const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>]/g, '-').replace(/\s+/g, ' ')
+    .trim();
 
   // 去除标题中首尾的信息，如作者，组织，原作，语言，翻译组
   let mainTitleJp = removeOtherInfo(titleJp);
   mainTitleJp = removeOtherInfo(mainTitleJp, true);
 
-  let digitalRomajiJpRe = Object.values(digitalRomaji).map(i => i[1].join('|')).join('|');
+  let digitalRomajiJpRe = Object.values(digitalRomaji).map((i) => i[1].join('|')).join('|');
   digitalRomajiJpRe = new RegExp(`(${digitalRomajiJpRe})(\\W+|$)`);
 
   if (!mainTitleJp.match(digitalRomajiJpRe)) return title;
@@ -87,11 +89,11 @@ const changeTitle = (text, titleJp) => {
     let re = digitalRomaji[10][0].join('|');
     re = new RegExp(`(${re})`, 'i');
     if (text.match(re)) {
-      const arr = text.split(re).filter(i => i);
+      const arr = text.split(re).filter((i) => i);
       if (arr.length > 1) {
-        let digitalRomajiRe = Object.values(digitalRomaji).map(i => i[0].join('|')).join('|');
+        let digitalRomajiRe = Object.values(digitalRomaji).map((i) => i[0].join('|')).join('|');
         digitalRomajiRe = new RegExp(`(\\W+|^)(${digitalRomajiRe})(\\W+|$)`, 'i');
-        if (arr.every(j => j.match(digitalRomajiRe))) {
+        if (arr.every((j) => j.match(digitalRomajiRe))) {
           mianTitleArr.splice(i, 1, ...arr.reverse());
           i--;
           continue;
@@ -105,7 +107,7 @@ const changeTitle = (text, titleJp) => {
       re = new RegExp(`^(${re})(\\W+|$)`, 'i');
       if (!text.match(re)) continue;
       matched = true;
-      mianTitleArr[i] = text.replace(re, digitalRomaji[j][1][0] + '$2');
+      mianTitleArr[i] = text.replace(re, `${digitalRomaji[j][1][0]}$2`);
 
       if (i > 0 && mianTitleArr[i].match(/^\d+$/) && mianTitleArr[i - 1].match(/^(\d+)(\W+)$/)) {
         const number1 = mianTitleArr[i] * 1;
@@ -127,7 +129,7 @@ const changeTitle = (text, titleJp) => {
 
 // Main
 const main = async () => {
-  var [command, ...files] = process.argv.slice(2);
+  const [command, ...files] = process.argv.slice(2);
   // command = 'add misc: multi-work series';
   // command = 'reInfo';
   // files = require('./../../_lib/walk')('F:\\H\\###ComicLibrary1', {
@@ -163,13 +165,13 @@ const main = async () => {
     const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
-    if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+    if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('Warn:\t压缩档内不存在info.txt');
       return new Error('no info.txt');
     }
 
     // 读取info.txt
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
 
@@ -183,8 +185,8 @@ const main = async () => {
         body: JSON.stringify({
           method: 'gdata',
           gidlist: [[pram[4] * 1, pram[5]]],
-          namespace: 1
-        })
+          namespace: 1,
+        }),
       });
       let json;
       try {
@@ -209,8 +211,8 @@ const main = async () => {
       infoNew.Posted = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
 
       infoNew.Visible = json.expunged ? 'No' : 'Yes';
-      infoNew.Length = json.filecount + ' pages';
-      infoNew['File Size'] = Math.round(json.filesize * 100 / 1024 / 1024) / 100 + ' MB';
+      infoNew.Length = `${json.filecount} pages`;
+      infoNew['File Size'] = `${Math.round(json.filesize * 100 / 1024 / 1024) / 100} MB`;
       infoNew.Rating = json.rating;
 
       for (const tag of json.tags) {
@@ -222,7 +224,7 @@ const main = async () => {
 
       if (command.match(/reInfo\s+(no|only):\s*(.*)/)) {
         let [, mode, keys] = command.match(/reInfo\s+(no|only):\s*(.*)/);
-        keys = keys.split(',').map(i => i.trim());
+        keys = keys.split(',').map((i) => i.trim());
         const withTags = keys.includes('tags');
         for (const i in infoNew) {
           const keysIncludes = keys.includes(i);
@@ -251,11 +253,11 @@ const main = async () => {
       console.log({ main, sub });
       if (main in info && info[main].indexOf(sub) >= 0) info[main].splice(info[main].indexOf(sub), 1);
     } else if (command.match(/^view/)) {
-      toDeleteInfo.forEach(i => delete info[i]);
+      toDeleteInfo.forEach((i) => delete info[i]);
 
       if (command.match(/view\s+(no|only):\s*(.*)/)) {
         let [, mode, keys] = command.match(/view\s+(no|only):\s*(.*)/);
-        keys = keys.split(',').map(i => i.trim());
+        keys = keys.split(',').map((i) => i.trim());
         const withTags = keys.includes('tags');
         for (const i in info) {
           const keysIncludes = keys.includes(i);
@@ -282,14 +284,14 @@ const main = async () => {
 
     const infoArr = [];
 
-    mainInfo.forEach(i => infoArr.push(info[i]));
+    mainInfo.forEach((i) => infoArr.push(info[i]));
     infoArr.push('');
 
-    otherInfo.forEach(i => infoArr.push(`${i}: ${info[i]}`));
+    otherInfo.forEach((i) => infoArr.push(`${i}: ${info[i]}`));
     infoArr.push('');
 
     infoArr.push('Tags:');
-    mainTag.forEach(main => {
+    mainTag.forEach((main) => {
       if (main in info && info[main].length) infoArr.push(`> ${main}: ${info[main].sort().join(', ')}`);
     });
     infoArr.push('');
@@ -310,8 +312,8 @@ const main = async () => {
         type: 'nodebuffer',
         compression: 'DEFLATE',
         compressionOptions: {
-          level: 9
-        }
+          level: 9,
+        },
       });
       fs.writeFileSync(file, content);
     } catch (error) {
@@ -329,7 +331,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

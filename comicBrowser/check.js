@@ -18,12 +18,12 @@ const resultLimit = 20;
 const rowFilterRaw = ['title', 'size', 'pages', 'web'];
 let rowFilter = [...rowFilterRaw];
 const validator = {
-  set: function (obj, prop, value) {
+  set(obj, prop, value) {
     if (rowFilter.includes(prop)) {
       obj[prop] = value;
     }
     return true;
-  }
+  },
 };
 
 let config = {};
@@ -33,7 +33,7 @@ let connectionLastTime = null;
 const connectionTimeout = 5 * 60 * 1000;
 const lastConnection = {
   info: {},
-  result: []
+  result: [],
 };
 let connecting = false;
 
@@ -46,16 +46,16 @@ const mysql = require('mysql2/promise');
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const waitInMs = require('./../_lib/waitInMs');
+const waitInMs = require('../_lib/waitInMs');
 
 // Function
-function diff (t1, t2) { // ignore case
+function diff(t1, t2) { // ignore case
   t1 = t1.replace(/\s+/g, ' ');
   t2 = t2.replace(/\s+/g, ' ');
-  const arr1 = t1.split(/([[\](){}\s])/).filter(i => i); // 不变
-  const arr2 = t2.split(/([[\](){}\s])/).filter(i => i); // 变
-  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
-  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
+  const arr1 = t1.split(/([[\](){}\s])/).filter((i) => i); // 不变
+  const arr2 = t2.split(/([[\](){}\s])/).filter((i) => i); // 变
+  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/).filter((i) => i);
+  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/).filter((i) => i);
   const result = [];
   for (let i = 0; i < arr1Up.length; i++) {
     if (arr2Up.includes(arr1Up[i])) {
@@ -96,7 +96,7 @@ const createConnection = async (obj) => {
   lastConnection.info = {
     host: obj.host,
     user: obj.user,
-    password: obj.password
+    password: obj.password,
   };
 
   console.log('re-connection');
@@ -112,9 +112,9 @@ const createConnection = async (obj) => {
       user: obj.user,
       password: obj.password,
       keepAliveInitialDelay: 10000,
-      enableKeepAlive: true
+      enableKeepAlive: true,
     });
-    connection.on('error', function (err) {
+    connection.on('error', (err) => {
       if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
         createConnection(obj);
       } else {
@@ -126,26 +126,24 @@ const createConnection = async (obj) => {
     if (error.message.match('Too many connections')) {
       connecting = false;
       return createConnection(obj);
-    } else {
-      console.log({ err: error, msg: error.message });
-      connection = null;
-      connecting = false;
-      connectionLastTime = null;
-      return ['Connection Failed, please check info', -1];
     }
+    console.log({ err: error, msg: error.message });
+    connection = null;
+    connecting = false;
+    connectionLastTime = null;
+    return ['Connection Failed, please check info', -1];
   }
 
   const [rows] = await connection.query('SHOW DATABASES');
 
-  if (rows.filter(i => i.Database === obj.database).length) {
+  if (rows.filter((i) => i.Database === obj.database).length) {
     await connection.query(`USE ${obj.database}`);
     connecting = false;
     return ['Connection Success, and you can update', 1];
-  } else {
-    connecting = false;
-    connectionLastTime = null;
-    return ['Connection Success, but you need to init', 0];
   }
+  connecting = false;
+  connectionLastTime = null;
+  return ['Connection Success, but you need to init', 0];
 };
 const query = async (list, column = 'title') => {
   if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config);
@@ -158,24 +156,24 @@ const query = async (list, column = 'title') => {
     const outNow = [];
     await new Promise((resolve, reject) => {
       for (let i = 0; i < now.length; i++) {
-        const segment = [].concat(now[i]).map(i => `${column} LIKE '%${i.replace(/[%_\\']/g, '\\$&')}%'`).join(' AND ');
+        const segment = [].concat(now[i]).map((i) => `${column} LIKE '%${i.replace(/[%_\\']/g, '\\$&')}%'`).join(' AND ');
         connection.query(`SELECT * FROM files WHERE ${segment} LIMIT ${queryLimit}`).then((result) => {
           result = result[0];
           if (result.length > resultLimit) {
             console.log(result.length);
             const name = [].concat(now[i]).join(' ');
             result = result.sort((a, b) => {
-              const la = diff(a[column], name).map(i => i[0] ? i[1].length : 0).reduce((a, b) => a + b, 0);
-              const lb = diff(b[column], name).map(i => i[0] ? i[1].length : 0).reduce((a, b) => a + b, 0);
+              const la = diff(a[column], name).map((i) => (i[0] ? i[1].length : 0)).reduce((a, b) => a + b, 0);
+              const lb = diff(b[column], name).map((i) => (i[0] ? i[1].length : 0)).reduce((a, b) => a + b, 0);
               return Math.abs(la) - Math.abs(lb);
             }).slice(0, resultLimit);
           }
-          outNow[i] = result.map(i => Object.assign(new Proxy({}, validator), i));
+          outNow[i] = result.map((i) => Object.assign(new Proxy({}, validator), i));
         }).catch((err) => {
           console.log(err);
           outNow[i] = [];
         }).finally(() => {
-          if (outNow.filter(i => i).length === now.length) resolve();
+          if (outNow.filter((i) => i).length === now.length) resolve();
         });
       }
     });
@@ -198,10 +196,10 @@ const main = async () => {
 
   const app = express();
   app.use(bodyParser.urlencoded({
-    extended: false
+    extended: false,
   }));
 
-  app.all('*', function (req, res, next) {
+  app.all('*', (req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Headers', 'X-Requested-With');
     res.header('Access-Control-Allow-Methods', 'PUT,POST,GET,DELETE,OPTIONS');
@@ -215,14 +213,14 @@ const main = async () => {
       const lst = await query(req.query.name);
       console.log('GET /', req.query, lst);
       res.writeHead(200, {
-        'Content-Type': 'application/json;charset=utf-8'
+        'Content-Type': 'application/json;charset=utf-8',
       });
       res.end(JSON.stringify(lst, null, 2));
     } else {
       console.log('GET /');
       const html = `<html><body><form method="post" action="http://localhost:${port}">Name: <input type="text" name="name" /><input type="submit" value="Submit" /></form></body>`;
       res.writeHead(200, {
-        'Content-Type': 'text/html;charset=utf-8'
+        'Content-Type': 'text/html;charset=utf-8',
       });
       res.end(html);
     }
@@ -238,25 +236,25 @@ const main = async () => {
       let names = JSON.parse(req.body.names);
       names.length = Object.keys(names).length;
       names = Array.from(names);
-      names = names.map(i => i.split(','));
+      names = names.map((i) => i.split(','));
 
       console.log('POST /', JSON.stringify(names, null, 2));
       lst = await query(names, column);
     }
-    console.log('RESPONSE /', lst.map(i => i.length));
+    console.log('RESPONSE /', lst.map((i) => i.length));
     res.writeHead(200, {
-      'Content-Type': 'application/json;charset=utf-8'
+      'Content-Type': 'application/json;charset=utf-8',
     });
     res.end(JSON.stringify(lst, null, 2));
   });
 
   app.listen(port);
-  console.log('Listening at http://localhost:' + port);
+  console.log(`Listening at http://localhost:${port}`);
 };
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

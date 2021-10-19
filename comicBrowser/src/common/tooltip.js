@@ -11,11 +11,9 @@
 // ==/Headers==
 /* global Mousetrap, $ */
 
-'use strict';
-
 let lastTooltip = null;
 
-const main = function tooltip (option = {}, content) {
+const main = function tooltip(option = {}, content) {
   Mousetrap.pause();
   if (lastTooltip) lastTooltip.close();
   if (typeof option === 'string') {
@@ -28,7 +26,7 @@ const main = function tooltip (option = {}, content) {
     Mousetrap.unpause();
   }
   return new Promise((resolve, reject) => {
-    lastTooltip = $.confirm(Object.assign({
+    lastTooltip = $.confirm({
       theme: 'banner',
       boxWidth: '50%',
       useBootstrap: false,
@@ -39,20 +37,21 @@ const main = function tooltip (option = {}, content) {
         ok: {
           text: 'OK',
           btnClass: 'btn-blue',
-          keys: ['enter']
-        }
+          keys: ['enter'],
+        },
       },
-      onClose: function () {
+      onClose() {
         resolve();
         lastTooltip = null;
         Mousetrap.unpause();
       },
-      onAction: function (btn) {
+      onAction(btn) {
         resolve(btn);
         lastTooltip = null;
         Mousetrap.unpause();
-      }
-    }, option));
+      },
+      ...option,
+    });
   });
 };
 module.exports = main;

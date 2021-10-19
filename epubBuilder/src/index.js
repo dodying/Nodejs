@@ -12,12 +12,12 @@
 /* global $ */
 /* global tranStr */
 
-var CONFIG = {
-  workDir: process.cwd()
+let CONFIG = {
+  workDir: process.cwd(),
   // defaultAuthor
   // nativeCover
 };
-var THIS = {
+let THIS = {
   // files 工作路径下的txt文件集
   // title 标题
   // content 工作路径下的首个txt文件的内容，或选择的文件的内容
@@ -28,14 +28,14 @@ const numberLib = {
   '１': '\\.０-９',
   一: '点零一二两三四五六七八九十卅百千万廿卅上中下',
   壹: '点點零壹贰叁参肆伍陆柒捌玖拾佰仟萬上中下',
-  '①': '〇①-⒛'
+  '①': '〇①-⒛',
 };
 numberLib['1１'] = numberLib['1'] + numberLib['１'];
 numberLib['一壹'] = numberLib['一'] + numberLib['壹'];
 numberLib['-1'] = numberLib['1１'] + numberLib['一壹'] + numberLib['①'];
 
 const suffixLib = {
-  '-1': '章回节集卷部话篇季'
+  '-1': '章回节集卷部话篇季',
 };
 
 const prefixLib = {};
@@ -48,19 +48,20 @@ const path = require('path');
 const archiver = require('archiver');
 const chardet = require('chardet');
 const iconv = require('iconv-lite');
+
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 // const numberFormat = new Intl.NumberFormat();
 
 // Function
-function wordSection (mode, word) { // 文本强制分段-测试功能
+function wordSection(mode, word) { // 文本强制分段-测试功能
   const symbol = {
     lineEnd: '。？！”」』', // 句子结尾
     lineStart: '“「『', // 句子开头
-    unbreak: '…，、—（）()·《 》〈 〉．_；：' // 不包括作为句子开头的标点 //作用是找到【需要断句的标点】后，不断判断之后的字符是否为标点，是则继续找，不是则断句
+    unbreak: '…，、—（）()·《 》〈 〉．_；：', // 不包括作为句子开头的标点 //作用是找到【需要断句的标点】后，不断判断之后的字符是否为标点，是则继续找，不是则断句
   };
-  const reLineEnd = new RegExp('[' + symbol.lineEnd + ']');
-  const reLineStart = new RegExp('[' + symbol.lineStart + ']');
-  const reUnbreak = new RegExp('[' + symbol.unbreak + ']');
+  const reLineEnd = new RegExp(`[${symbol.lineEnd}]`);
+  const reLineStart = new RegExp(`[${symbol.lineStart}]`);
+  const reUnbreak = new RegExp(`[${symbol.unbreak}]`);
   if (mode.includes('all')) word = word.replace(/([\r\n]+\s+)/g, '').replace(/[\r\n]+/g, '');
   const arr = word.split(/[\r\n]+/);
 
@@ -72,7 +73,7 @@ function wordSection (mode, word) { // 文本强制分段-测试功能
         j++;
         lastWord = arr[j].substr(-1, 1);
       }
-      arr.splice(i, j - i + 1, arr.slice(i, j + 1).map(i => i.trim()).join(''));
+      arr.splice(i, j - i + 1, arr.slice(i, j + 1).map((i) => i.trim()).join(''));
     }
   }
 
@@ -99,7 +100,7 @@ function wordSection (mode, word) { // 文本强制分段-测试功能
   return arr.join('\r\n').replace(/\r\n\s+/g, '\r\n').replace(/[\r\n]+/g, '\r\n　　');
 }
 
-function regexpEscape (text) {
+function regexpEscape(text) {
   return text.replace(/[\^$*+?.|(){}[\]]/g, '\\$&');
 }
 
@@ -145,7 +146,7 @@ const funcStart = () => {
 
   // 设置本地参数
   let files;
-  files = fs.existsSync(CONFIG.workDir) ? fs.readdirSync(CONFIG.workDir).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).sort(collator.compare) : [];
+  files = fs.existsSync(CONFIG.workDir) ? fs.readdirSync(CONFIG.workDir).filter((file) => ['.txt'].includes(path.extname(file).toLowerCase())).sort(collator.compare) : [];
 
   // 设置本地元素属性
   if (files.length) {
@@ -155,19 +156,19 @@ const funcStart = () => {
     $('.tabContent[name="start"]').find('[name="currentWorkStatus"]').removeClass('actived');
   }
   files = files.slice(0, 10);
-  const currentWorkFileList = files.map(file => `<li>${file}</li>`).join('');
+  const currentWorkFileList = files.map((file) => `<li>${file}</li>`).join('');
   $('.tabContent[name="start"]').find('[name="currentWorkDir"]').val(CONFIG.workDir);
   $('.tabContent[name="start"]').find('[name="currentWorkFiles"]').html(currentWorkFileList);
 
   // 设置本地元素事件
-  $('.tabContent[name="start"]').find('[name="selectFile"]').off('change').on('change', e => {
+  $('.tabContent[name="start"]').find('[name="selectFile"]').off('change').on('change', (e) => {
     if (!e.target.files || !e.target.files.length) {
       e.target.value = null;
       return;
     }
     THIS.title = path.parse(e.target.value).name.trim();
     const fr = new window.FileReader();
-    fr.onload = e => {
+    fr.onload = (e) => {
       const content = Buffer.from(e.target.result);
       const charset = chardet.detect(content);
       console.log(charset);
@@ -180,9 +181,9 @@ const funcStart = () => {
   });
 
   $('.tabContent[name="start"]').find('input[name="list"]').off('click').on('click', (e) => {
-    let folder = fs.readdirSync(CONFIG.workDir).map(i => path.resolve(CONFIG.workDir, i)).filter(i => fs.statSync(i).isDirectory()).sort(collator.compare);
-    folder = folder.find(i => fs.readdirSync(i).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).length);
-    const files = fs.readdirSync(folder).filter(file => ['.txt'].includes(path.extname(file).toLowerCase())).map(file => path.join(folder, file)).sort(collator.compare);
+    let folder = fs.readdirSync(CONFIG.workDir).map((i) => path.resolve(CONFIG.workDir, i)).filter((i) => fs.statSync(i).isDirectory()).sort(collator.compare);
+    folder = folder.find((i) => fs.readdirSync(i).filter((file) => ['.txt'].includes(path.extname(file).toLowerCase())).length);
+    const files = fs.readdirSync(folder).filter((file) => ['.txt'].includes(path.extname(file).toLowerCase())).map((file) => path.join(folder, file)).sort(collator.compare);
     if (files.length) {
       $('.bottomBar [name="next"]').removeAttr('disabled');
     } else {
@@ -198,17 +199,17 @@ const funcStart = () => {
       const content = fs.readFileSync(file);
       THIS.list.push({
         title: path.parse(file).name.replace(/^\d+-(.*)$/, '$1'),
-        content: iconv.decode(content, charset)
+        content: iconv.decode(content, charset),
       });
     }
-    THIS.content = THIS.list.map(i => `${i.title}\r\n${i.content}`).join('\r\n\r\n');
+    THIS.content = THIS.list.map((i) => `${i.title}\r\n${i.content}`).join('\r\n\r\n');
     $('.bottomBar [name="next"]').click();
     THIS.files = files;
   });
 
   $('.tabContent[name="start"]').find('input[name="nextEvent"]').off('click').on('click', (e) => {
     if (!THIS.content) {
-      THIS.files = files.map(file => path.join(CONFIG.workDir, file));
+      THIS.files = files.map((file) => path.join(CONFIG.workDir, file));
       THIS.title = path.parse(THIS.files[0]).name.trim();
 
       let charset = chardet.detectFileSync(THIS.files[0], { sampleSize: 1024 * 10 });
@@ -222,10 +223,16 @@ const funcStart = () => {
     if (THIS.title.match(/^【(.*?)】/)) THIS.title = THIS.title.match(/^【(.*?)】/)[1];
     THIS.title = THIS.title.replace(/\(.*?\)|（.*?）|【.*?】|作者：.*|全本|全集|完本|(无|未)删?减.*$/g, '').trim();
 
-    THIS.content = THIS.content.replace(/^\s*(\*+|\*\s+.*?(更多好书请访问|shuchong8).*?\s*\*)\s*$/mg, '\r\n').replace(/([^\S\r\n]|[*]){10,}/g, '\r\n').replace(//g, '').replace(/<\/?br>/gi, '\r\n').replace(/<\/?font>/gi, '').replace(/^.*(书虫包小说网).*$/mig, '').trim();
+    THIS.content = THIS.content.replace(/^\s*(\*+|\*\s+.*?(更多好书请访问|shuchong8).*?\s*\*)\s*$/mg, '\r\n').replace(/([^\S\r\n]|[*]){10,}/g, '\r\n').replace(//g, '').replace(/<\/?br>/gi, '\r\n')
+      .replace(/<\/?font>/gi, '')
+      .replace(/^.*(书虫包小说网).*$/mig, '')
+      .trim();
     if (THIS.list) {
       for (let i = 0; i < THIS.list.length; i++) {
-        THIS.list[0].content = THIS.list[0].content.replace(/^\s*(\*+|\*\s+.*?(更多好书请访问|shuchong8).*?\s*\*)\s*$/mg, '').replace(/[\s＊]{10,}/g, '\r\n').replace(//g, '').replace(/<\/?br>/gi, '\r\n').replace(/<\/?font>/gi, '').replace(/^.*(书虫包小说网).*$/mig, '').trim();
+        THIS.list[0].content = THIS.list[0].content.replace(/^\s*(\*+|\*\s+.*?(更多好书请访问|shuchong8).*?\s*\*)\s*$/mg, '').replace(/[\s＊]{10,}/g, '\r\n').replace(//g, '').replace(/<\/?br>/gi, '\r\n')
+          .replace(/<\/?font>/gi, '')
+          .replace(/^.*(书虫包小说网).*$/mig, '')
+          .trim();
       }
     }
   });
@@ -273,13 +280,13 @@ const funcInfo = () => {
   $('.tabContent[name="info"]').find('[name="author"]').val(THIS.author);
 
   // 设置本地元素事件
-  $('.tabContent[name="info"]').find('[name="selectCover"]').off('change').on('change', e => {
+  $('.tabContent[name="info"]').find('[name="selectCover"]').off('change').on('change', (e) => {
     if (!e.target.files || !e.target.files.length) {
       e.target.value = null;
       return;
     }
     const fr = new window.FileReader();
-    fr.onload = e => {
+    fr.onload = (e) => {
       THIS.cover = e.target.result;
     };
     fr.readAsDataURL(e.target.files[0]);
@@ -295,7 +302,7 @@ const funcInfo = () => {
     const color = '#000';
     const lineHeight = 10;
     const maxlen = width / fontSize - 2;
-    const txtArray = THIS.title.split(new RegExp('(.{' + maxlen + '})'));
+    const txtArray = THIS.title.split(new RegExp(`(.{${maxlen}})`));
     let i = 1;
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -303,9 +310,10 @@ const funcInfo = () => {
     const context = canvas.getContext('2d');
     context.fillStyle = color;
     context.strokeRect(0, 0, width, height);
-    context.font = fontSize + 'px sans-serif';
+    context.font = `${fontSize}px sans-serif`;
     context.textBaseline = 'top';
-    let fLeft, fTop;
+    let fLeft; let
+      fTop;
     for (let j = 0; j < txtArray.length; j++) {
       if (txtArray[j] === '') continue;
       fLeft = fontSize * ((maxlen - txtArray[j].length) / 2 + 1);
@@ -324,7 +332,7 @@ const funcChapter = () => {
   // 重置全局参数
   THIS.chapters = THIS.chapters || THIS.list || [{
     title: THIS.title,
-    content: THIS.content
+    content: THIS.content,
   }];
 
   // 设置全局元素
@@ -348,9 +356,9 @@ const funcChapter = () => {
     '<input type="button" key="h" title="(&h)新增章节" name="add" value="增">',
     '<input type="button" key="j" title="(&j)插入章节" name="insert" value="插">',
     '<input type="button" key="k" title="(&k)移除章节" name="delete" value="减">',
-    '</div>'
+    '</div>',
   ].join('');
-  const elemGen = chapter => {
+  const elemGen = (chapter) => {
     let html = elemPattern;
     html = html.replace(/\{title\}/g, $('<div>').text(chapter.title.substr(0, 30)).html());
     html = html.replace(/\{length\}/g, chapter.content.length);
@@ -361,29 +369,29 @@ const funcChapter = () => {
     let number = $('.tabContent[name="chapter"]').find('[name="patternNumber"]').val();
     if (number in numberLib) {
       number = numberLib[number];
-      number = '[' + number + ']+';
+      number = `[${number}]+`;
     }
 
     let prefix = $('.tabContent[name="chapter"]').find('[name="patternPre"]').val();
     if (prefix in prefixLib) {
       prefix = prefixLib[prefix];
-      prefix = '[' + prefix + ']+';
+      prefix = `[${prefix}]+`;
     }
 
     let suffix = $('.tabContent[name="chapter"]').find('[name="patternSuf"]').val();
     if (suffix in suffixLib) {
       suffix = suffixLib[suffix];
-      suffix = '[' + suffix + ']+';
+      suffix = `[${suffix}]+`;
     }
 
-    const regexp = '([\\r\\n]|^)(.*?' + prefix + number + suffix + '.*?)([\\r\\n]|$)';
+    const regexp = `([\\r\\n]|^)(.*?${prefix}${number}${suffix}.*?)([\\r\\n]|$)`;
     $('.tabContent[name="chapter"]').find('[name="pattern"]').val(regexp);
   };
   let filtered = false;
   let chs = false;
   const regenChapterElements = () => {
     $('.tabContent[name="chapter"]').find('[name="chapterList"]').empty();
-    THIS.chapters.forEach(chapter => {
+    THIS.chapters.forEach((chapter) => {
       $(elemGen(chapter)).appendTo('.tabContent[name="chapter"] [name="chapterList"]');
     });
   };
@@ -393,7 +401,7 @@ const funcChapter = () => {
     store = JSON.parse(store);
     for (const name in store) {
       const list = $('.tabContent[name="chapter"]').find('input[list]').filter(`[name="${name}"]`).prop('list');
-      $(list).append(store[name].map(value => `<option value="${value}">${value}</option>`).join(''));
+      $(list).append(store[name].map((value) => `<option value="${value}">${value}</option>`).join(''));
     }
   }
 
@@ -407,9 +415,10 @@ const funcChapter = () => {
   });
   $('.tabContent[name="chapter"]').find('[name="patternPre"],[name="patternNumber"],[name="patternSuf"]').off('change').on('change', (e) => {
     updateRegExp();
-  }).change();
+  })
+    .change();
   $('.tabContent[name="chapter"]').find('[name="patternGroup"]').off('change').on('change', (e) => {
-    const value = e.target.value;
+    const { value } = e.target;
     if (value.split('|').length === 3) {
       const [pre, number, suf] = value.split('|');
       if (pre !== 'null') $('.tabContent[name="chapter"]').find('[name="patternPre"]').val(pre);
@@ -453,7 +462,7 @@ const funcChapter = () => {
           showIndex.push(i, i - 1, i + 1);
         }
       }
-      $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter(i => !showIndex.includes(i)).addClass('hide');
+      $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter((i) => !showIndex.includes(i)).addClass('hide');
     }
     filtered = !filtered;
     $('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').get(0).scrollIntoView();
@@ -462,7 +471,7 @@ const funcChapter = () => {
   $('.tabContent[name="chapter"]').find('[name="resetChapter"]').off('click').on('click', (e) => {
     THIS.chapters = THIS.list || [{
       title: THIS.title,
-      content: THIS.content
+      content: THIS.content,
     }];
     regenChapterElements();
   });
@@ -480,7 +489,7 @@ const funcChapter = () => {
   $('.tabContent[name="chapter"]').find('[name="combineEmptyChapter"]').off('click').on('click', (e) => {
     for (let i = 1; i < THIS.chapters.length; i++) {
       if (THIS.chapters[i].content.length === 0) {
-        THIS.chapters[i - 1].content += '\r\n' + THIS.chapters[i].title;
+        THIS.chapters[i - 1].content += `\r\n${THIS.chapters[i].title}`;
         THIS.chapters.splice(i, 1);
         i--;
       }
@@ -500,7 +509,7 @@ const funcChapter = () => {
   $('.tabContent[name="chapter"]').find('[name="combineEmptyChapter2"]').off('click').on('click', (e) => {
     for (let i = 0; i < THIS.chapters.length - 1; i++) {
       if (THIS.chapters[i].content.length === 0) {
-        THIS.chapters[i].content = THIS.chapters[i + 1].title + '\r\n' + THIS.chapters[i + 1].content;
+        THIS.chapters[i].content = `${THIS.chapters[i + 1].title}\r\n${THIS.chapters[i + 1].content}`;
         THIS.chapters.splice(i + 1, 1);
         i--;
       }
@@ -548,7 +557,7 @@ const funcChapter = () => {
       [/.{0,20}尾声/, 1, '||尾声'],
       [/.{0,20}幕间/, 1, '||幕间'],
       [/.{0,20}终章/, 1, '||终章'],
-      [/.{0,20}卷尾/, 1, '||卷尾']
+      [/.{0,20}卷尾/, 1, '||卷尾'],
       // “哟！小哥，你醒了？”忽然一道声音从门外传来，罗凡循声望去，只见一个身着青灰道袍的青年道士端着一碗黑乎乎的药汤走了过来，“小哥你运气真不错，在蒙古人屠村之后居然能活下来，正好我师父路过发现还有活人，于是把你给带了回来。”
     ];
     for (const arr of lib) {
@@ -598,7 +607,8 @@ const funcChapter = () => {
   $('.tabContent[name="chapter"]').find('[name="dealLongChapter"]').off('click').on('click', (e) => {
     const action = $(e.target).attr('action');
     const wordCount = $('.tabContent[name="chapter"]').find('[name="wordCount"]').val() * 1;
-    $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter((i, e) => $(e).find('[count]').attr('count') * 1 >= wordCount * 2).find(`[type="button"][name="${action}"]`).click();
+    $('.tabContent[name="chapter"]').find('[name="chapterList"]>div').filter((i, e) => $(e).find('[count]').attr('count') * 1 >= wordCount * 2).find(`[type="button"][name="${action}"]`)
+      .click();
     regenChapterElements();
   });
 
@@ -630,19 +640,19 @@ const funcChapter = () => {
       regexp = new RegExp(regexp, 'gim');
 
       const chapter = THIS.chapters[index];
-      var result = chapter.content.split(regexp);
+      const result = chapter.content.split(regexp);
       const chapters = [];
       // if (result[0].trim()) {
       chapters.push({
         title: chapter.title,
-        content: result[0].trim()
+        content: result[0].trim(),
       });
       // }
       for (let i = 1; i < result.length; i = i + 4) {
         let title = result[i + 1].trim();
         let content = result[i + 3].trim();
         if (!title) {
-          content = content.split(/[\n]/).map(i => i.replace(/[\r]/g, ''));
+          content = content.split(/[\n]/).map((i) => i.replace(/[\r]/g, ''));
           for (let i = 0; i < content.length;) {
             if (content[i].trim()) break;
             content.splice(i, 1);
@@ -657,7 +667,7 @@ const funcChapter = () => {
         chapters.push({ title, content });
       }
 
-      const elems = chapters.map(chapter => elemGen(chapter)).join('');
+      const elems = chapters.map((chapter) => elemGen(chapter)).join('');
       $(target).replaceWith(elems);
       THIS.chapters.splice(index, 1, ...chapters);
     } else if (name === 'cut') {
@@ -668,12 +678,12 @@ const funcChapter = () => {
       const chapter = THIS.chapters[index];
       let chapters = [];
 
-      let content = chapter.content;
-      const title = chapter.title;
+      let { content } = chapter;
+      const { title } = chapter;
       while (content.length) {
         if (content.length <= wordCount && chapters.length) {
           if (content.length * 2 < wordCount) {
-            chapters[chapters.length - 1] += '\r\n　　' + content.trim();
+            chapters[chapters.length - 1] += `\r\n　　${content.trim()}`;
           } else {
             chapters.push(content);
           }
@@ -695,7 +705,7 @@ const funcChapter = () => {
 
       chapters = chapters.map((i, o) => ({ title: `${title} - 第${o + 1}部分`, content: i }));
 
-      const elems = chapters.map(chapter => elemGen(chapter)).join('');
+      const elems = chapters.map((chapter) => elemGen(chapter)).join('');
       $(target).replaceWith(elems);
       THIS.chapters.splice(index, 1, ...chapters);
     } else if (name === 'combine' && index > 0) {
@@ -703,13 +713,13 @@ const funcChapter = () => {
       const chapterBefore = THIS.chapters[index - 1];
       let title;
       if (chapter.title.match(/ - 第(\d+)部分$/)) {
-        title = chapter.title.match(/ - 第(\d+)部分$/)[1] * 1 === 1 ? '\r\n\r\n' + chapter.title.replace(/ - 第(\d+)部分$/, '') : '';
+        title = chapter.title.match(/ - 第(\d+)部分$/)[1] * 1 === 1 ? `\r\n\r\n${chapter.title.replace(/ - 第(\d+)部分$/, '')}` : '';
       } else {
-        title = '\r\n\r\n' + chapter.title.trim();
+        title = `\r\n\r\n${chapter.title.trim()}`;
       }
       const chapterNew = {
         title: chapterBefore.title.replace(/ - 第(\d+)部分$/, ''),
-        content: chapterBefore.content + title + '\r\n' + chapter.content.trim()
+        content: `${chapterBefore.content + title}\r\n${chapter.content.trim()}`,
       };
 
       index = index - 1;
@@ -719,7 +729,7 @@ const funcChapter = () => {
     } else if (name === 'add') {
       const chapterNew = {
         title: '',
-        content: ''
+        content: '',
       };
 
       index = index + 1;
@@ -728,7 +738,7 @@ const funcChapter = () => {
     } else if (name === 'insert') {
       const chapterNew = {
         title: '',
-        content: ''
+        content: '',
       };
 
       $(target).before(elemGen(chapterNew));
@@ -743,22 +753,22 @@ const funcChapter = () => {
       const chapter = THIS.chapters[index];
       const chapters = [{
         title: chapter.title,
-        content: ''
+        content: '',
       }];
 
-      const lines = chapter.content.split(/[\n]/).map(i => i.replace(/[\r]/g, ''));
+      const lines = chapter.content.split(/[\n]/).map((i) => i.replace(/[\r]/g, ''));
       for (const line of lines) {
         if (line.trim() && line.trim().length <= chapterCount) {
           chapters.push({
             title: line.trim(),
-            content: ''
+            content: '',
           });
         } else {
-          chapters[chapters.length - 1].content = chapters[chapters.length - 1].content.trim() + '\r\n' + line;
+          chapters[chapters.length - 1].content = `${chapters[chapters.length - 1].content.trim()}\r\n${line}`;
         }
       }
 
-      const elems = chapters.map(chapter => elemGen(chapter)).join('');
+      const elems = chapters.map((chapter) => elemGen(chapter)).join('');
       $(target).replaceWith(elems);
       THIS.chapters.splice(index, 1, ...chapters);
     } else if (name === 'moveup' && index > 0) {
@@ -782,20 +792,18 @@ const funcChapter = () => {
       } else if (['ArrowUp'].includes(e.key)) {
         index--;
       } else if (['ArrowRight'].includes(e.key)) {
-        index += 20;
+        index = index + 20;
       } else if (['ArrowLeft'].includes(e.key)) {
-        index -= 20;
+        index = index - 20;
+      } else if ($('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').find(`input:button[key="${e.key}"]`).length) {
+        $('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').find(`input:button[key="${e.key}"]`).click();
+      } else if ($('.tabContent[name="chapter"]').find(`input:button[key="${e.key}"]`).length) {
+        $('.tabContent[name="chapter"]').find(`input:button[key="${e.key}"]`).click();
       } else {
-        if ($('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').find(`input:button[key="${e.key}"]`).length) {
-          $('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').find(`input:button[key="${e.key}"]`).click();
-        } else if ($('.tabContent[name="chapter"]').find(`input:button[key="${e.key}"]`).length) {
-          $('.tabContent[name="chapter"]').find(`input:button[key="${e.key}"]`).click();
-        } else {
-          console.log(e.key);
-        }
+        console.log(e.key);
       }
       if (['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft'].includes(e.key)) {
-        if (index >= THIS.chapters.length) index -= THIS.chapters.length;
+        if (index >= THIS.chapters.length) index = index - THIS.chapters.length;
         $('.tabContent[name="chapter"]').find('[name="chapterList"]>div>span:nth-child(3)').eq(index).click();
       }
       if ($('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').length) $('.tabContent[name="chapter"]').find('[name="chapterList"]>div.actived').get(0).scrollIntoView();
@@ -843,8 +851,8 @@ const funcExport = () => {
 
   // 设置本地元素事件
   $('.tabContent[name="export"]').find('input[name="nextEvent"]').off('click').on('click', (e) => {
-    const length = String(THIS.chapters.length).length;
-    const uuid = 'nd' + new Date().getTime().toString();
+    const { length } = String(THIS.chapters.length);
+    const uuid = `nd${new Date().getTime().toString()}`;
 
     const files = {
       mimetype: 'application/epub+zip',
@@ -853,7 +861,7 @@ const funcExport = () => {
       'OEBPS/cover.jpg': THIS.cover,
       'OEBPS/content.opf': `<?xml version="1.0" encoding="UTF-8"?><package version="2.0" unique-identifier="${uuid}" xmlns="http://www.idpf.org/2007/opf"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf"><dc:title>${THIS.title}</dc:title><dc:creator>${THIS.author}</dc:creator><dc:publisher>epubBuilder</dc:publisher><dc:identifier id="${uuid}">urn:uuid:${uuid}</dc:identifier><dc:language>zh-CN</dc:language><meta name="cover" content="cover-image" /></metadata><manifest>`,
       'OEBPS/toc.ncx': `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd"><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:${uuid}"/><meta name="dtb:depth" content="1"/><meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head><docTitle><text>${THIS.title}</text></docTitle><navMap><navPoint id="navpoint-1" playOrder="1"><navLabel><text>首页</text></navLabel><content src="cover.html"/></navPoint>`,
-      'OEBPS/cover.html': `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${THIS.title}</title><link type="text/css" rel="stylesheet" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h1>${THIS.title}</h1><h2>本电子书由用户脚本${THIS.author}制作</h2></body></html>`
+      'OEBPS/cover.html': `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${THIS.title}</title><link type="text/css" rel="stylesheet" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h1>${THIS.title}</h1><h2>本电子书由用户脚本${THIS.author}制作</h2></body></html>`,
     };
 
     let item = '<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/><item id="cover" href="cover.html" media-type="application/xhtml+xml"/><item id="css" href="stylesheet.css" media-type="text/css"/>';
@@ -865,14 +873,14 @@ const funcExport = () => {
       const chapterOrder = String(i + 1).padStart(length, '0');
       const chapterContent = chapter.content.replace(/\r/g, '').replace(/\n/g, '</p><p>').replace(/<p>\s+/g, '<p>');
 
-      files['OEBPS/toc.ncx'] += '<navPoint id="chapter' + chapterOrder + '" playOrder="' + (i + 2) + '"><navLabel><text>' + chapterName + '</text></navLabel><content src="' + chapterOrder + '.html"/></navPoint>';
+      files['OEBPS/toc.ncx'] = `${files['OEBPS/toc.ncx']}<navPoint id="chapter${chapterOrder}" playOrder="${i + 2}"><navLabel><text>${chapterName}</text></navLabel><content src="${chapterOrder}.html"/></navPoint>`;
 
-      item += '<item id="chapter' + chapterOrder + '" href="' + chapterOrder + '.html" media-type="application/xhtml+xml"/>';
-      itemref += '<itemref idref="chapter' + chapterOrder + '" linear="yes"/>';
-      files[`OEBPS/${chapterOrder}.html`] = '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>' + chapterName + '</title><link type="text/css" rel="stylesheet" media="all" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h3>' + chapterName + '</h3><div><p>' + chapterContent + '</p></div></body></html>';
+      item = `${item}<item id="chapter${chapterOrder}" href="${chapterOrder}.html" media-type="application/xhtml+xml"/>`;
+      itemref = `${itemref}<itemref idref="chapter${chapterOrder}" linear="yes"/>`;
+      files[`OEBPS/${chapterOrder}.html`] = `<html xmlns="http://www.w3.org/1999/xhtml"><head><title>${chapterName}</title><link type="text/css" rel="stylesheet" media="all" href="stylesheet.css" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /></head><body><h3>${chapterName}</h3><div><p>${chapterContent}</p></div></body></html>`;
     }
-    files['OEBPS/content.opf'] += `${item}<item id="cover-image" href="cover.jpg" media-type="image/jpeg"/></manifest><spine toc="ncx">${itemref}</spine><guide><reference href="cover.html" type="cover" title="Cover"/></guide></package>`;
-    files['OEBPS/toc.ncx'] += '</navMap></ncx>';
+    files['OEBPS/content.opf'] = `${files['OEBPS/content.opf']}${item}<item id="cover-image" href="cover.jpg" media-type="image/jpeg"/></manifest><spine toc="ncx">${itemref}</spine><guide><reference href="cover.html" type="cover" title="Cover"/></guide></package>`;
+    files['OEBPS/toc.ncx'] = `${files['OEBPS/toc.ncx']}</navMap></ncx>`;
 
     // console.log(files)
     for (const file in files) {
@@ -886,12 +894,12 @@ const funcExport = () => {
     }
 
     output = fs.createWriteStream(output);
-    var archive = archiver('zip', {
+    const archive = archiver('zip', {
       zlib: {
-        level: 9
-      }
+        level: 9,
+      },
     });
-    output.on('close', function () {
+    output.on('close', () => {
       if (THIS.list) {
         for (const file of THIS.files) {
           fs.unlinkSync(file);
@@ -905,7 +913,7 @@ const funcExport = () => {
       }
       $('.bottomBar span[name="reset"]').click();
     });
-    archive.on('error', function (err) {
+    archive.on('error', (err) => {
       throw err;
     });
     archive.pipe(output);
@@ -917,7 +925,7 @@ const funcExport = () => {
 const funcConfig = () => {
   const elems = $('.tabContent[name="config"]').find('input:not([type="button"]):not([type="file"]),select,textarea').toArray();
 
-  elems.forEach(i => {
+  elems.forEach((i) => {
     const key = i.getAttribute('id').replace('config-', '');
     if (!(key in CONFIG)) return;
     const value = CONFIG[key];
@@ -932,7 +940,7 @@ const funcConfig = () => {
 
   $('#config-btnSave').on('click', () => {
     const config = {};
-    elems.forEach(i => {
+    elems.forEach((i) => {
       const key = i.getAttribute('id').replace('config-', '');
       let value;
       if (i.type === 'number') {
@@ -1015,7 +1023,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

@@ -18,7 +18,7 @@ let connectionLastTime = null;
 const connectionTimeout = 5 * 60 * 1000;
 const lastConnection = {
   info: {},
-  result: []
+  result: [],
 };
 let connecting = false;
 const columns = {
@@ -40,7 +40,7 @@ const columns = {
   rating: 'float unsigned', // 评分
   favorited: 'int unsigned', // 收藏人数
   time_download: 'timestamp', // 下载时间
-  tags: 'json' // 标签
+  tags: 'json', // 标签
 };
 
 // 导入原生模块
@@ -52,33 +52,35 @@ const mysql = require('mysql2/promise');
 const JSZip = require('jszip');
 // const sane = require('sane');
 
-const walk = require('./../_lib/walk');
-const waitInMs = require('./../_lib/waitInMs');
+const walk = require('../_lib/walk');
+const waitInMs = require('../_lib/waitInMs');
 const parseInfo = require('./js/parseInfo');
 const getTitleMain = require('./js/getTitleMain');
+
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
 
 // Function
 const updateTableFilesNew = async (obj, files) => {
   if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config);
 
-  let queryString, arr;
+  let queryString; let
+    arr;
 
   const filesLocal = files;
 
   const [rows] = await connection.query('select path from files');
-  const filesDatabase = rows.map(i => i.path);
+  const filesDatabase = rows.map((i) => i.path);
 
-  const filesLocalUpperCase = filesLocal.map(i => i.toUpperCase());
+  const filesLocalUpperCase = filesLocal.map((i) => i.toUpperCase());
   // const filesDatabaseUpperCase = filesDatabase.map(i => i.toUpperCase());
-  const filesDeleted = filesDatabase.filter(i => filesLocalUpperCase.includes(i.toUpperCase())); // 移除已存在
+  const filesDeleted = filesDatabase.filter((i) => filesLocalUpperCase.includes(i.toUpperCase())); // 移除已存在
   const filesNew = filesLocal;
 
   queryString = 'DELETE FROM files WHERE ';
   arr = [];
   for (const file of filesDeleted) {
     if (arr.length >= 100) {
-      const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+      const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
       await connection.query(queryString + arr1);
       arr = [];
     }
@@ -86,7 +88,7 @@ const updateTableFilesNew = async (obj, files) => {
     arr.push(file);
   }
   if (arr.length) {
-    const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+    const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
     await connection.query(queryString + arr1);
   }
 
@@ -95,13 +97,13 @@ const updateTableFilesNew = async (obj, files) => {
   arr = [];
   for (const file of filesNew) {
     if (arr.length >= 100) {
-      const arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
+      const arr1 = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
       await connection.query(queryString + arr1);
       arr = [];
     }
 
     const fullpath = path.join(obj.libraryFolder, file);
-    const size = fse.statSync(fullpath).size;
+    const { size } = fse.statSync(fullpath);
 
     // 读取数据
     const targetData = fse.readFileSync(fullpath);
@@ -116,7 +118,7 @@ const updateTableFilesNew = async (obj, files) => {
         file, size, 'NULL',
         title, ...getTitleMain(title),
         title, ...getTitleMain(title),
-        ...'1'.repeat(column.length - 9).split('').map(i => 'NULL')
+        ...'1'.repeat(column.length - 9).split('').map((i) => 'NULL'),
       ]);
       continue;
     }
@@ -125,13 +127,13 @@ const updateTableFilesNew = async (obj, files) => {
     const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
-    if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+    if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('压缩档内不存在info.txt: ', file);
       return new Error('no info.txt');
     }
 
     // 读取info.txt
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
 
@@ -141,7 +143,7 @@ const updateTableFilesNew = async (obj, files) => {
       if (i in info) tags[i] = info[i];
     }
     let artist = tags.artist ? tags.artist : tags.group ? tags.group : [];
-    artist = artist.map(i => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
+    artist = artist.map((i) => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
     arr.push([
       file, size, artist,
       info.title, ...getTitleMain(info.title),
@@ -152,11 +154,11 @@ const updateTableFilesNew = async (obj, files) => {
       isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
       isNaN(parseInt(info.Favorited)) ? 0 : parseInt(info.Favorited),
       info.downloadTime,
-      JSON.stringify(tags)
+      JSON.stringify(tags),
     ]);
   }
   if (arr.length) {
-    arr = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
+    arr = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
     await connection.query(queryString + arr);
   }
 };
@@ -177,7 +179,7 @@ const createConnection = async (obj) => {
   lastConnection.info = {
     host: obj.host,
     user: obj.user,
-    password: obj.password
+    password: obj.password,
   };
 
   console.log('re-connection');
@@ -193,9 +195,9 @@ const createConnection = async (obj) => {
       user: obj.user,
       password: obj.password,
       keepAliveInitialDelay: 10000,
-      enableKeepAlive: true
+      enableKeepAlive: true,
     });
-    connection.on('error', function (err) {
+    connection.on('error', (err) => {
       if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
         createConnection(obj);
       } else {
@@ -207,55 +209,54 @@ const createConnection = async (obj) => {
     if (error.message.match('Too many connections')) {
       connecting = false;
       return createConnection(obj);
-    } else {
-      console.log({ err: error, msg: error.message });
-      connection = null;
-      connecting = false;
-      connectionLastTime = null;
-      return ['Connection Failed, please check info', -1];
     }
+    console.log({ err: error, msg: error.message });
+    connection = null;
+    connecting = false;
+    connectionLastTime = null;
+    return ['Connection Failed, please check info', -1];
   }
 
   const [rows] = await connection.query('SHOW DATABASES');
 
-  if (rows.filter(i => i.Database === obj.database).length) {
+  if (rows.filter((i) => i.Database === obj.database).length) {
     await connection.query(`USE ${obj.database}`);
     connecting = false;
     return ['Connection Success, and you can update', 1];
-  } else {
-    connecting = false;
-    connectionLastTime = null;
-    return ['Connection Success, but you need to init', 0];
   }
+  connecting = false;
+  connectionLastTime = null;
+  return ['Connection Success, but you need to init', 0];
 };
 const updateTableFiles = async (obj) => {
   console.log('database-update');
 
   console.time('walk');
   let filesLocal = walk(obj.libraryFolder);
-  filesLocal = filesLocal.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.relative(obj.libraryFolder, i));
+  filesLocal = filesLocal.filter((i) => ['.cbz', '.zip'].includes(path.extname(i))).map((i) => path.relative(obj.libraryFolder, i));
   console.timeEnd('walk');
 
   console.time('query');
   const [rows] = await connection.query('select path from files');
-  const filesDatabase = rows.map(i => i.path);
+  const filesDatabase = rows.map((i) => i.path);
   console.timeEnd('query');
 
   console.debug('Total Files:\t', filesLocal.length, '\nExisted Files:\t', filesDatabase.length);
-  const filesLocalUpperCase = filesLocal.map(i => i.toUpperCase());
-  const filesDatabaseUpperCase = filesDatabase.map(i => i.toUpperCase());
-  const filesDeleted = filesDatabase.filter(i => !filesLocalUpperCase.includes(i.toUpperCase()));
-  const filesNew = filesLocal.filter(i => !filesDatabaseUpperCase.includes(i.toUpperCase()));
+  const filesLocalUpperCase = filesLocal.map((i) => i.toUpperCase());
+  const filesDatabaseUpperCase = filesDatabase.map((i) => i.toUpperCase());
+  const filesDeleted = filesDatabase.filter((i) => !filesLocalUpperCase.includes(i.toUpperCase()));
+  const filesNew = filesLocal.filter((i) => !filesDatabaseUpperCase.includes(i.toUpperCase()));
   console.debug('New Files\t', filesNew.length, '\nDeleted Files:\t', filesDeleted.length);
 
-  let queryString, arr;
+  let queryString; let
+    arr;
 
   console.time('DELETE INTO');
   queryString = 'DELETE FROM files WHERE ';
   arr = [];
   for (const file of filesDeleted) {
     if (arr.length >= 100) {
-      const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+      const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
       await connection.query(queryString + arr1);
       arr = [];
     }
@@ -263,7 +264,7 @@ const updateTableFiles = async (obj) => {
     arr.push(file);
   }
   if (arr.length) {
-    const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+    const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
     await connection.query(queryString + arr1);
   }
   console.timeEnd('DELETE INTO');
@@ -274,13 +275,13 @@ const updateTableFiles = async (obj) => {
   arr = [];
   for (const file of filesNew) {
     if (arr.length >= 100) {
-      const arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
+      const arr1 = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
       await connection.query(queryString + arr1);
       arr = [];
     }
 
     const fullpath = path.join(obj.libraryFolder, file);
-    const size = fse.statSync(fullpath).size;
+    const { size } = fse.statSync(fullpath);
 
     // 读取数据
     const targetData = fse.readFileSync(fullpath);
@@ -295,7 +296,7 @@ const updateTableFiles = async (obj) => {
         file, size, 'NULL',
         title, ...getTitleMain(title),
         title, ...getTitleMain(title),
-        ...'1'.repeat(column.length - 9).split('').map(i => 'NULL')
+        ...'1'.repeat(column.length - 9).split('').map((i) => 'NULL'),
       ]);
       continue;
     }
@@ -304,13 +305,13 @@ const updateTableFiles = async (obj) => {
     const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
-    if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+    if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('压缩档内不存在info.txt: ', file);
       return new Error('no info.txt');
     }
 
     // 读取info.txt
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
 
@@ -320,7 +321,7 @@ const updateTableFiles = async (obj) => {
       if (i in info) tags[i] = info[i];
     }
     let artist = tags.artist ? tags.artist : tags.group ? tags.group : [];
-    artist = artist.map(i => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
+    artist = artist.map((i) => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
     arr.push([
       file, size, artist,
       info.title, ...getTitleMain(info.title),
@@ -331,11 +332,11 @@ const updateTableFiles = async (obj) => {
       isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
       isNaN(parseInt(info.Favorited)) ? 0 : parseInt(info.Favorited),
       info.downloadTime,
-      JSON.stringify(tags)
+      JSON.stringify(tags),
     ]);
   }
   if (arr.length) {
-    arr = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
+    arr = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
     await connection.query(queryString + arr);
   }
   console.timeEnd('INSERT INTO');
@@ -366,11 +367,11 @@ const main = async () => {
     queryString = `USE ${config.database}`;
     await connection.query(queryString);
 
-    queryString = 'CREATE TABLE `files` (' + [
+    queryString = `CREATE TABLE \`files\` (${[
       'id int unsigned not null auto_increment',
-      ...Object.keys(columns).map(i => `${i} ${columns[i]}`),
-      'PRIMARY KEY (id)'
-    ].join(', ') + ')';
+      ...Object.keys(columns).map((i) => `${i} ${columns[i]}`),
+      'PRIMARY KEY (id)',
+    ].join(', ')})`;
     await connection.query(queryString);
     result = ['Init Success', code];
   } else if (code === 0) {
@@ -398,7 +399,8 @@ const main = async () => {
     await connection.query('RENAME TABLE files1 TO files;');
   } else if (args.includes('watch')) {
     await new Promise((resolve, reject) => {
-      let lastFiles, lastTime;
+      let lastFiles; let
+        lastTime;
       const watcher = fse.watch(config.libraryFolder, { recursive: true }, (type, filename) => {
         // if (type === 'rename') {
         if (lastFiles === filename && new Date().getTime() - lastTime <= 5 * 1000) return;
@@ -441,7 +443,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

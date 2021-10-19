@@ -16,19 +16,20 @@
 // 导入第三方模块
 const fse = require('fs-extra');
 // const cheerio = require('cheerio');
-const req = require('./../_lib/req');
+const req = require('../_lib/req');
+
 req.config.init({
   proxy: 'socks5://127.0.0.1:1088',
   request: {
     timeout: 60 * 1000,
     followAllRedirects: false,
-    strictSSL: true
+    strictSSL: true,
   },
   autoProxy: true,
   withProxy: ['blogspot.com'],
-  logLevel: ['warn', 'error']
+  logLevel: ['warn', 'error'],
 });
-require('./../_lib/log').hack();
+require('../_lib/log').hack();
 
 // Main
 const database = fse.existsSync('./database.json') ? fse.readJSONSync('./database.json') : { items: [], files: [], manual: [] };
@@ -56,15 +57,13 @@ const main = async () => {
   while (link) {
     console.log(`Index:\t${link}`);
     const res = await req(link);
-    const $ = res.$;
-    const items = $('[rel=\'bookmark\']').map((index, item) => {
-      return {
-        href: item.attribs.href,
-        title: item.attribs.title.replace('Permanent Link to', '').replace('Permalink to', '').trim()
-      };
-    }).toArray();
+    const { $ } = res;
+    const items = $('[rel=\'bookmark\']').map((index, item) => ({
+      href: item.attribs.href,
+      title: item.attribs.title.replace('Permanent Link to', '').replace('Permalink to', '').trim(),
+    })).toArray();
     for (const i of items) {
-      if (database.items.filter(j => j === i.href).length === 0) {
+      if (database.items.filter((j) => j === i.href).length === 0) {
         console.log(`Page:\t${i.href}`);
         const res1 = await req(i.href);
         const $1 = res1.$;
@@ -73,7 +72,7 @@ const main = async () => {
         database.files.push({
           href: links,
           refer: i.href,
-          title: i.title
+          title: i.title,
         });
         database.items.push(i.href);
       }
@@ -84,7 +83,7 @@ const main = async () => {
 };
 
 try {
-  process.once('SIGINT', function () {
+  process.once('SIGINT', () => {
     doExit(false);
     console.log('SIGINT');
     process.exit();
@@ -92,7 +91,7 @@ try {
 
   main().then(async () => {
     doExit();
-  }, async err => {
+  }, async (err) => {
     console.error(err);
 
     doExit();

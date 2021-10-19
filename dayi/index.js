@@ -11,15 +11,16 @@
 // ==/Headers==
 
 // 设置
+const fs = require('fs');
 const config = require('./config');
 
 // 导入原生模块
-const fs = require('fs');
 
 // 导入第三方模块
-const req = require('./../_lib/req');
+const req = require('../_lib/req');
+
 req.config.init(config.req);
-require('./../_lib/log').hack();
+require('../_lib/log').hack();
 
 // Function
 let database;
@@ -69,7 +70,7 @@ const main = async () => {
 };
 
 try {
-  process.once('SIGINT', function () {
+  process.once('SIGINT', () => {
     doExit(false);
     console.log('SIGINT');
     process.exit();
@@ -77,7 +78,7 @@ try {
 
   main().then(async () => {
     doExit();
-  }, async err => {
+  }, async (err) => {
     console.error(err);
 
     doExit();

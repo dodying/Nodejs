@@ -10,15 +10,13 @@
 // @Require:            null
 // ==/Headers==
 
-'use strict';
-
-module.exports = function diff (t1, t2) { // ignore case
+module.exports = function diff(t1, t2) { // ignore case
   t1 = t1.replace(/\s+/g, ' ');
   t2 = t2.replace(/\s+/g, ' ');
-  const arr1 = t1.split(/([[\](){}\s])/).filter(i => i); // 不变
-  const arr2 = t2.split(/([[\](){}\s])/).filter(i => i); // 变
-  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
-  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/).filter(i => i);
+  const arr1 = t1.split(/([[\](){}\s])/).filter((i) => i); // 不变
+  const arr2 = t2.split(/([[\](){}\s])/).filter((i) => i); // 变
+  const arr1Up = t1.toUpperCase().split(/([[\](){}\s])/).filter((i) => i);
+  const arr2Up = t2.toUpperCase().split(/([[\](){}\s])/).filter((i) => i);
   const result = [];
   for (let i = 0; i < arr1Up.length; i++) {
     if (arr2Up.includes(arr1Up[i])) {

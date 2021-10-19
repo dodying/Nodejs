@@ -10,11 +10,9 @@
 // @Require:            electron
 // ==/Headers==
 
-'use strict';
+const { ipcRenderer } = require('electron');
 
-const ipcRenderer = require('electron').ipcRenderer;
-
-const main = async function configChange (func, name = 'config') {
+const main = async function configChange(func, name = 'config') {
   const value = ipcRenderer.sendSync(name);
   const noSave = await func(value);
   if (!noSave) ipcRenderer.sendSync(name, 'set', value);

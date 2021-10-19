@@ -16,19 +16,19 @@ const config = {
   host: 'localhost',
   user: 'admin',
   password: '',
-  database: 'mark'
+  database: 'mark',
 };
 let connection = null;
 let connectionLastTime = null;
 const connectionTimeout = 5 * 60 * 1000;
 const lastConnection = {
   info: {},
-  result: []
+  result: [],
 };
 let connecting = false;
 const columns = {
   name: 'VARCHAR(511) NOT NULL UNIQUE', // 名称
-  mark: 'VARCHAR(20) NOT NULL'
+  mark: 'VARCHAR(20) NOT NULL',
 };
 
 // 导入原生模块
@@ -39,8 +39,8 @@ const mysql = require('mysql2/promise');
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const waitInMs = require('./../_lib/waitInMs');
-const wait = require('./../_lib/wait');
+const waitInMs = require('../_lib/waitInMs');
+const wait = require('../_lib/wait');
 
 // Function
 const createConnection = async (obj) => {
@@ -60,7 +60,7 @@ const createConnection = async (obj) => {
   lastConnection.info = {
     host: obj.host,
     user: obj.user,
-    password: obj.password
+    password: obj.password,
   };
 
   console.log('re-connection');
@@ -76,9 +76,9 @@ const createConnection = async (obj) => {
       user: obj.user,
       password: obj.password,
       keepAliveInitialDelay: 10000,
-      enableKeepAlive: true
+      enableKeepAlive: true,
     });
-    connection.on('error', function (err) {
+    connection.on('error', (err) => {
       if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
         createConnection(obj);
       } else {
@@ -90,26 +90,24 @@ const createConnection = async (obj) => {
     if (error.message.match('Too many connections')) {
       connecting = false;
       return createConnection(obj);
-    } else {
-      console.log({ err: error, msg: error.message });
-      connection = null;
-      connecting = false;
-      connectionLastTime = null;
-      return ['Connection Failed, please check info', -1];
     }
+    console.log({ err: error, msg: error.message });
+    connection = null;
+    connecting = false;
+    connectionLastTime = null;
+    return ['Connection Failed, please check info', -1];
   }
 
   const [rows] = await connection.query('SHOW DATABASES');
 
-  if (rows.filter(i => i.Database === obj.database).length) {
+  if (rows.filter((i) => i.Database === obj.database).length) {
     await connection.query(`USE ${obj.database}`);
     connecting = false;
     return ['Connection Success, and you can update', 1];
-  } else {
-    connecting = false;
-    connectionLastTime = null;
-    return ['Connection Success, but you need to init', 0];
   }
+  connecting = false;
+  connectionLastTime = null;
+  return ['Connection Success, but you need to init', 0];
 };
 const createDatabase = async (name) => {
   let queryString = `CREATE DATABASE IF NOT EXISTS \`${name}\` CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci`;
@@ -119,18 +117,18 @@ const createDatabase = async (name) => {
   await connection.query(queryString);
 };
 const createTable = async (name) => {
-  const queryString = 'CREATE TABLE IF NOT EXISTS `' + name + '` (' + [
+  const queryString = `CREATE TABLE IF NOT EXISTS \`${name}\` (${[
     'id INT UNSIGNED NOT NULL AUTO_INCREMENT',
-    ...Object.keys(columns).map(i => `\`${i}\` ${columns[i]}`),
+    ...Object.keys(columns).map((i) => `\`${i}\` ${columns[i]}`),
     'PRIMARY KEY (id)',
-    'INDEX (name)'
-  ].join(', ') + ')';
+    'INDEX (name)',
+  ].join(', ')})`;
   await connection.query(queryString);
 };
 const updateExistsTables = async () => {
   const queryString = 'SHOW TABLES';
   const [rows] = await connection.query(queryString);
-  return rows.map(i => Object.values(i)).flat();
+  return rows.map((i) => Object.values(i)).flat();
 };
 
 // Main
@@ -140,7 +138,7 @@ const main = async () => {
   if (code === -1) {
     console.log('Exit: Connection Failed');
     return;
-  } else if (code === 0) {
+  } if (code === 0) {
     await createDatabase(config.database);
   }
   let existsTable = await updateExistsTables();
@@ -150,7 +148,7 @@ const main = async () => {
   app.use(bodyParser.urlencoded({ limit: '50mb', extended: false, parameterLimit: 1000000 }));
 
   let busy = false;
-  app.all('*', async function (req, res, next) {
+  app.all('*', async (req, res, next) => {
     await wait.for(() => !busy, 30 * 1000);
     busy = true;
     res.header('Access-Control-Allow-Origin', '*');
@@ -167,7 +165,7 @@ const main = async () => {
     const result = [];
     console.log('QUERY /', req.body);
 
-    const category = req.body.category;
+    const { category } = req.body;
     if (!(existsTable.includes(category))) {
       await createTable(category);
       existsTable = await updateExistsTables();
@@ -179,7 +177,7 @@ const main = async () => {
 
     console.log('RESPONSE /', result);
     res.writeHead(200, {
-      'Content-Type': 'application/json;charset=utf-8'
+      'Content-Type': 'application/json;charset=utf-8',
     });
 
     res.end(JSON.stringify(result, null, 2));
@@ -192,17 +190,17 @@ const main = async () => {
     let result = [];
     console.log('SEARCH /', req.body);
 
-    const category = req.body.category;
+    const { category } = req.body;
     if (!(existsTable.includes(category))) {
       await createTable(category);
       existsTable = await updateExistsTables();
     }
     const [rows] = await connection.query(`SELECT name FROM \`${category}\` WHERE name REGEXP ${mysql.escape(req.body.name)}`);
-    result = rows.length ? rows.map(i => i.name) : [];
+    result = rows.length ? rows.map((i) => i.name) : [];
 
     console.log('RESPONSE /', result);
     res.writeHead(200, {
-      'Content-Type': 'application/json;charset=utf-8'
+      'Content-Type': 'application/json;charset=utf-8',
     });
 
     res.end(JSON.stringify(result, null, 2));
@@ -215,7 +213,7 @@ const main = async () => {
     const result = true;
     console.log('UPDATE /', req.body);
 
-    const category = req.body.category;
+    const { category } = req.body;
     if (!(existsTable.includes(category))) {
       await createTable(category);
       existsTable = await updateExistsTables();
@@ -232,33 +230,33 @@ const main = async () => {
       }
     }
     if (valuesAdd.length) {
-      const values = valuesAdd.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : mysql.escape(j)).join(', ')})`).join(',\n');
-      await connection.query(`INSERT INTO \`${category}\` (${Object.keys(columns).join(', ')}) values ` + values + ' ON DUPLICATE KEY UPDATE mark=VALUES(mark)');
+      const values = valuesAdd.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : mysql.escape(j))).join(', ')})`).join(',\n');
+      await connection.query(`INSERT INTO \`${category}\` (${Object.keys(columns).join(', ')}) values ${values} ON DUPLICATE KEY UPDATE mark=VALUES(mark)`);
     }
     if (valuesDelete.length) {
-      await connection.query(`DELETE FROM \`${category}\` WHERE ${valuesDelete.map(i => `name=${mysql.escape(i)}`).join(' OR ')}`);
+      await connection.query(`DELETE FROM \`${category}\` WHERE ${valuesDelete.map((i) => `name=${mysql.escape(i)}`).join(' OR ')}`);
     }
 
     console.log('RESPONSE /', result);
     res.writeHead(200, {
-      'Content-Type': 'application/json;charset=utf-8'
+      'Content-Type': 'application/json;charset=utf-8',
     });
     res.end(String(result));
 
     next();
   });
 
-  app.all('*', function (req, res, next) {
+  app.all('*', (req, res, next) => {
     busy = false;
   });
 
   app.listen(port);
-  console.log('Listening at http://localhost:' + port);
+  console.log(`Listening at http://localhost:${port}`);
 };
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

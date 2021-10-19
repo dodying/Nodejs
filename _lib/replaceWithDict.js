@@ -10,13 +10,12 @@
 // @Require:            null
 // ==/Headers==
 
-'use strict';
 let dictG = {};
 let optionG = {
   depth: 1,
   ifNotString: (key, value, dict) => JSON.stringify(value),
   ifString: (key, value, dict) => value,
-  ignoreDefaultDict: false
+  ignoreDefaultDict: false,
 };
 
 /**
@@ -28,8 +27,8 @@ let optionG = {
  * depth
  */
 const replaceWithDict = (text, dict, option = {}) => {
-  option = Object.assign({}, optionG, option);
-  if (!option.ignoreDefaultDict) dict = Object.assign({}, dictG, dict);
+  option = { ...optionG, ...option };
+  if (!option.ignoreDefaultDict) dict = { ...dictG, ...dict };
   const pattern = /(\{[^{}]+\})/;
   const pattern1 = /\{([^{}]+)\}/;
   for (let time = 0; time < (option.depth || 1); time++) {
@@ -53,7 +52,7 @@ const replaceWithDict = (text, dict, option = {}) => {
 };
 replaceWithDict.init = (dict = {}, option = optionG) => {
   dictG = dict;
-  optionG = Object.assign({}, optionG, option);
+  optionG = { ...optionG, ...option };
 };
-replaceWithDict.assign = dict => (dictG = Object.assign(dictG, dict || {}));
+replaceWithDict.assign = (dict) => (dictG = Object.assign(dictG, dict || {}));
 module.exports = replaceWithDict;

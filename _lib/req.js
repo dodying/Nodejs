@@ -10,8 +10,6 @@
 // @Require:            cheerio,deepmerge,iconv-lite,request,request-promise,socks5-http-client,socks5-https-client
 // ==/Headers==
 
-'use strict';
-
 const request = require('request');
 const requestPromise = require('request-promise');
 const Agent = require('socks5-http-client/lib/Agent');
@@ -29,10 +27,10 @@ let config = {
   request: { // 替换option
     headers: {
       Accept: 'text/html, application/json, */*',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36'
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36',
     },
     timeout: 60 * 1000,
-    jar: request.jar()
+    jar: request.jar(),
   },
   retry: 5,
   proxy: '', // 仅http/socks5 格式：http://user:pwd@host:port
@@ -40,13 +38,13 @@ let config = {
   withoutProxy: ['://127.0.0.1', '://localhost'], // 总是直连
   autoProxy: true, // 自动切换代理（开启后，先直连，直连失败则通过代理，之后再直连
   setCookie: [], // eg: [['key=value','example.com']]
-  logLevel: ['debug', 'warn', 'error']
+  logLevel: ['debug', 'warn', 'error'],
 };
 
 const initConfig = (obj) => {
   config = merge(config, obj, {
     arrayMerge: (destinationArray, sourceArray, options) => sourceArray, // 不合并数组
-    clone: false
+    clone: false,
   });
   if (config.setCookie.length) {
     for (const i of config.setCookie) {
@@ -58,21 +56,21 @@ const initConfig = (obj) => {
 const setConfig = (key, value) => { config[key] = value; };
 const getConfig = (key, defaultValue) => config[key] || defaultValue;
 
-function reqOption (uriOrOption, optionUser = {}) {
+function reqOption(uriOrOption, optionUser = {}) {
   let option = typeof uriOrOption === 'string' ? { uri: uriOrOption } : uriOrOption;
-  let uri = option.uri;
+  let { uri } = option;
 
   if (uriLast) uri = new URL(uri, uriLast).href;
   option = merge.all([{
     method: 'GET',
     headers: {
-      Referer: uriLast && new URL(uriLast).hostname === new URL(uri).hostname ? uriLast : uri
+      Referer: uriLast && new URL(uriLast).hostname === new URL(uri).hostname ? uriLast : uri,
     },
     timeout: 60 * 1000,
     strictSSL: false,
     resolveWithFullResponse: true,
     simple: false,
-    gzip: true
+    gzip: true,
   }, config.request, option, { uri }]); // 不合并数组
 
   uri = option.uri || option.url;
@@ -87,9 +85,9 @@ function reqOption (uriOrOption, optionUser = {}) {
     let useProxy;
     if (!protocol || !hostname || !port) {
       useProxy = false;
-    } else if (config.withoutProxy.some(i => uri.match(i))) {
+    } else if (config.withoutProxy.some((i) => uri.match(i))) {
       useProxy = false;
-    } else if (config.withProxy.some(i => uri.match(i))) {
+    } else if (config.withProxy.some((i) => uri.match(i))) {
       useProxy = true;
     } else if (config.autoProxy) {
       useProxy = uri in retryList ? !proxyList[uriHost] : proxyList[uriHost] || false;
@@ -103,7 +101,7 @@ function reqOption (uriOrOption, optionUser = {}) {
         option.agentClass = uri.match(/^http:/) ? Agent : Agent2;
         option.agentOptions = {
           socksHost: hostname,
-          socksPort: port
+          socksPort: port,
         };
         if (username && password) {
           option.agentOptions.socksUsername = username;
@@ -119,7 +117,7 @@ function reqOption (uriOrOption, optionUser = {}) {
   return option;
 }
 
-async function req (uriOrOption, optionUser = {}) {
+async function req(uriOrOption, optionUser = {}) {
   const option = reqOption(uriOrOption, optionUser);
   const uri = option.uri || option.url;
   if (option.cache && uri in cacheList) return cacheList[uri];
@@ -176,91 +174,87 @@ async function req (uriOrOption, optionUser = {}) {
       delete retryList[uri];
       if (option.cache) cacheList[uri] = res;
       return res;
-    } else {
-      return errorHandle(res.statusCode + ' ' + res.statusMessage);
     }
+    return errorHandle(`${res.statusCode} ${res.statusMessage}`);
   } catch (error) {
     if (error.cause && error.cause.errno === 'ETIMEDOUT' && error.cause.port === 443 && uri.match('http://')) {
       option.uri = uri.replace('http://', 'https://');
       return req(option, optionUser);
-    } else {
-      return errorHandle(error.message);
     }
+    return errorHandle(error.message);
   }
 }
 
-function reqRaw (uriOrOption, optionUser = {}) {
+function reqRaw(uriOrOption, optionUser = {}) {
   const option = reqOption(uriOrOption, optionUser);
   return request(option);
 }
 
-async function reqHEAD (uriOrOption, optionUser = {}) {
+async function reqHEAD(uriOrOption, optionUser = {}) {
   let option = typeof uriOrOption === 'string' ? { uri: uriOrOption } : uriOrOption;
-  let useProxy = optionUser.useProxy;
-  const withoutHeader = optionUser.withoutHeader;
+  let { useProxy } = optionUser;
+  const { withoutHeader } = optionUser;
 
   let retry = 1;
-  const head = async () => {
-    return new Promise((resolve, reject) => {
-      let req;
-      const _withoutHeader = withoutHeader;
-      if (!_withoutHeader) {
-        req = reqRaw(option, optionUser);
-      } else {
-        option = Object.assign(option, {
-          headers: {},
-          jar: request.jar(),
-          removeRefererHeader: true
-        });
-        req = reqRaw(option, optionUser);
+  const head = async () => new Promise((resolve, reject) => {
+    let req;
+    const _withoutHeader = withoutHeader;
+    if (!_withoutHeader) {
+      req = reqRaw(option, optionUser);
+    } else {
+      option = Object.assign(option, {
+        headers: {},
+        jar: request.jar(),
+        removeRefererHeader: true,
+      });
+      req = reqRaw(option, optionUser);
+    }
+    let html = '';
+    const reses = [];
+
+    req.on('redirect', function () {
+      if (config.logLevel.includes('warn')) console.warn(`Redirect:\t${this.uri.href}`);
+    }).on('response', async (res) => {
+      reses.push(res);
+      if (
+        ['application', 'binary', 'image', 'audio', 'video', 'font', 'model'].some((i) => res.headers['content-type'] && res.headers['content-type'].match(i))
+          || (res.headers['content-disposition'] && res.headers['content-disposition'].match(/^attachment/))
+          || res.headers.etag
+      ) {
+        req.abort();
+        resolve(reses);
+        return;
       }
-      let html = '';
-      const reses = [];
 
-      req.on('redirect', function () {
-        if (config.logLevel.includes('warn')) console.warn(`Redirect:\t${this.uri.href}`);
-      }).on('response', async res => {
-        reses.push(res);
-        if (
-          ['application', 'binary', 'image', 'audio', 'video', 'font', 'model'].some(i => res.headers['content-type'] && res.headers['content-type'].match(i)) ||
-          (res.headers['content-disposition'] && res.headers['content-disposition'].match(/^attachment/)) ||
-          res.headers.etag
-        ) {
-          req.abort();
-          resolve(reses);
-          return;
-        }
-
-        res.on('end', async function () {
-          const $ = cheerio.load(html);
-          const match = html.match(/<meta http-equiv="?refresh"? content="?(.*)"?/i);
-          const refresh = $('meta[http-equiv="refresh"],meta[http-equiv="REFRESH"]');
-          if (refresh.length || match) {
-            let uri1 = refresh.length ? refresh.attr('content') : match[1];
-            uri1 = uri1.match(/url=(.*)/i)[1];
-            option.uri = uri1;
-            const reses1 = await reqHEAD(option, { useProxy });
-            resolve(reses.concat(reses1));
-          } else {
-            resolve(reses);
-          }
-        });
-        res.on('data', chunk => {
-          html += chunk;
-        });
-      }).on('error', async error => {
-        if (config.logLevel.includes('error')) console.error(`Failed-${retry}:\t${error.message}`);
-        retry = retry + 1;
-        useProxy = !useProxy;
-        if (config.retry > retry) {
-          const reses1 = await head();
+      res.on('end', async () => {
+        const $ = cheerio.load(html);
+        const match = html.match(/<meta http-equiv="?refresh"? content="?(.*)"?/i);
+        const refresh = $('meta[http-equiv="refresh"],meta[http-equiv="REFRESH"]');
+        if (refresh.length || match) {
+          let uri1 = refresh.length ? refresh.attr('content') : match[1];
+          uri1 = uri1.match(/url=(.*)/i)[1];
+          option.uri = uri1;
+          const reses1 = await reqHEAD(option, { useProxy });
           resolve(reses.concat(reses1));
         } else {
           resolve(reses);
         }
       });
+      res.on('data', (chunk) => {
+        html = html + chunk;
+      });
+    }).on('error', async (error) => {
+      if (config.logLevel.includes('error')) console.error(`Failed-${retry}:\t${error.message}`);
+      retry = retry + 1;
+      useProxy = !useProxy;
+      if (config.retry > retry) {
+        const reses1 = await head();
+        resolve(reses.concat(reses1));
+      } else {
+        resolve(reses);
+      }
     });
-  };
+  });
   const reses = await head();
   return reses[reses.length - 1];
 }
@@ -268,7 +262,7 @@ async function reqHEAD (uriOrOption, optionUser = {}) {
 req.config = {
   init: initConfig,
   set: setConfig,
-  get: getConfig
+  get: getConfig,
 };
 req.option = reqOption;
 req.raw = reqRaw;

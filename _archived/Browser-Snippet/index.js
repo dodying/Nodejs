@@ -10,7 +10,7 @@
 // ==/Headers==
 
 // 导入原生模块
-const fs = require('fs')
+const fs = require('fs');
 
 // 导入第三方模块
 
@@ -18,36 +18,36 @@ const fs = require('fs')
 
 // Main
 const main = async () => {
-  let file = 'api-metadata.json'
+  const file = 'api-metadata.json';
   if (!fs.existsSync(file)) {
-    console.error('No api-metadata.json')
-    process.exit()
+    console.error('No api-metadata.json');
+    process.exit();
   }
-  let api = fs.readFileSync(file, 'utf-8')
+  let api = fs.readFileSync(file, 'utf-8');
   try {
-    api = JSON.parse(api)
+    api = JSON.parse(api);
   } catch (error) {
-    console.error('Error api-metadata.json')
-    process.exit()
+    console.error('Error api-metadata.json');
+    process.exit();
   }
-  let out = {}
-  for (let main in api) {
-    let method = Object.keys(api[main])
+  const out = {};
+  for (const main in api) {
+    const method = Object.keys(api[main]);
     out[`browser.${main}`] = {
       prefix: `browser.${main}`,
-      body: `browser.${main}.\${1|${method.join()}|}($0)`
-    }
+      body: `browser.${main}.\${1|${method.join()}|}($0)`,
+    };
     out[`chrome.${main}`] = {
       prefix: `chrome.${main}`,
-      body: `chrome.${main}.\${1|${method.join()}|}($0)`
-    }
+      body: `chrome.${main}.\${1|${method.join()}|}($0)`,
+    };
   }
-  fs.writeFileSync('snippet.json', JSON.stringify(out, null, 2))
-}
+  fs.writeFileSync('snippet.json', JSON.stringify(out, null, 2));
+};
 
 main().then(async () => {
   //
-}, async err => {
-  console.error(err)
-  process.exit()
-})
+}, async (err) => {
+  console.error(err);
+  process.exit();
+});

@@ -23,7 +23,7 @@ let connectionLastTime = null;
 const connectionTimeout = 5 * 60 * 1000;
 const lastConnection = {
   info: {},
-  result: []
+  result: [],
 };
 let connecting = false;
 const columns = {
@@ -45,7 +45,7 @@ const columns = {
   rating: 'float unsigned', // 评分
   favorited: 'int unsigned', // 收藏人数
   time_download: 'timestamp', // 下载时间
-  tags: 'json' // 标签
+  tags: 'json', // 标签
 };
 
 // 导入原生模块
@@ -54,22 +54,26 @@ const cp = require('child_process');
 
 // 导入第三方模块
 const fse = require('fs-extra');
-const { app, BrowserWindow, ipcMain, Menu, shell, Tray } = require('electron');
+const {
+  app, BrowserWindow, ipcMain, Menu, shell, Tray,
+} = require('electron');
 if (debug) require('electron-reload')(path.join(__dirname, 'src'));
 const mysql = require('mysql2/promise');
 const JSZip = require('jszip');
 
-const walk = require('./../_lib/walk');
-const waitInMs = require('./../_lib/waitInMs');
+const walk = require('../_lib/walk');
+const waitInMs = require('../_lib/waitInMs');
 const parseInfo = require('./js/parseInfo');
 const getTitleMain = require('./js/getTitleMain');
+
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
 
 // Function
 const openWindow = (url) => {
   if (!url.match(/^https?:/)) url = path.resolve(__dirname, url);
   console.debug('open', url);
-  let win, id;
+  let win; let
+    id;
 
   return new Promise((resolve, reject) => {
     win = new BrowserWindow({
@@ -81,8 +85,8 @@ const openWindow = (url) => {
       frame: false,
       icon: './src/icon.png',
       webPreferences: {
-        nodeIntegration: true
-      }
+        nodeIntegration: true,
+      },
     });
     id = win.id;
     windows[id] = win;
@@ -115,7 +119,7 @@ const openWindow = (url) => {
       resolve = null;
     });
 
-    windows[id].on('closed', function () {
+    windows[id].on('closed', () => {
       delete windows[id];
       win = null;
 
@@ -132,7 +136,7 @@ const openWindow = (url) => {
       }
     });
 
-    windows[id].on('focus', function () {
+    windows[id].on('focus', () => {
       windowHistory.unshift(id);
       windowHistory = Array.from(new Set(windowHistory));
     });
@@ -160,7 +164,7 @@ const createConnection = async (obj) => {
   lastConnection.info = {
     host: obj.host,
     user: obj.user,
-    password: obj.password
+    password: obj.password,
   };
 
   console.log('re-connection');
@@ -176,9 +180,9 @@ const createConnection = async (obj) => {
       user: obj.user,
       password: obj.password,
       keepAliveInitialDelay: 10000,
-      enableKeepAlive: true
+      enableKeepAlive: true,
     });
-    connection.on('error', function (err) {
+    connection.on('error', (err) => {
       if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
         createConnection(obj);
       } else {
@@ -190,45 +194,43 @@ const createConnection = async (obj) => {
     if (error.message.match('Too many connections')) {
       connecting = false;
       return createConnection(obj);
-    } else {
-      console.log({ err: error, msg: error.message });
-      connection = null;
-      connecting = false;
-      connectionLastTime = null;
-      return ['Connection Failed, please check info', -1];
     }
+    console.log({ err: error, msg: error.message });
+    connection = null;
+    connecting = false;
+    connectionLastTime = null;
+    return ['Connection Failed, please check info', -1];
   }
 
   const [rows] = await connection.query('SHOW DATABASES');
 
-  if (rows.filter(i => i.Database === obj.database).length) {
+  if (rows.filter((i) => i.Database === obj.database).length) {
     await connection.query(`USE ${obj.database}`);
     connecting = false;
     return ['Connection Success, and you can update', 1];
-  } else {
-    connecting = false;
-    connectionLastTime = null;
-    return ['Connection Success, but you need to init', 0];
   }
+  connecting = false;
+  connectionLastTime = null;
+  return ['Connection Success, but you need to init', 0];
 };
 const updateTableFiles = async (obj) => {
   console.log('database-update');
 
   console.time('walk');
   let filesLocal = walk(obj.libraryFolder);
-  filesLocal = filesLocal.filter(i => ['.cbz', '.zip'].includes(path.extname(i))).map(i => path.relative(obj.libraryFolder, i));
+  filesLocal = filesLocal.filter((i) => ['.cbz', '.zip'].includes(path.extname(i))).map((i) => path.relative(obj.libraryFolder, i));
   console.timeEnd('walk');
 
   console.time('query');
   const [rows] = await connection.query('select path from files');
-  const filesDatabase = rows.map(i => i.path);
+  const filesDatabase = rows.map((i) => i.path);
   console.timeEnd('query');
 
   console.debug('Total Files:\t', filesLocal.length, '\nExisted Files:\t', filesDatabase.length);
-  const filesLocalUpperCase = filesLocal.map(i => i.toUpperCase());
-  const filesDatabaseUpperCase = filesDatabase.map(i => i.toUpperCase());
-  const filesDeleted = filesDatabase.filter(i => !filesLocalUpperCase.includes(i.toUpperCase()));
-  const filesNew = filesLocal.filter(i => !filesDatabaseUpperCase.includes(i.toUpperCase()));
+  const filesLocalUpperCase = filesLocal.map((i) => i.toUpperCase());
+  const filesDatabaseUpperCase = filesDatabase.map((i) => i.toUpperCase());
+  const filesDeleted = filesDatabase.filter((i) => !filesLocalUpperCase.includes(i.toUpperCase()));
+  const filesNew = filesLocal.filter((i) => !filesDatabaseUpperCase.includes(i.toUpperCase()));
   console.debug('New Files\t', filesNew.length, '\nDeleted Files:\t', filesDeleted.length);
 
   console.time('INSERT INTO');
@@ -237,13 +239,13 @@ const updateTableFiles = async (obj) => {
   let arr = [];
   for (const file of filesNew) {
     if (arr.length >= 100) {
-      const arr1 = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
+      const arr1 = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
       await connection.query(queryString + arr1);
       arr = [];
     }
 
     const fullpath = path.join(obj.libraryFolder, file);
-    const size = fse.statSync(fullpath).size;
+    const { size } = fse.statSync(fullpath);
 
     // 读取数据
     const targetData = fse.readFileSync(fullpath);
@@ -258,7 +260,7 @@ const updateTableFiles = async (obj) => {
         file, size, 'NULL',
         title, ...getTitleMain(title),
         title, ...getTitleMain(title),
-        ...'1'.repeat(column.length - 9).split('').map(i => 'NULL')
+        ...'1'.repeat(column.length - 9).split('').map((i) => 'NULL'),
       ]);
       continue;
     }
@@ -267,13 +269,13 @@ const updateTableFiles = async (obj) => {
     const fileList = Object.keys(zip.files);
 
     // 检测有无info.txt
-    if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+    if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('压缩档内不存在info.txt: ', file);
       return new Error('no info.txt');
     }
 
     // 读取info.txt
-    const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+    const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
 
@@ -283,7 +285,7 @@ const updateTableFiles = async (obj) => {
       if (i in info) tags[i] = info[i];
     }
     let artist = tags.artist ? tags.artist : tags.group ? tags.group : [];
-    artist = artist.map(i => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
+    artist = artist.map((i) => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
     arr.push([
       file, size, artist,
       info.title, ...getTitleMain(info.title),
@@ -294,11 +296,11 @@ const updateTableFiles = async (obj) => {
       isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
       isNaN(parseInt(info.Favorited)) ? 0 : parseInt(info.Favorited),
       info.downloadTime,
-      JSON.stringify(tags)
+      JSON.stringify(tags),
     ]);
   }
   if (arr.length) {
-    arr = arr.map(i => `(${i.map(j => j === 'NULL' ? 'NULL' : connection.escape(j)).join(', ')})`).join(',\n');
+    arr = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
     await connection.query(queryString + arr);
   }
   console.timeEnd('INSERT INTO');
@@ -308,7 +310,7 @@ const updateTableFiles = async (obj) => {
   arr = [];
   for (const file of filesDeleted) {
     if (arr.length >= 100) {
-      const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+      const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
       await connection.query(queryString + arr1);
       arr = [];
     }
@@ -316,7 +318,7 @@ const updateTableFiles = async (obj) => {
     arr.push(file);
   }
   if (arr.length) {
-    const arr1 = arr.map(i => `path=${connection.escape(i)}`).join(' OR ');
+    const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
     await connection.query(queryString + arr1);
   }
   console.timeEnd('DELETE INTO');
@@ -340,7 +342,7 @@ const rebuildTrayMenu = () => {
           }
         }
         rebuildTrayMenu();
-      }
+      },
     },
     {
       label: '显示所有窗口',
@@ -349,7 +351,7 @@ const rebuildTrayMenu = () => {
           windows[id].show();
         }
         rebuildTrayMenu();
-      }
+      },
     },
     {
       label: '隐藏所有窗口',
@@ -358,9 +360,9 @@ const rebuildTrayMenu = () => {
           windows[id].hide();
         }
         rebuildTrayMenu();
-      }
+      },
     },
-    { type: 'separator' }
+    { type: 'separator' },
   ];
 
   for (const id in windows) {
@@ -370,7 +372,7 @@ const rebuildTrayMenu = () => {
       click: (menuItem, browserWindow, event) => {
         windows[id].show();
         rebuildTrayMenu();
-      }
+      },
     });
   }
 
@@ -381,14 +383,14 @@ const rebuildTrayMenu = () => {
       click: (menuItem, browserWindow, event) => {
         saveLastTabs();
         for (const id in windows) windows[id].close();
-      }
+      },
     },
     {
       label: '退出',
       click: (menuItem, browserWindow, event) => {
         for (const id in windows) windows[id].close();
-      }
-    }
+      },
+    },
   );
 
   const contextMenu = Menu.buildFromTemplate(menuItem);
@@ -400,7 +402,7 @@ const saveLastTabs = () => {
   for (const id in windows) {
     let url = windows[id].webContents.getURL();
     const arr = url.split(separator);
-    if (arr.length > 1) url = '.' + arr.slice(1).join(separator);
+    if (arr.length > 1) url = `.${arr.slice(1).join(separator)}`;
     urls.push(url);
   }
   config.lastTabs = urls;
@@ -424,7 +426,7 @@ ipcMain.on('open-external', async (event, url, name) => {
   } else if (name === 'delete') {
     const fullpath = path.resolve(config.libraryFolder, url);
     if (fse.existsSync(fullpath)) fse.unlinkSync(fullpath);
-    const cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg');
+    const cover = path.resolve(path.dirname(fullpath), `${path.parse(fullpath).name}.jpg`);
     if (fse.existsSync(cover)) fse.unlinkSync(cover);
 
     if (!('delete' in store)) store.delete = [];
@@ -436,17 +438,17 @@ ipcMain.on('open-external', async (event, url, name) => {
     const fullpath = path.resolve(config.libraryFolder, url);
     const targetData = fse.readFileSync(fullpath);
     const zipContent = await new JSZip().loadAsync(targetData);
-    const fileList = Object.keys(zipContent.files).filter(i => !i.match(/(info.txt|\/)$/));
+    const fileList = Object.keys(zipContent.files).filter((i) => !i.match(/(info.txt|\/)$/));
     for (const i of fileList) zipContent.remove(i);
     const content = await zipContent.generateAsync({
       type: 'nodebuffer',
       compression: 'DEFLATE',
       compressionOptions: {
-        level: 9
-      }
+        level: 9,
+      },
     });
     fse.writeFileSync(fullpath, content);
-    const cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg');
+    const cover = path.resolve(path.dirname(fullpath), `${path.parse(fullpath).name}.jpg`);
     if (fse.existsSync(cover)) fse.unlinkSync(cover);
     await connection.query('DELETE FROM files WHERE ' + `path=${connection.escape(url)}`);
   } else if (name === 'everything') {
@@ -535,11 +537,11 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
     queryString = `USE ${obj.database}`;
     await connection.query(queryString);
 
-    queryString = 'CREATE TABLE `files` (' + [
+    queryString = `CREATE TABLE \`files\` (${[
       'id int unsigned not null auto_increment',
-      ...Object.keys(columns).map(i => `${i} ${columns[i]}`),
-      'PRIMARY KEY (id)'
-    ].join(', ') + ')';
+      ...Object.keys(columns).map((i) => `${i} ${columns[i]}`),
+      'PRIMARY KEY (id)',
+    ].join(', ')})`;
     await connection.query(queryString);
     event.returnValue = ['Init Success', code];
   } else if (code === 0) {
@@ -558,7 +560,7 @@ ipcMain.on('database-query', async (event, str) => {
   if (!connection || new Date().getTime() - connectionLastTime >= connectionTimeout) await createConnection(config);
   console.debug('database-query', '\n\x1b[32m', str, '\x1b[0m');
   let result = [
-    []
+    [],
   ];
   try {
     result = await connection.query(str);
@@ -649,9 +651,9 @@ ipcMain.on('query-by-condition', async (event, condition) => {
     if (not) str = `NOT(${str})`;
     querySegment.push(str);
   }
-  query += querySegment.join(' AND ');
-  query += ' ORDER BY ' + order.join(', ');
-  if (condition.filter(i => !i[0] && i[1] === 'command').length) query = condition.filter(i => !i[0] && i[1] === 'command').map(i => i[3]).join('\n');
+  query = query + querySegment.join(' AND ');
+  query = `${query} ORDER BY ${order.join(', ')}`;
+  if (condition.filter((i) => !i[0] && i[1] === 'command').length) query = condition.filter((i) => !i[0] && i[1] === 'command').map((i) => i[3]).join('\n');
   console.debug('database-query', '\n\x1b[32m', query, '\x1b[0m');
   let result = [[]];
   try {
@@ -681,7 +683,7 @@ ipcMain.on('close-all-tabs', (event, id) => {
   for (const id in windows) windows[id].close();
 });
 
-app.on('window-all-closed', function () {
+app.on('window-all-closed', () => {
   fse.writeJSONSync('./config.json', config, { spaces: 2 });
   fse.writeJSONSync('./store.json', store, { spaces: 2 });
   if (process.platform !== 'darwin') app.quit();
@@ -691,7 +693,7 @@ app.on('window-all-closed', function () {
 const main = async () => {
   config = fse.existsSync('./config.json') ? fse.readJSONSync('./config.json') : {};
 
-  app.on('ready', async function () {
+  app.on('ready', async () => {
     const urls = ['./src/index.html'];
 
     store = fse.existsSync('./store.json') ? fse.readJSONSync('./store.json') : {};
@@ -723,7 +725,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

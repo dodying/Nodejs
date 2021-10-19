@@ -22,17 +22,17 @@
         $('<div class="title-bar-btns"></div>').html([
           '<button name="min">_</button>',
           '<button name="max">□</button>',
-          '<button name="close">×</button>'
+          '<button name="close">×</button>',
         ].join('')).css({
           position: 'fixed',
           top: '0px',
-          right: '0px'
+          right: '0px',
         }).appendTo('body');
         $('.title-bar-btns:visible').on('mouseup', 'button', (e) => {
           e.preventDefault();
 
           const name = $(e.target).attr('name');
-          const button = e.button;
+          const { button } = e;
           if (name === 'min' && button === 0) {
             electron.remote.getCurrentWindow().minimize();
           } else if (name === 'min' && button === 2) {
@@ -59,33 +59,33 @@
     }
   });
 
-  Mousetrap.bind('ctrl+shift+q', function () {
+  Mousetrap.bind('ctrl+shift+q', () => {
     ipcRenderer.send('close-all-tabs');
     return false;
   });
-  Mousetrap.bind('esc', function () {
+  Mousetrap.bind('esc', () => {
     electron.remote.getCurrentWindow().close();
     return false;
   });
-  Mousetrap.bind('ctrl+shift+s', function () {
+  Mousetrap.bind('ctrl+shift+s', () => {
     ipcRenderer.send('save-last-tabs');
     return false;
   });
-  Mousetrap.bind('ctrl+`', function () {
+  Mousetrap.bind('ctrl+`', () => {
     ipcRenderer.send('hide-all-tabs');
     return false;
   });
-  Mousetrap.bind('`', function () {
+  Mousetrap.bind('`', () => {
     ipcRenderer.send('hide-tab', electron.remote.getCurrentWindow().id);
     return false;
   });
-  Mousetrap.bind('ctrl+t', function () {
+  Mousetrap.bind('ctrl+t', () => {
     ipcRenderer.send('open', './src/index.html');
     return false;
   });
 })().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

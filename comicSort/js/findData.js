@@ -1,5 +1,3 @@
-'use strict';
-
 const fs = require('fs');
 const path = require('path');
 
@@ -13,17 +11,17 @@ const findData = (main, sub = undefined, textOnly = true) => {
 
   let data;
   if (main) {
-    data = Dataset.filter(i => i.namespace === main);
+    data = Dataset.filter((i) => i.namespace === main);
     if (data.length === 0) return {};
     if (sub === undefined) {
       return {
         name: main,
         cname: data[0].frontMatters.name,
-        info: data[0].frontMatters.description
+        info: data[0].frontMatters.description,
       };
     }
   } else {
-    data = Dataset.filter(i => !['rows'].includes(i.namespace) && sub.replace(/_/g, ' ') in i.data);
+    data = Dataset.filter((i) => !['rows'].includes(i.namespace) && sub.replace(/_/g, ' ') in i.data);
     if (data.length) {
       main = data[0].namespace;
     } else {
@@ -40,13 +38,12 @@ const findData = (main, sub = undefined, textOnly = true) => {
       cname = cname.replace(/!\[(.*?)\]\((.*?)\)/g, '').replace(/\p{Extended_Pictographic}/gu, '');
     }
     return {
-      name: main === 'misc' ? sub : main + ':' + sub,
-      cname: cname,
-      info: info
+      name: main === 'misc' ? sub : `${main}:${sub}`,
+      cname,
+      info,
     };
-  } else {
-    return {};
   }
+  return {};
 };
 
 findData.init = (obj) => {

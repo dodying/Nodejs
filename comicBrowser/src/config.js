@@ -16,14 +16,15 @@
 
 // 导入第三方模块
 const electron = require('electron');
-const ipcRenderer = electron.ipcRenderer;
+
+const { ipcRenderer } = electron;
 
 // Function
 const funcConfig = () => {
   const CONFIG = ipcRenderer.sendSync('config');
   const elems = $('div[name="config"]').find('input:not([type="button"]):not([type="file"]),select,textarea').toArray();
 
-  elems.forEach(i => {
+  elems.forEach((i) => {
     const key = i.getAttribute('id').replace('config-', '');
     if (!(key in CONFIG)) return;
     const value = CONFIG[key];
@@ -38,7 +39,7 @@ const funcConfig = () => {
 
   $('#config-btnSave').on('click', () => {
     const config = {};
-    elems.forEach(i => {
+    elems.forEach((i) => {
       const key = i.getAttribute('id').replace('config-', '');
       let value;
       if (i.type === 'number') {
@@ -75,7 +76,7 @@ const main = async () => {
       user: $('#config-user').val(),
       password: $('#config-password').val(),
       database: $('#config-database').val(),
-      libraryFolder: $('#config-libraryFolder').val()
+      libraryFolder: $('#config-libraryFolder').val(),
     };
 
     const result = ipcRenderer.sendSync('database-connect', obj, name);
@@ -92,7 +93,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

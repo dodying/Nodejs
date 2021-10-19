@@ -10,8 +10,6 @@
 // @Require:            null
 // ==/Headers==
 
-'use strict';
-
 const color = {
   Reset: '\x1b[0m',
   Bright: '\x1b[1m',
@@ -37,17 +35,17 @@ const color = {
   BgBlue: '\x1b[44m',
   BgMagenta: '\x1b[45m',
   BgCyan: '\x1b[46m',
-  BgWhite: '\x1b[47m'
+  BgWhite: '\x1b[47m',
 };
 const _color = {
   log: color.FgGreen,
   warn: color.FgYellow,
   error: color.BgRed,
-  debug: color.FgBlue
+  debug: color.FgBlue,
 };
-var consoleRaw = {};
+const consoleRaw = {};
 
-function logWithColor (type, ...args) {
+function logWithColor(type, ...args) {
   if (args.length === 1 && typeof args[0] === 'string') {
     const result = args[0].match(/^(.*):\t(.*)$/);
     if (result && result[1].length < 16) {

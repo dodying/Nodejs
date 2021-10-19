@@ -1,5 +1,3 @@
-'use strict';
-
 const fs = require('fs');
 const path = require('path');
 
@@ -16,13 +14,13 @@ const getValue = (value, dafaultValue) => {
 };
 
 class Option {
-  constructor (dir, other = {}) {
+  constructor(dir, other = {}) {
     this.dir = dir;
     Object.assign(this, {
       fullpath: true,
       nodir: false,
       nofile: false,
-      recursive: true
+      recursive: true,
     }, other);
     this.ignore = getValue(this.ignore, []);
     this.ignoreDir = getValue(this.ignoreDir, []);
@@ -49,25 +47,25 @@ const walk = function (dir, option = {}) {
   try {
     list = fs.readdirSync(dir);
   } catch (error) {}
-  list.forEach(function (file) {
+  list.forEach((file) => {
     const fullpath = path.join(dir, file);
-    if (option.ignore.some(i => fullpath.match(i))) return;
-    if (option.match && !option.match.some(i => fullpath.match(i))) return;
+    if (option.ignore.some((i) => fullpath.match(i))) return;
+    if (option.match && !option.match.some((i) => fullpath.match(i))) return;
 
     const name = option.fullpath ? fullpath : path.relative(option.dir, fullpath);
     if (fs.existsSync(fullpath) && fs.statSync(fullpath).isDirectory()) { // isDirectory
       const dirname = path.basename(file);
-      if (option.ignoreDir.some(i => dirname.match(i))) return;
-      if (option.matchDir && !option.matchDir.some(i => dirname.match(i))) return;
+      if (option.ignoreDir.some((i) => dirname.match(i))) return;
+      if (option.matchDir && !option.matchDir.some((i) => dirname.match(i))) return;
 
       if (!option.nodir) output.push(name);
       if (option.recursive) output = output.concat(walk(fullpath, option) || []);
     } else {
       const basename = path.basename(file);
-      if (option.ignoreFile.some(i => basename.match(i))) return;
-      if (option.matchFile && !option.matchFile.some(i => basename.match(i))) return;
+      if (option.ignoreFile.some((i) => basename.match(i))) return;
+      if (option.matchFile && !option.matchFile.some((i) => basename.match(i))) return;
 
-      if (option.match && !option.match.some(i => file.match(i))) return;
+      if (option.match && !option.match.some((i) => file.match(i))) return;
       if (!option.nofile) output.push(name);
     }
   });

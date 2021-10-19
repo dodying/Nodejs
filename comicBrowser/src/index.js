@@ -51,7 +51,7 @@ const showInfo = { // 查询结果-显示列
   'tag:female': [true, '标签:女性'], // (#)标签:女性
   'tag:male': [true, '标签:男性'], // (#)标签:男性
   'tag:misc': [true, '标签:杂项'], // (#)标签:杂项
-  'tag:group': [false, '标签:组织'] // (#)标签:组织
+  'tag:group': [false, '标签:组织'], // (#)标签:组织
   // tag:language
   // tag:reclass
 };
@@ -61,7 +61,7 @@ const keyMap = { // 按键事件
   left: ['a', 'left', '4'], // 向上翻页
   right: ['d', 'right', '6'], // 向下翻页
   upLeft: ['q', '7'], // 上一页
-  upRight: ['e', '9'] // 下一页
+  upRight: ['e', '9'], // 下一页
 };
 const showColumns = { // 筛选条件要显示的类别
   // 按key顺序显示
@@ -85,26 +85,26 @@ const showColumns = { // 筛选条件要显示的类别
   uploader: [true, 'text'],
   favorited: [true, 'number'],
   time_download: [true, 'datetime'],
-  command: [true, 'text'] // (#)
+  command: [true, 'text'], // (#)
 };
-keyMap.shiftAndUp = keyMap.up.map(i => `shift+${i}`); // 滚动到顶部
-keyMap.shiftAndDown = keyMap.down.map(i => `shift+${i}`); // 滚动到底部
+keyMap.shiftAndUp = keyMap.up.map((i) => `shift+${i}`); // 滚动到顶部
+keyMap.shiftAndDown = keyMap.down.map((i) => `shift+${i}`); // 滚动到底部
 const pagerOption = { // 分页设置
   enable: true, // 是否启用
   minCount: 300, // 结果数量超过则pager
-  size: 100 // 每页数量
+  size: 100, // 每页数量
 };
 const autoCompleteOption = { // 自动填充条件
-  enbaleColumns: ['tags'].concat(Object.keys(showColumns).map(i => [i, showColumns[i]]).filter(i => i[1][0] && i[1][1] === 'text' && !(['command'].includes(i[0]))).map(i => i[0])), // 支持tags或类型为text
+  enbaleColumns: ['tags'].concat(Object.keys(showColumns).map((i) => [i, showColumns[i]]).filter((i) => i[1][0] && i[1][1] === 'text' && !(['command'].includes(i[0]))).map((i) => i[0])), // 支持tags或类型为text
   minLength: 3, // 最小字符数时，显示
-  limit: 50 // 填充结果数限制
+  limit: 50, // 填充结果数限制
 };
 const tagsAlertStyle = { // 高亮标签
   // action: css
   Alert: 'color:#FF0;background-color:#080;',
   // 'Unlike': 'color:#F00!important;background-color:#000;',
   Unlike: 'color:#F00;background-color:#00F;',
-  Like: 'color:#000;background-color:#0FF;'
+  Like: 'color:#000;background-color:#0FF;',
 };
 
 // 导入原生模块
@@ -115,12 +115,13 @@ const path = require('path');
 const electron = require('electron');
 const mysql = require('mysql2/promise');
 
-const waitInMs = require('./../../_lib/waitInMs');
-const findData = require('./../js/findData');
+const waitInMs = require('../../_lib/waitInMs');
+const findData = require('../js/findData');
 const configChange = require('./common/configChange');
 const tooltip = require('./common/tooltip');
-const ipcRenderer = electron.ipcRenderer;
-const Menu = electron.remote.Menu;
+
+const { ipcRenderer } = electron;
+const { Menu } = electron.remote;
 const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data;
 findData.init(EHT);
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
@@ -157,10 +158,10 @@ const showResult = (page) => {
       let index = 0;
       if (JSON.stringify(condition) in resultPosition) {
         const file = resultPosition[JSON.stringify(condition)];
-        index = lastResult.findIndex(i => i.path === file);
+        index = lastResult.findIndex((i) => i.path === file);
       } else {
-        const lastViewTimes = lastResult.map(i => i.time_view);
-        const sorted = lastViewTimes.filter(i => i).sort(collator.compare).reverse();
+        const lastViewTimes = lastResult.map((i) => i.time_view);
+        const sorted = lastViewTimes.filter((i) => i).sort(collator.compare).reverse();
         index = sorted.length ? lastViewTimes.indexOf(sorted[0]) : 0;
       }
       page = Math.floor(index / pagerOption.size) + 1;
@@ -178,7 +179,8 @@ const showResult = (page) => {
     $('.pager>.last').off('click').on('click', () => { showResult(max); }).removeClass('disabled');
     if (page === max) $('.pager>.next,.pager>.last').off('click').addClass('disabled');
     $('.pager>.pagedisplay').attr('max', max);
-    $('.pager>.pagedisplay>input').val(page).prop('max', max).off('change').on('change', e => { showResult(e.target.value * 1); });
+    $('.pager>.pagedisplay>input').val(page).prop('max', max).off('change')
+      .on('change', (e) => { showResult(e.target.value * 1); });
   } else {
     $('.pager').hide();
   }
@@ -190,7 +192,7 @@ const showResult = (page) => {
     let tr = `<tr class="${order % 2 ? 'even' : 'odd'}" path="${row.path}" star="${star}" tags="${tagString}" invisible="${invisible}">`; // path 用于定位
 
     // td order
-    tr += `<td>${order++}</td>`;
+    tr = `${tr}<td>${order++}</td>`;
 
     for (const i in showInfo) {
       if (showInfo[i][0]) {
@@ -220,7 +222,7 @@ const showResult = (page) => {
             '<button name="invisible"></button>',
             '<br>',
             `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}">View</a>`,
-            `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`
+            `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`,
           ].join('');
         } else if (['path'].includes(i)) {
           text = `<a href="${row.path}" name="item">${path.dirname(row[i]).replace(/\\(#[^\\]+)/g, (all, m1) => {
@@ -231,7 +233,7 @@ const showResult = (page) => {
         } else if (['title', 'title_main', 'title_jpn', 'title_jpn_main'].includes(i)) {
           const condition = [[false, i, '=', row[i], undefined]];
           text = `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify(condition))}"></a>`;
-          text += row[i] + (['title', 'title_main'].includes(i) ? `<a href="${row[i]}" name="everything"></a>` : '');
+          text = text + (row[i] + (['title', 'title_main'].includes(i) ? `<a href="${row[i]}" name="everything"></a>` : ''));
         } else if (i.match(/^tag:(.*)$/)) {
           const main = i.match(/^tag:(.*)$/)[1];
           if (row.tags && main in row.tags) {
@@ -246,11 +248,11 @@ const showResult = (page) => {
         } else {
           text = row[i] instanceof Object ? JSON.stringify(row[i]) : row[i];
         }
-        tr += `<td ${attr.join(' ')}>${text}</td>`;
+        tr = `${tr}<td ${attr.join(' ')}>${text}</td>`;
       }
     }
 
-    tr += '</tr>';
+    tr = `${tr}</tr>`;
     html.push(tr);
   }
   html.push('</tbody>', '</table>', '</div>');
@@ -263,7 +265,7 @@ const showResult = (page) => {
   $(scrollElement).on('scroll', () => {
     const total = $(scrollElement).prop('scrollHeight');
     let current = $(scrollElement).prop('scrollTop');
-    current += Math.min(parseInt($(scrollElement).css('height')), document.documentElement.clientHeight);
+    current = current + Math.min(parseInt($(scrollElement).css('height')), document.documentElement.clientHeight);
     electron.remote.getCurrentWindow().setProgressBar(Math.min(current / total, 1));
   });
   resultTable = $('.tableBody');
@@ -273,7 +275,7 @@ const showResult = (page) => {
   const overallWidth = $('.tableBody>table').width();
   for (const td of $('.tableBody>table>tbody>tr:nth-child(1)>td').toArray()) {
     const width = $(td).width();
-    const percent = parseInt((width / overallWidth) * 1000, 10) / 10 + '%';
+    const percent = `${parseInt((width / overallWidth) * 1000, 10) / 10}%`;
     colgroup.push(`<col style="width: ${percent};">`);
   }
   colgroup.push('</colgroup>');
@@ -295,7 +297,7 @@ const showBookmarks = () => {
 const showHistory = () => {
   const history = ipcRenderer.sendSync('store', 'get', 'history', []);
   const html = [
-    '<ul>'
+    '<ul>',
   ];
   for (const href of history) {
     const name = href.match(/^.\/src\//) ? 'native' : 'path';
@@ -323,31 +325,31 @@ const getCondition = () => {
 };
 const getConditionReadable = () => {
   const condition = getCondition();
-  const text = condition.map(i => {
+  const text = condition.map((i) => {
     let text = i[0] ? '!' : '';
     if (i[1] === 'tags') {
       let main = i[2].split(':')[1];
       if (main === '*') {
         main = null;
-        text += '*:';
+        text = `${text}*:`;
       } else {
-        text += findData(main).cname + ':';
+        text = `${text}${findData(main).cname}:`;
       }
 
-      text += findData(main, i[3]).cname || i[3];
+      text = text + (findData(main, i[3]).cname || i[3]);
     } else if ($('.comparison:not(.hide)').attr('name') === 'comp-datetime') {
-      text += `${i[1]}:${i[2]}`;
+      text = `${text}${i[1]}:${i[2]}`;
     } else if (i[2] === 'Duplicate') {
-      text += `重复值:${i[1]}`;
+      text = `${text}重复值:${i[1]}`;
     } else {
-      text += i[3];
+      text = text + i[3];
     }
     return text;
   }).join('&&');
   return text;
 };
 const rememberCondition = (key) => {
-  configChange(config => {
+  configChange((config) => {
     const condition = getCondition();
     config[key] = JSON.stringify(condition);
   });
@@ -376,7 +378,7 @@ const calcRelativeTime = (time) => {
     h: 60,
     d: 24,
     mh: 30,
-    y: 12
+    y: 12,
   };
   let suf;
   let t = delta;
@@ -393,11 +395,11 @@ const calcRelativeTime = (time) => {
   t = Math.round(t);
   const double = ''; // t > 1 ? 's' : ''
   let text = `${t}${suf}${double}`;
-  if (delta <= 1000 * 60 * 60 * 24 * 30) text = '<span class="highlight">' + text + '</span>';
+  if (delta <= 1000 * 60 * 60 * 24 * 30) text = `<span class="highlight">${text}</span>`;
   return text;
 };
 const updateRelativeTime = () => {
-  $('[datetime]').toArray().forEach(ele => {
+  $('[datetime]').toArray().forEach((ele) => {
     $(ele).html(calcRelativeTime($(ele).attr('datetime')));
   });
 };
@@ -407,7 +409,7 @@ const updateTitleUrl = () => {
 
   const params = new URLSearchParams();
   params.set('condition', JSON.stringify(condition));
-  window.history.pushState(null, 'INDEX', '?' + params.toString());
+  window.history.pushState(null, 'INDEX', `?${params.toString()}`);
 };
 const scrollToLast = () => {
   let scrollTop = 0;
@@ -419,8 +421,8 @@ const scrollToLast = () => {
   if (JSON.stringify(condition) in resultPosition) {
     file = resultPosition[JSON.stringify(condition)];
   } else {
-    const lastViewTimes = lastResult.map(i => i.time_view);
-    const sorted = lastViewTimes.filter(i => i).sort(collator.compare).reverse();
+    const lastViewTimes = lastResult.map((i) => i.time_view);
+    const sorted = lastViewTimes.filter((i) => i).sort(collator.compare).reverse();
     const index = sorted.length ? lastViewTimes.indexOf(sorted[0]) : 0;
     if (index in lastResult) file = lastResult[index].path;
   }
@@ -447,17 +449,17 @@ const main = async () => {
         ok: {
           text: 'OK',
           keys: ['enter'],
-          btnClass: 'btn-red'
+          btnClass: 'btn-red',
         },
         cancel: {
           text: 'Cancel',
-          btnClass: 'btn-blue'
-        }
-      }
+          btnClass: 'btn-blue',
+        },
+      },
     });
     if (confirm === 'ok') {
       if (ipcRenderer.sendSync('config', 'get', 'deleteLastTabs')) {
-        configChange(config => delete config.lastTabs);
+        configChange((config) => delete config.lastTabs);
       }
 
       ipcRenderer.sendSync('open', ipcRenderer.sendSync('config', 'get', 'lastTabs'));
@@ -517,23 +519,24 @@ const main = async () => {
       $('.datalist li').eq(e.key === '0' ? 9 : e.key - 1).click();
     } else if (hasItem && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'].includes(e.key)) {
       if (['ArrowUp'].includes(e.key)) {
-        onItem += -1;
+        onItem = onItem + -1;
       } else if (['ArrowDown'].includes(e.key)) {
-        onItem += 1;
+        onItem = onItem + 1;
       } else if (['ArrowLeft', 'PageUp'].includes(e.key)) {
-        onItem += -10;
+        onItem = onItem + -10;
       } else if (['ArrowRight', 'PageDown'].includes(e.key)) {
-        onItem += 10;
+        onItem = onItem + 10;
       } else if (['Home'].includes(e.key)) {
         onItem = 0;
       } else if (['End'].includes(e.key)) {
         onItem = -1;
       }
       while (onItem < 0 || onItem >= hasItem) {
-        onItem += onItem < 0 ? hasItem : -hasItem;
+        onItem = onItem + (onItem < 0 ? hasItem : -hasItem);
       }
       $('.datalistHover').removeClass('datalistHover');
-      $('.datalist li').eq(onItem).addClass('datalistHover').get(0).scrollIntoView();
+      $('.datalist li').eq(onItem).addClass('datalistHover').get(0)
+        .scrollIntoView();
       $(window).scrollTop(0);
     } else if (onItem >= 0 && ['Enter', 'Insert'].includes(e.key)) {
       $('.datalistHover').click();
@@ -554,10 +557,10 @@ const main = async () => {
       if (main === '*') {
         tags = EHT;
       } else {
-        tags = EHT.filter(i => i.namespace === main);
+        tags = EHT.filter((i) => i.namespace === main);
       }
 
-      tags.forEach(i => {
+      tags.forEach((i) => {
         for (const key in i.data) {
           const name = i.data[key].name.replace(/!\[(.*?)\]\((.*?)\)/g, '');
           if (key.match(value) || name.match(value)) {
@@ -572,7 +575,7 @@ const main = async () => {
       const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/[%_\\]/g, '\\$&')}%`)} LIMIT ${autoCompleteOption.limit}`;
       const [rows] = await ipcRenderer.sendSync('database-query', query);
       const html = [];
-      Array.from(new Set(rows.map(i => i[column]))).forEach(i => html.push(`<li>${i}</li>`));
+      Array.from(new Set(rows.map((i) => i[column]))).forEach((i) => html.push(`<li>${i}</li>`));
       $('.datalist>ol').html(html);
     }
     $('.datalist').show();
@@ -611,9 +614,9 @@ const main = async () => {
     const condition = getCondition();
 
     const [rows] = ipcRenderer.sendSync('query-by-condition', condition);
-    configChange(obj => {
+    configChange((obj) => {
       if (!('resultList' in obj)) obj.resultList = {};
-      obj.resultList[JSON.stringify(condition)] = rows.map(i => i.path);
+      obj.resultList[JSON.stringify(condition)] = rows.map((i) => i.path);
     }, 'store');
     lastResult = rows;
     showResult();
@@ -648,22 +651,22 @@ const main = async () => {
             text: 'Submit',
             btnClass: 'btn-blue',
             keys: ['enter'],
-            action: function () {
+            action() {
               const name = this.$content.find('[name="name"]').val();
               resolve(name);
-            }
+            },
           },
-          cancel: function () {
+          cancel() {
             resolve(null);
-          }
+          },
         },
-        onContentReady: function () {
+        onContentReady() {
           this.$content.find('[name="name"]').focus().val(nameBefore || getConditionReadable());
-        }
+        },
       });
     });
     if (!name) return;
-    configChange(config => {
+    configChange((config) => {
       if (!('bookmarkCondition' in config)) config.bookmarkCondition = {};
       if (nameBefore) delete config.bookmarkCondition[nameBefore];
       config.bookmarkCondition[name.trim()] = conditionStr;
@@ -686,12 +689,12 @@ const main = async () => {
   $('.filter').find('[name="move-files"]').on('click', async (e) => {
     if (!lastResult.length) return;
     const result = electron.remote.dialog.showOpenDialogSync({
-      properties: ['openDirectory']
+      properties: ['openDirectory'],
     });
     if (result && result.length) {
       const dir = result[0];
       const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
-      const files = lastResult.map(i => i.path).map(i => path.resolve(libraryFolder, i));
+      const files = lastResult.map((i) => i.path).map((i) => path.resolve(libraryFolder, i));
       const moveMode = path.parse(libraryFolder).root === path.parse(dir).root;
       for (const file of files) {
         electron.remote.getCurrentWindow().setProgressBar((files.indexOf(file) + 1) / files.length);
@@ -708,7 +711,7 @@ const main = async () => {
           }
         } catch (error) {
           if (error.code === 'EBUSY') {
-            console.error('File Locked: ' + file);
+            console.error(`File Locked: ${file}`);
           } else {
             console.error(error);
           }
@@ -760,7 +763,7 @@ const main = async () => {
     $(target).attr('exists', fs.existsSync(fullpath));
 
     const { dir, name } = path.parse(file);
-    const src = path.resolve(libraryFolder, dir, name + '.jpg');
+    const src = path.resolve(libraryFolder, dir, `${name}.jpg`);
     let cover = $(target).attr('cover');
     if (!cover && !$(target).prop('image_loading') && fs.existsSync(src)) {
       $(target).prop('image_loading', true);
@@ -791,7 +794,7 @@ const main = async () => {
         tagsChs = [];
         for (const main of mainTag) {
           if (!(main in tags)) continue;
-          const chs = findData(main).cname + ': ';
+          const chs = `${findData(main).cname}: `;
           const subChs = [];
           for (const sub of tags[main]) {
             let color = '';
@@ -802,7 +805,7 @@ const main = async () => {
           }
           tagsChs.push(chs + subChs.join(', '));
         }
-        tagsChs = '<ul>' + tagsChs.map(i => `<li>${i}</li>`).join('') + '</ul>';
+        tagsChs = `<ul>${tagsChs.map((i) => `<li>${i}</li>`).join('')}</ul>`;
       }
       $(target).prop('tagsChs', tagsChs).attr('tags', null);
     }
@@ -839,7 +842,7 @@ const main = async () => {
     const file = parent.attr('path');
     let star = parent.attr('star');
     star = star === '1' ? 0 : 1;
-    configChange(obj => {
+    configChange((obj) => {
       if (!('star' in obj)) obj.star = [];
       if (star === 1 && !obj.star.includes(file)) {
         obj.star.push(file);
@@ -854,7 +857,7 @@ const main = async () => {
     const parent = $(e.target).parentsUntil('tbody').eq(-1);
     const file = parent.attr('path');
     parent.find('[name="time_view"]').attr('datetime', 'null');
-    configChange(obj => {
+    configChange((obj) => {
       if (obj.lastViewPosition && file in obj.lastViewPosition) delete obj.lastViewPosition[file];
       if (obj.lastViewTime && file in obj.lastViewTime) delete obj.lastViewTime[file];
       if (obj.history && obj.history.includes(file)) obj.history.splice(obj.history.indexOf(file), 1);
@@ -866,13 +869,11 @@ const main = async () => {
     const parent = $(e.target).parentsUntil('tbody').eq(-1);
     const file = parent.attr('path');
     const invisible = (parent.attr('invisible') || parent.attr('raw-invisible')) === '1' ? 0 : 1;
-    configChange(obj => {
+    configChange((obj) => {
       if (!('invisible' in obj)) obj.invisible = [];
       if (invisible) {
         obj.invisible.push(file);
-      } else {
-        if (obj.invisible.includes(file)) obj.invisible.splice(obj.invisible.indexOf(file), 1);
-      }
+      } else if (obj.invisible.includes(file)) obj.invisible.splice(obj.invisible.indexOf(file), 1);
     }, 'store');
     parent.attr('invisible', invisible);
     parent.attr('raw-invisible', invisible);
@@ -884,10 +885,10 @@ const main = async () => {
     lastResult = lastResult.sort((a, b) => collator.compare(a[key], b[key]));
     if (isAsc) lastResult = lastResult.reverse();
 
-    configChange(obj => {
+    configChange((obj) => {
       if (!('resultList' in obj)) obj.resultList = {};
       const condition = getCondition();
-      obj.resultList[JSON.stringify(condition)] = lastResult.map(i => i.path);
+      obj.resultList[JSON.stringify(condition)] = lastResult.map((i) => i.path);
     }, 'store');
 
     showResult();
@@ -930,7 +931,7 @@ const main = async () => {
       ipcRenderer.send('open-external', href, name);
       if (name === 'path') {
         const date = new Date();
-        configChange(obj => {
+        configChange((obj) => {
           if (!('lastViewTime' in obj)) obj.lastViewTime = {};
           obj.lastViewTime[file] = date.toLocaleString('zh-CN', { hour12: false });
         }, 'store');
@@ -944,7 +945,7 @@ const main = async () => {
     }
     if ([undefined, 'native', 'path'].includes(name)) {
       const rememberHistory = ipcRenderer.sendSync('config', 'get', 'rememberHistory');
-      configChange(obj => {
+      configChange((obj) => {
         if (!name || !rememberHistory) return true;
         if (!('history' in obj)) obj.history = [];
         obj.history.unshift(href);
@@ -953,7 +954,7 @@ const main = async () => {
 
     const condition = getCondition();
     if (file) {
-      configChange(obj => {
+      configChange((obj) => {
         if (!('resultPosition' in obj)) obj.resultPosition = {};
         obj.resultPosition[JSON.stringify(condition)] = file;
       }, 'store');
@@ -966,9 +967,9 @@ const main = async () => {
     if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
 
     if (keyMap.up.includes(combo)) { // 向上滚动
-      scrollElement.scrollTop += -scrollHeight;
+      scrollElement.scrollTop = scrollElement.scrollTop + -scrollHeight;
     } else if (keyMap.down.includes(combo)) { // 向下滚动
-      scrollElement.scrollTop += scrollHeight;
+      scrollElement.scrollTop = scrollElement.scrollTop + scrollHeight;
     }
 
     keypressLastTime = new Date().getTime();
@@ -976,9 +977,9 @@ const main = async () => {
   });
   Mousetrap.bind([].concat(keyMap.left, keyMap.right), async (e, combo) => { // 左右键
     if (keyMap.left.includes(combo)) { // 向上滚动
-      scrollElement.scrollTop += -scrollElement.clientHeight;
+      scrollElement.scrollTop = scrollElement.scrollTop + -scrollElement.clientHeight;
     } else if (keyMap.right.includes(combo)) { // 向下滚动
-      scrollElement.scrollTop += scrollElement.clientHeight;
+      scrollElement.scrollTop = scrollElement.scrollTop + scrollElement.clientHeight;
     }
     return false;
   });
@@ -1000,7 +1001,7 @@ const main = async () => {
 
   tagsAlert = ipcRenderer.sendSync('config', 'get', 'tagsAlert', '{}');
   tagsAlert = JSON.parse(tagsAlert);
-  $('<style>').text(Object.keys(tagsAlertStyle).map(i => `[color="${i}"]{${tagsAlertStyle[i]}}`).join('\n')).appendTo('head');
+  $('<style>').text(Object.keys(tagsAlertStyle).map((i) => `[color="${i}"]{${tagsAlertStyle[i]}}`).join('\n')).appendTo('head');
 
   // 还原上次或链接里的条件
   const params = (new URL(document.location)).searchParams;
@@ -1020,7 +1021,7 @@ const main = async () => {
       label: '删除web相同的本子',
       click: () => {
         for (const item of lastResult) {
-          let arr = lastResult.filter(i => i.web === item.web);
+          let arr = lastResult.filter((i) => i.web === item.web);
           arr = arr.sort((a, b) => {
             const ta = new Date(a.time_download).getTime();
             const tb = new Date(b.time_download).getTime();
@@ -1031,7 +1032,7 @@ const main = async () => {
             ipcRenderer.send('open-external', arr[i].path, 'delete');
           }
         }
-      }
+      },
     },
     {
       label: '清空该本子内容',
@@ -1041,7 +1042,7 @@ const main = async () => {
         const item = lastResult[index];
         console.log(item.path);
         ipcRenderer.send('open-external', item.path, 'empty');
-      }
+      },
     },
     {
       label: '清空这之后的本子内容',
@@ -1054,7 +1055,7 @@ const main = async () => {
             ipcRenderer.send('open-external', item.path, 'empty');
           }
         }
-      }
+      },
     },
     { type: 'separator' },
     {
@@ -1062,8 +1063,8 @@ const main = async () => {
       click: () => {
         electron.remote.getCurrentWindow().openDevTools();
         console.log(rightEvent);
-      }
-    }
+      },
+    },
   ];
   const contextMenu = Menu.buildFromTemplate(menuItem);
   $('.result').on('contextmenu', (e) => {
@@ -1075,7 +1076,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });

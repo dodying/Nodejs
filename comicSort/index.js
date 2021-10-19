@@ -11,13 +11,13 @@
 
 // 设置
 const _ = require('./config');
-_.introPicName = _.introPicName.map(i => {
+
+_.introPicName = _.introPicName.map((i) => {
   if (i instanceof RegExp && i.source.match(/^\^/)) {
     const source = i.source.replace(/^\^/, '^(|\\d+.)');
     return new RegExp(source, i.flags);
-  } else {
-    return i;
   }
+  return i;
 });
 
 // 导入原生模块
@@ -28,16 +28,17 @@ const JSZip = require('jszip');
 const sizeOf = require('image-size');
 const fse = require('fs-extra');
 
-const waitInMs = require('./../_lib/waitInMs');
-const walk = require('./../_lib/walk');
+const waitInMs = require('../_lib/waitInMs');
+const walk = require('../_lib/walk');
 
-const replaceWithDict = require('./../_lib/replaceWithDict');
+const replaceWithDict = require('../_lib/replaceWithDict');
 const parseInfo = require('./js/parseInfo');
 const findData = require('./js/findData');
+
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, 'EHT.json'), 'utf-8')).data;
 findData.init(EHT);
 const tags = ['language', 'reclass', 'artist', 'group', 'parody', 'character', 'female', 'male', 'misc'];
-const tagsChs = tags.map(i => `${i}:chs`);
+const tagsChs = tags.map((i) => `${i}:chs`);
 
 // Function
 const color = {
@@ -65,14 +66,14 @@ const color = {
   BgBlue: '\x1b[44m',
   BgMagenta: '\x1b[45m',
   BgCyan: '\x1b[46m',
-  BgWhite: '\x1b[47m'
+  BgWhite: '\x1b[47m',
 };
 const colors = {
-  info: text => color.FgGreen + text + color.Reset,
-  help: text => color.FgCyan + text + color.Reset,
-  warn: text => color.FgYellow + text + color.Reset,
-  debug: text => color.FgBlue + text + color.Reset,
-  error: text => color.FgRed + text + color.Reset
+  info: (text) => color.FgGreen + text + color.Reset,
+  help: (text) => color.FgCyan + text + color.Reset,
+  warn: (text) => color.FgYellow + text + color.Reset,
+  debug: (text) => color.FgBlue + text + color.Reset,
+  error: (text) => color.FgRed + text + color.Reset,
 };
 const moveFile = (oldpath, newpath, date = undefined) => {
   const info = date && (date instanceof Date || !isNaN(Number(date))) ? { atime: date, mtime: date } : fse.statSync(oldpath);
@@ -101,23 +102,23 @@ const moveFile = (oldpath, newpath, date = undefined) => {
     }
   }
 };
-const unique = arr => [...(new Set(arr))];
-const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
-const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
+const unique = (arr) => [...(new Set(arr))];
+const escape = (text) => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
+const escape2 = (text) => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
 const sortFileBySpecialRule = (info, rules, root, first) => {
   const result = [];
   for (let rule of rules) {
-    if (!rule.length) rule = Object.keys(rule).map(key => [key, rule[key]]); // 兼容旧版本
+    if (!rule.length) rule = Object.keys(rule).map((key) => [key, rule[key]]); // 兼容旧版本
     // console.log({ rule })
-    let folder = rule.find(arr => arr[0] === 'folder');
+    let folder = rule.find((arr) => arr[0] === 'folder');
     folder = folder ? folder[1] : '';
-    let mode = rule.find(arr => arr[0] === 'mode');
+    let mode = rule.find((arr) => arr[0] === 'mode');
     mode = mode ? mode[1] : '0';
 
-    rule = rule.filter(arr => !['folder', 'mode'].includes(arr[0]));
+    rule = rule.filter((arr) => !['folder', 'mode'].includes(arr[0]));
     // console.log({ rule })
 
-    const checkFunction = arr => {
+    const checkFunction = (arr) => {
       let [key, value] = [].concat(arr);
       if (arr.length === 1) [key, value] = ['artist', key];
       let infoThis = info[key];
@@ -125,13 +126,13 @@ const sortFileBySpecialRule = (info, rules, root, first) => {
         return typeof value === 'function' ? value([]) : [0, false, null, undefined].includes(value);
       }
       if (typeof infoThis === 'string') infoThis = [].concat(infoThis);
-      infoThis = [].concat(...infoThis.map(i => i.split('|'))).map(i => i.trim());
+      infoThis = [].concat(...infoThis.map((i) => i.split('|'))).map((i) => i.trim());
       // console.log({ infoThis, key, value })
 
       if (typeof value === 'string') {
         if (infoThis.includes(value)) return true;
       } else if (value instanceof RegExp) {
-        if (infoThis.some(i => i.match(value))) return true;
+        if (infoThis.some((i) => i.match(value))) return true;
       } else if (typeof value === 'function') {
         if (value(infoThis)) return true;
       }
@@ -147,18 +148,17 @@ const sortFileBySpecialRule = (info, rules, root, first) => {
           ifNotString: (key, value) => {
             if (tagsChs.includes(key)) {
               const main = key.split(':chs')[0];
-              value = main in info ? info[main].map(i => findData(main, i).cname || i) : '';
+              value = main in info ? info[main].map((i) => findData(main, i).cname || i) : '';
             }
             if (value instanceof Array) return value.sort().join(',');
-          }
+          },
         });
       }
-      folder = (root ? root + '/' : '') + escape2(folder);
+      folder = (root ? `${root}/` : '') + escape2(folder);
       if (first) {
         return folder;
-      } else {
-        result.push(folder);
       }
+      result.push(folder);
     }
   }
   return result.join('/');
@@ -169,39 +169,39 @@ const sortFile = (info) => {
     if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
     subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
     return _.subFolderDelete + '/' + subdir.join('/');
-  } else if (sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true)) {
+  } if (sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true)) {
     return sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true);
-  } else if (['multi-work series', 'soushuuhen', 'compilation'].some(i => info.tags.includes(i))) {
+  } if (['multi-work series', 'soushuuhen', 'compilation'].some(i => info.tags.includes(i))) {
     if (info.artist || info.group) {
       let value = [].concat(info.artist, info.group).filter(i => i)[0];
       value = findData('artist', value).cname || findData('group', value).cname || value;
       value = escape(value);
       return _.subFolder[0] + '/' + value;
-    } else {
+    } 
       return _.subFolder[0];
-    }
-  } else if (info.genre.match(/^COSPLAY$/i)) {
+    
+  } if (info.genre.match(/^COSPLAY$/i)) {
     return _.subFolder[1];
-  } else if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || ['artbook', 'variant set'].some(i => info.tags.includes(i)) || info.title.match(/\b(pixiv|artist)\b/i)) {
+  } if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || ['artbook', 'variant set'].some(i => info.tags.includes(i)) || info.title.match(/\b(pixiv|artist)\b/i)) {
     return _.subFolder[2];
-  } else if (info.genre.match(/^(game|artist) ?cg( set)?$/i)) {
+  } if (info.genre.match(/^(game|artist) ?cg( set)?$/i)) {
     return _.subFolder[3];
-  } else if (info.genre.match(/^DOUJINSHI$/i) && info.parody) {
+  } if (info.genre.match(/^DOUJINSHI$/i) && info.parody) {
     if (info.parody.length > 1) {
       return _.subFolder[4] + '/' + escape(info.parody.map(i => findData('parody', i).cname || i).sort().join(', '));
       // return _.subFolder[4] + '/Various'
-    } else {
+    } 
       let value = info.parody[0];
       value = escape(findData('parody', value).cname || value);
       if (info.character) {
         const character = info.character.filter(i => !(_.removeCharacter.includes(i)));
         const name = character.length >= 4 ? '###' + character.length : escape(character.map(i => findData('character', i).cname || i).sort().join(', '));
         return _.subFolder[4] + '/' + value + '/' + name;
-      } else {
+      } 
         return _.subFolder[4] + '/' + value;
-      }
-    }
-  } else if ('female' in info && info.female.includes('harem')) {
+      
+    
+  } if ('female' in info && info.female.includes('harem')) {
     return _.subFolder[5];
   } else if (info.tags.includes('incest') || info.tags.includes('inseki')) {
     const tags = [];
@@ -241,18 +241,18 @@ const moveByInfo = (info, target) => {
   let nameNew = escape(replaceWithDict(_.title || '{title}', info));
   nameNew = nameNew.replace(/\u200B/g, '').trim();
 
-  let targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
+  let targetNew = path.resolve(targetFolderNew, `${nameNew}.cbz`);
 
   if (targetNew.length >= 250 && _.cutLongTitle) { // 文件名 > 250
     nameNew = nameNew.substr(0, 250 - targetFolderNew.length);
-    targetNew = path.resolve(targetFolderNew, nameNew + '.cbz');
+    targetNew = path.resolve(targetFolderNew, `${nameNew}.cbz`);
   }
 
   const targetShort = path.relative(_.libraryFolder, targetFolderNew);
   let atime;
   if (_.cover) {
-    const targetCover = path.resolve(_.comicFolder, path.parse(target).name + '.jpg');
-    const targetCoverNew = path.resolve(targetFolderNew, nameNew + '.jpg');
+    const targetCover = path.resolve(_.comicFolder, `${path.parse(target).name}.jpg`);
+    const targetCoverNew = path.resolve(targetFolderNew, `${nameNew}.jpg`);
     if (fse.existsSync(targetCover)) {
       atime = fse.statSync(targetCover).atime;
       moveFile(targetCover, targetCoverNew);
@@ -273,16 +273,16 @@ const main = async () => {
   const task = async () => {
     let d = new Date();
     d = d.toLocaleString('zh-CN', {
-      hour12: false
+      hour12: false,
     });
     process.title = d;
     lst = walk(_.comicFolder, {
       matchFile: /.(cbz|zip)$/,
       fullpath: false,
       nodir: true,
-      recursive: _.globRecursive
+      recursive: _.globRecursive,
     });
-    lst = lst.filter(i => !lstIgnore.includes(i));
+    lst = lst.filter((i) => !lstIgnore.includes(i));
     if (lst.length) console.log('当前任务数: ', colors.info(lst.length));
 
     // 开始处理
@@ -311,30 +311,29 @@ const main = async () => {
           if (error.message === 'End of data reached (data length = 0, asked index = 4). Corrupted zip ?') {
             moveByInfo({ title: path.parse(target).name }, target);
             return;
-          } else {
-            console.error(error);
-            return error;
           }
+          console.error(error);
+          return error;
         }
 
         // 查看列表
         let fileList = Object.keys(zip.files);
 
         // 检测有无info.txt
-        if (fileList.filter(item => item.match(/(^|\/)info\.txt$/)).length === 0) {
+        if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
           console.warn(colors.warn('压缩档内不存在info.txt: '), target);
           return new Error('no info.txt');
         }
 
         // 读取info.txt
-        const infoFile = fileList.find(item => item.match(/(^|\/)info\.txt$/));
+        const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
         const data = await zip.files[infoFile].async('text');
         const info = parseInfo(data);
-        info.pageCount = fileList.filter(i => !i.match(/(info.txt|\/)$/)).length;
+        info.pageCount = fileList.filter((i) => !i.match(/(info.txt|\/)$/)).length;
         if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1);
         if (info.parody && info.parody.length === 0) delete info.parody;
-        if (info.parody && info.parody.some(i => _.parody.some(j => i.match(j.filter)))) {
-          info.parody = info.parody.map(i => {
+        if (info.parody && info.parody.some((i) => _.parody.some((j) => i.match(j.filter)))) {
+          info.parody = info.parody.map((i) => {
             for (let j = 0; j < _.parody.length; j++) {
               if (i.match(_.parody[j].filter)) return _.parody[j].name;
             }
@@ -345,12 +344,12 @@ const main = async () => {
 
         // 检测图片及大小
         if ((_.delIntroPic || _.checkImageSize || _.checkImageRatio) && info.web.match(/e(-|x)hentai.org/)) {
-          const imgs = fileList.filter(item => item.match(/\.(jpg|png|gif)$/));
+          const imgs = fileList.filter((item) => item.match(/\.(jpg|png|gif)$/));
           for (let j = 0; j < imgs.length; j++) { // 跳过封面
             if (_.delIntroPic) { // 检查是否删除图片
               const name = path.parse(imgs[j]).base;
-              const filter = info.page.filter(p => p.name === name);
-              if ((filter.length && _.introPic.includes(filter[0].id)) || _.introPicName.some(k => name.match(k))) {
+              const filter = info.page.filter((p) => p.name === name);
+              if ((filter.length && _.introPic.includes(filter[0].id)) || _.introPicName.some((k) => name.match(k))) {
                 console.log(colors.error('Reason: '), 'IntroPic (Name or ID matched)');
                 console.log(colors.error('Deleted: '), colors.info(imgs[j]));
                 zip.remove(imgs[j]);
@@ -391,7 +390,7 @@ const main = async () => {
                 const web = info.web.replace('http:', 'https:').replace(/(g.|)e-hentai/, 'exhentai').replace(/#\d+$/, '');
                 console.info('Url:', colors.info(web));
 
-                fse.appendFileSync('error.txt', web + '\n');
+                fse.appendFileSync('error.txt', `${web}\n`);
                 return new Error('no accepted size');
               }
             }
@@ -404,26 +403,26 @@ const main = async () => {
             type: 'nodebuffer',
             compression: 'DEFLATE',
             compressionOptions: {
-              level: 9
-            }
+              level: 9,
+            },
           });
           fse.writeFileSync(target, content);
         }
 
         const img = data.match(/Image\s+1:\s+(.*)/);
         let firstImg;
-        if (img && fileList.find(item => item.match(new RegExp(img[1])))) {
-          firstImg = fileList.find(item => item.match(new RegExp(img[1])));
+        if (img && fileList.find((item) => item.match(new RegExp(img[1])))) {
+          firstImg = fileList.find((item) => item.match(new RegExp(img[1])));
         } else {
-          firstImg = fileList.find(item => item.match(/\.(jpg|png|gif|webp)$/));
+          firstImg = fileList.find((item) => item.match(/\.(jpg|png|gif|webp)$/));
         }
         // 解压封面
         if (_.cover && firstImg) {
           const u8a = await zip.files[firstImg].async('uint8array');
-          const targetCover = path.resolve(_.comicFolder, path.parse(target).name + '.jpg');
+          const targetCover = path.resolve(_.comicFolder, `${path.parse(target).name}.jpg`);
           fse.writeFileSync(targetCover, u8a);
           // 设置最后修改时间
-          const date = zip.files[firstImg].date;
+          const { date } = zip.files[firstImg];
           fse.utimesSync(targetCover, date, date);
         }
 
@@ -453,7 +452,7 @@ const main = async () => {
 
 main().then(async () => {
   //
-}, async err => {
+}, async (err) => {
   console.error(err);
   process.exit();
 });
