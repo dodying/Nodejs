@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        浏览comic
-// @Version:            1.0.962
+// @Version:            1.0.969
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020/12/13 13:07:51
+// @Modified:           2021-10-19 20:45:33
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -174,7 +174,16 @@ const createConnection = async (obj) => {
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
-      password: obj.password
+      password: obj.password,
+      keepAliveInitialDelay: 10000,
+      enableKeepAlive: true
+    });
+    connection.on('error', function (err) {
+      if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
+        createConnection(obj);
+      } else {
+        console.log('Database error:', err);
+      }
     });
     connectionLastTime = new Date().getTime();
   } catch (error) {

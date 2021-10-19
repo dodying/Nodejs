@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               check
 // @Description:        check
-// @Version:            1.0.115
+// @Version:            1.0.117
 // @Author:             dodying
 // @Created:            2020-07-09 15:39:26
-// @Modified:           2020/11/26 13:33:49
+// @Modified:           2021-03-30 19:30:06
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express,fs-extra,mysql2
@@ -110,7 +110,16 @@ const createConnection = async (obj) => {
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
-      password: obj.password
+      password: obj.password,
+      keepAliveInitialDelay: 10000,
+      enableKeepAlive: true
+    });
+    connection.on('error', function (err) {
+      if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
+        createConnection(obj);
+      } else {
+        console.log('Database error:', err);
+      }
     });
     connectionLastTime = new Date().getTime();
   } catch (error) {

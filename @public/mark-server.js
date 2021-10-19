@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               mark-server
 // @Description:        mark-server
-// @Version:            1.0.235
+// @Version:            1.0.237
 // @Author:             dodying
 // @Created:            2020-07-09 15:39:26
-// @Modified:           2020/11/26 13:33:37
+// @Modified:           2021-03-30 19:29:59
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            body-parser,express,mysql2
@@ -74,7 +74,16 @@ const createConnection = async (obj) => {
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
-      password: obj.password
+      password: obj.password,
+      keepAliveInitialDelay: 10000,
+      enableKeepAlive: true
+    });
+    connection.on('error', function (err) {
+      if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
+        createConnection(obj);
+      } else {
+        console.log('Database error:', err);
+      }
     });
     connectionLastTime = new Date().getTime();
   } catch (error) {
