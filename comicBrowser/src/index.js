@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1844
+// @Version:            1.0.1875
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2020/10/12 14:58:54
+// @Modified:           2021-10-10 16:00:17
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -120,6 +120,7 @@ const findData = require('./../js/findData');
 const configChange = require('./common/configChange');
 const tooltip = require('./common/tooltip');
 const ipcRenderer = electron.ipcRenderer;
+const Menu = electron.remote.Menu;
 const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data;
 findData.init(EHT);
 const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
@@ -937,6 +938,8 @@ const main = async () => {
         waitInMs(1000).then(() => {
           updateRelativeTime();
         });
+      } else if (name === 'empty') {
+        parent.remove();
       }
     }
     if ([undefined, 'native', 'path'].includes(name)) {
@@ -1009,6 +1012,65 @@ const main = async () => {
   } else if (ipcRenderer.sendSync('config', 'get', 'useStarCondition')) {
     showCondition(JSON.parse(ipcRenderer.sendSync('config', 'get', 'starCondition', '[]')));
   }
+
+  // 右键菜单
+  let rightEvent;
+  const menuItem = [
+    {
+      label: '删除web相同的本子',
+      click: () => {
+        for (const item of lastResult) {
+          let arr = lastResult.filter(i => i.web === item.web);
+          arr = arr.sort((a, b) => {
+            const ta = new Date(a.time_download).getTime();
+            const tb = new Date(b.time_download).getTime();
+            return ta > tb ? -1 : ta < tb ? 1 : 0;
+          });
+          for (let i = 1; i < arr.length; i++) {
+            console.log(arr[i].path);
+            ipcRenderer.send('open-external', arr[i].path, 'delete');
+          }
+        }
+      }
+    },
+    {
+      label: '清空该本子内容',
+      click: () => {
+        if (!$(rightEvent.target).is('.tableBody>table>tbody>tr>td')) return;
+        const index = $(rightEvent.target).parent().index();
+        const item = lastResult[index];
+        console.log(item.path);
+        ipcRenderer.send('open-external', item.path, 'empty');
+      }
+    },
+    {
+      label: '清空这之后的本子内容',
+      click: () => {
+        if (!$(rightEvent.target).is('.tableBody>table>tbody>tr>td')) return;
+        const index = $(rightEvent.target).parent().index();
+        if (window.confirm(`是否清空第${index + 1}本以及之后的本子`)) {
+          for (const item of lastResult.slice(index)) {
+            console.log(item.path);
+            ipcRenderer.send('open-external', item.path, 'empty');
+          }
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Inspect Element',
+      click: () => {
+        electron.remote.getCurrentWindow().openDevTools();
+        console.log(rightEvent);
+      }
+    }
+  ];
+  const contextMenu = Menu.buildFromTemplate(menuItem);
+  $('.result').on('contextmenu', (e) => {
+    e.preventDefault();
+    rightEvent = e;
+    contextMenu.popup(electron.remote.getCurrentWindow());
+  });
 };
 
 main().then(async () => {

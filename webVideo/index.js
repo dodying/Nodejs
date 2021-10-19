@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               webVideo
 // @Description:        根据list.txt下载网页视频（主要是NSFW）
-// @Version:            1.1.0
+// @Version:            1.1.704
 // @Author:             dodying
 // @Created:            2020-10-27 15:58:28
-// @Modified:           2020/12/28 21:03:07
+// @Modified:           2021/2/17 14:33:13
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            cheerio,commander,crypto-js,m3u8-parser,puppeteer
+// @Require:            cheerio,commander,crypto-js,dotenv,m3u8-parser,puppeteer
 // ==/Headers==
 
 // 设置
@@ -18,7 +18,8 @@ const config = {
   executable: {
     'N_m3u8DL-CLI': 'm3u8.exe', // https://github.com/nilaoda/N_m3u8DL-CLI
     aria2c: 'aria2c.exe', // 支持更多选项
-    IDMan: 'D:\\GreenSoftware\\_Basis\\Internet Download Manager\\Bin\\IDMan.exe' // 可视化
+    IDMan: 'D:\\GreenSoftware\\_Basis\\Internet Download Manager\\Bin\\IDMan.exe', // 可视化
+    ffmpeg: 'ffmpeg'
   },
   downloadMode: 'auto', // one of ['auto', 'hls', 'direct']
   directDownloadMode: 'aria2c', // one of ['aria2c', 'IDMan']
@@ -31,8 +32,25 @@ const config = {
       strictSSL: false
     },
     autoProxy: true,
-    withProxy: ['.pornhub.com'], // '.*'
-    withoutProxy: ['ph666.me'], // , '.m3u8', '.hls'
+    withProxy: [
+      '91porn.com',
+      // 'papapa.info',
+      '3atv.cc',
+      'zmxx22.com',
+      'avtb01.com',
+      '4hu.tv',
+      '8x8x.com',
+
+      'xvideos.com',
+      'pornhub.com',
+      'tokyomotion.net', 'osakamotion.net',
+      'daftsex.com', 'daxab.com',
+      'xhamster.com',
+      'spankbang.com',
+      'tnaflix.com',
+      'netflav.com', 'avple.video', 'fvs.io', /ff-\d{2}.com/
+    ],
+    withoutProxy: ['ph666.me'],
     logLevel: ['debug', 'warn', 'error'],
     setCookie: []
   },
@@ -65,6 +83,7 @@ const m3u8Parser = require('m3u8-parser');
 const puppeteer = require('puppeteer');
 const CryptoJS = require('crypto-js');
 const { program } = require('commander');
+require('dotenv').config();
 
 require('./../_lib/log').hack();
 const wait = require('./../_lib/wait');
@@ -177,10 +196,44 @@ const getRemoteInfo = async (url, lib) => {
 
   let info = {};
   if (lib.puppeteer) {
-    // https://github.com/puppeteer/puppeteer/blob/main/examples/proxy.js
-    if (!browser) browser = await puppeteer.launch({ args: [`--proxy-server=${config.reqConfig.proxy}`] });
+    if (!browser) {
+      try {
+        browser = await puppeteer.launch({ args: [`--proxy-server=${config.reqConfig.proxy}`] }); // https://github.com/puppeteer/puppeteer/blob/main/examples/proxy.js
+      } catch (error) {
+        console.log(error);
+        process.exit();
+      }
+    }
     const page = await browser.newPage();
-    if (lib.beforeLoad && typeof lib.beforeLoad === 'function') await lib.beforeLoad(page, url);
+
+    const requests = [];
+    page.on('requestfinished', async (req) => {
+      const res = req.response();
+      let body;
+      try {
+        body = ['image', 'media', 'font'].includes(req.resourceType()) ? await res.buffer() : await res.text();
+      } catch (error) {
+        body = null;
+      }
+      requests.push({
+        method: req.method(),
+        url: req.url(),
+        headers: req.headers(),
+        postData: req.postData(),
+        redirectChain: req.redirectChain().map(i => i.url()),
+        resourceType: req.resourceType(),
+        response: {
+          headers: res.headers(),
+          ok: res.ok(),
+          status: res.status(),
+          statusText: res.statusText(),
+          url: res.url(),
+          body
+        }
+      });
+    });
+
+    if (lib.beforeLoad && typeof lib.beforeLoad === 'function') await lib.beforeLoad(page, url, requests);
     let res;
     try {
       res = await page.goto(url, { waitUntil: 'networkidle2', timeout: 60 * 1000 });
@@ -190,7 +243,7 @@ const getRemoteInfo = async (url, lib) => {
 
     if (res && res.ok()) {
       try {
-        info = await lib.getInfo(page, url);
+        info = await lib.getInfo(page, url, requests);
       } catch (error) {
         info = {};
         console.error('an expection on page.evaluate ', error);
@@ -213,6 +266,7 @@ const getRemoteInfo = async (url, lib) => {
     try {
       valueToGetInfo = typeof lib.beforeGetInfo === 'function' ? await lib.beforeGetInfo(res) : null;
     } catch (error) {
+      console.log(error);
       console.error(`Error:\tbeforeGetInfo Failed when "${url}"`);
       return info;
     }
@@ -220,6 +274,7 @@ const getRemoteInfo = async (url, lib) => {
       try {
         info = await lib.getInfo(res, valueToGetInfo);
       } catch (error) {
+        console.log(error);
         console.error(`Error:\tgetInfo Failed when "${url}"`);
       }
     } else {
@@ -228,6 +283,7 @@ const getRemoteInfo = async (url, lib) => {
           try {
             info[key] = await lib.getInfo[key](res, valueToGetInfo);
           } catch (error) {
+            console.log(error);
             console.error(`Error:\tgetInfo "${key}" Failed when "${url}"`);
           }
         } else if (typeof lib.getInfo[key] === 'string' || lib.getInfo[key] instanceof Array) {
@@ -289,6 +345,7 @@ const downloadWith = { // 仅当错误时返回错误
   Direct: async (info, filename, url) => {
     if (config.directDownloadMode === 'aria2c') {
       fs.writeFileSync(config.listFiles.cookies, (JSON.parse(JSON.stringify(req.config.get('request').jar))._jar.cookies || []).map(i => [`.${i.domain}`, i.hostOnly ? 'TRUE' : 'FALSE', i.path, i.secure ? 'TRUE' : 'FALSE', i.expires ? Math.round(new Date(i.expires).getTime() / 1000) : '0', i.key, i.value].join('\t')).join('\r\n'));
+
       const end = await spawnSync(config.executable.aria2c, [
         '--async-dns=false',
 
@@ -296,7 +353,7 @@ const downloadWith = { // 仅当错误时返回错误
         '--max-tries=10', '--retry-wait=30', '--timeout=30',
         `--load-cookies=${config.listFiles.cookies}`,
         `--referer=${url}`, '--user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.67 Safari/537.36 Edg/87.0.664.55"',
-        '--check-certificate=false', (url.match(config.reqConfig.withProxy) && !url.match(config.reqConfig.withoutProxy) ? `--all-proxy=${config.proxyHTTP}` : ''),
+        '--check-certificate=false', (config.reqConfig.withProxy.some(i => url.match(i) || info.videoDirect.match(i)) && !config.reqConfig.withoutProxy.some(i => url.match(i) || info.videoDirect.match(i)) ? `--all-proxy=${config.proxyHTTP}` : ''),
         '--auto-file-renaming=false', '--allow-overwrite=true',
         '--file-allocation=none',
         '--min-split-size=1M', '--max-connection-per-server=64', '--split=64',
@@ -336,8 +393,8 @@ let libs = [
       urlModify: function(url) => urlNew; // 匹配规则后，修改链接
 
       puppeteer: boolean; // 是否使用无头浏览器 // https://zhaoqize.github.io/puppeteer-api-zh_CN/#/
-      beforeLoad: async function(page, url); // 当使用无头浏览器时，载入页面前运行
-      getInfo: async function(page, url) => Info;
+      beforeLoad: async function(page, url, requests); // 当使用无头浏览器时，载入页面前运行
+      getInfo: async function(page, url, requests) => Info;
 
       request: object; // 请求时的其他选项（详见https://github.com/request/request/#requestoptions-callback）
       requestUser: object; // 请求时的其他选项（用户）（详见_lib/req optionUser）
@@ -358,6 +415,7 @@ let libs = [
       duration // 视频时长（单位秒）
       videoHLS // m3u8下载（推荐），下载器支持多线程下载
       videoDirect // 直接下载，多线程下载需网站支持
+      chapters // 章节 JSON eg: [{ "title": "第一章", "start": time_in_ms }]
 
       // 特殊的
       failed // 失败，如视频被删等情况
@@ -367,173 +425,7 @@ let libs = [
     // 文件一般命名为 [name][id][uploader]title
    */
 
-  { // xvideos
-    name: 'xvideos',
-    filter: /\.xvideos.com\/video(\d+)|xvideos.com\/prof-video-click\/upload/,
-    request: {
-      headers: {
-        'Accept-Language': 'zh-CN'
-      }
-    },
-    getInfo: {
-      id: res => res.request.uri.href.match(/\/video(\d+)\//)[1],
-      title: ['[property="og:title"]', 'content'],
-      uploader: '.video-metadata .uploader-tag>.name',
-      duration: ['[property="og:duration"]', 'content'],
-      videoHLS: res => res.body.match(/html5player.setVideoHLS\('(.*?)'\);/)[1],
-      videoDirect: res => res.body.match(/html5player.setVideoUrlHigh\('(.*?)'\);/)[1]
-    },
-    link: id => `https://www.xvideos.com/video${id}/`,
-    test: {
-      url: 'https://www.xvideos.com/video59537313/_-_',
-      name: 'xvideos',
-      id: '59537313',
-      title: '撕裂连裤袜和体内射精 - 欺骗妻子得到硬的丈夫从邻居回来后性交',
-      uploader: 'Perfecthelen',
-      duration: '418',
-      videoHLS: /xvideos-cdn.com\/.*?\/videos\/hls\/.*?\/hls.m3u8/,
-      videoDirect: /xvideos-cdn.com\/videos\/mp4\/.*?\/.*?.mp4/
-    }
-  },
-  { // papapa.info
-    name: 'papapa.info',
-    filter: /(papapa.info|yase1.xyz)\/vod\/play\/id\/(\d+)/,
-    beforeGetInfo: res => res.request.uri.href.match(/(papapa.info|yase1.xyz)\/vod\/play\/id\/(\d+)/)[2],
-    getInfo: {
-      id: (res, id) => id,
-      title: '.video-title>h1',
-      uploader: '.hr-director+a[href*="/director/"]',
-      videoHLS: async (res, id) => {
-        const res1 = await req(`https://papapa.info/vod/getPlayUrl?id=${id}&is_win=true`, {
-          check: res => {
-            try {
-              const json = JSON.parse(res.body);
-              return json.data;
-            } catch (error) {}
-          }
-        });
-        // console.log(res1.json);
-        // process.exit()
-        return res1.json.data.url;
-      }
-    },
-    link: id => `https://papapa.info/vod/play/id/${id}/sid/1/nid/1.html`,
-    test: {
-      url: 'https://papapa.info/vod/play/id/100/sid/1/nid/1.html',
-      name: 'papapa.info',
-      id: '100',
-      title: '带验证，匆匆忙忙拍的，下次改进吧',
-      uploader: 'Lareine',
-      videoHLS: /papapa.info\/video\/complete\/.*?\/index.m3u8/
-    }
-  },
-
-  { // pornhub
-    name: 'pornhub',
-    filter: /pornhub.com\/view_video.php\?viewkey=([a-z0-9]+)/,
-    getInfo: async (res) => {
-      if (res.request.uri.href.match(/modelhub.com\/video/)) { // TODO modelhub
-        return { failed: true };
-      }
-
-      const $ = cheerio.load(res.body);
-      const script = $('script').toArray().map(i => $(i).html()).find(i => i.match(/var\s+(flashvars_\d+)\s+=\s+/));
-      let flashvars;
-      try {
-        const name = script.match(/var\s+(flashvars_\d+)\s+=\s+/)[1];
-        flashvars = eval(`(function (){var playerObjList = {}; ${script}; return ${name};})()`); // eslint-disable-line no-eval
-      } catch (error) {
-        console.log(error);
-        // return {};
-      }
-      if (!flashvars || !flashvars.mediaDefinitions) {
-        if (!res.request.uri.href.match(/[a-z]+\.pornhub\.com/)) return {};
-        const lib = libs.find(i => i.name === 'pornhub-ph666');
-        const url = res.request.uri.href.replace(/[a-z]+\.pornhub\.com/, 'ph666.me');
-        console.log(`Try ph666.me:\t${url}`);
-        const res1 = await req(Object.assign({ uri: url }, lib.request || {}));
-        return lib.getInfo(res1);
-      }
-      return {
-        id: res.request._rp_options.uri.match(/(pornhub.com|pornhubpremium.com|ph666.me)\/view_video.php\?viewkey=([a-z0-9]+)/)[2],
-        name: 'pornhub',
-        title: flashvars.video_title,
-        uploader: $('.video-detailed-info .userInfo .usernameBadgesWrapper>a').text(),
-        duration: flashvars.video_duration,
-        videoHLS: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'hls').videoUrl,
-        videoDirect: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'mp4').videoUrl
-      };
-    },
-    link: id => `https://cn.pornhub.com/view_video.php?viewkey=${id}`,
-    test: {
-      url: 'https://cn.pornhub.com/view_video.php?viewkey=ph5fba7f726d0b5',
-      name: 'pornhub',
-      id: 'ph5fba7f726d0b5',
-      title: '黑丝袜美女酒店狗狗做爱',
-      uploader: 'Harvey2258',
-      duration: '595',
-      videoHLS: /phncdn.com\/hls\/videos\/.*?\/master.m3u8/,
-      videoDirect: /phncdn.com\/videos\/.*?.mp4/
-    }
-  },
-  { // pornhub-ph666
-    name: 'pornhub-ph666',
-    filter: /ph666.me\/view_video.php\?viewkey=([a-z0-9]+)/,
-    request: {
-      headers: {
-        Cookie: 'fanClubInfoPop=1; authToken=2bd7671dcc71be9d; __cfduid=d3f9a622ca3dbf5daf8dc927a4866465e1603711336'
-      }
-    },
-    getInfo: async (res) => {
-      const $ = cheerio.load(res.body);
-      if (!$('.video-wrapper>#player').length || $('.video-wrapper>#player>.lockedFanclub').length) {
-        return { failed: true };
-      }
-      return libs.find(i => i.name === 'pornhub' && i.filter.source.startsWith('pornhub.com')).getInfo(res);
-    },
-    link: id => `https://ph666.me/view_video.php?viewkey=${id}`,
-    test: {
-      url: 'https://ph666.me/view_video.php?viewkey=ph5f1d654ec4d3a',
-      name: 'pornhub',
-      id: 'ph5f1d654ec4d3a',
-      title: '5个付费视频合集（非更新，请勿重复购买！仅为方便代付使用）',
-      uploader: 'xiao e',
-      duration: '5662',
-      videoHLS: /phprcdn.com\/hls\/videos\/.*?\/master.m3u8/,
-      videoDirect: /phprcdn.com\/videos\/.*?.mp4/
-    }
-  },
-
-  { // tokyomotion osakamotion
-    name: 'tokyomotion',
-    filter: /(tokyo|osaka)motion.net\/video\/\d+/,
-    request: {
-      gzip: false
-    },
-    getInfo: {
-      name: res => res.request.uri.host.match(/^(www.)?(?<site>(tokyo|osaka)motion).net$/).groups.site,
-      id: res => res.request.uri.href.match(/\/video\/(\d+)\//)[1],
-      title: ['[property="og:title"]', 'content'],
-      uploader: '.user-container>a>span',
-      duration: ['[property="video:duration"]', 'content'],
-      videoDirect: ['#vjsplayer>source:nth-child(1)', 'src']
-    },
-    link: id => `https://www.tokyomotion.net/video/${id}/`,
-    test: {
-      url: 'https://www.tokyomotion.net/video/1563523/ncy-021',
-      name: 'tokyomotion',
-      id: '1563523',
-      title: 'NCY-021',
-      uploader: 'zhaoji987',
-      duration: '2311.04',
-      videoDirect: /tokyomotion.net\/vsrc\/hd\//
-    }
-  },
-  { // osakamotion
-    name: 'osakamotion',
-    link: id => `https://www.osakamotion.net/video/${id}/`
-  },
-
+  // 国内
   { // 91porn-heiporn
     name: '91porn-heiporn',
     filter: /91porn.com\/view_video.php\?viewkey=([a-z0-9]+)|heiporn.com\/player-index-([a-z0-9]+).html/,
@@ -570,7 +462,7 @@ let libs = [
       title: '18岁大一漂亮学妹，水嫩性感，再爽一次！',
       uploader: '千岁九王爷',
       duration: 431,
-      videoDirect: /91p52.com\/\/mp43\/116241.mp4/
+      videoDirect: /91p\d+.com\/\/mp43\/\d+.mp4/
     }
   },
   { // 91porn
@@ -593,11 +485,15 @@ let libs = [
       },
       videoDirect: async res => {
         try {
-          const script = res.$('#player_one>script').html().match(/strencode\(.*?\)/)[1];
-          const res1 = await req({ uri: 'https://91porn.com/js/m.js', cache: true });
-          const html = eval(`(function (){const window = {};${res1.body};return ${script}})();`); // eslint-disable-line no-eval
+          const script = res.$('#player_one>script').html().match(/strencode(\d?)\(.*?\)/);
+          const html = decodeURIComponent(script[0]);
           return html.match(/src='(.*?)'/)[1];
+
+          // const res1 = await req({ uri: `https://91porn.com/js/m${script[1]}.js`, cache: true });
+          // const html = eval(`(function (){atob = (str) => CryptoJS.enc.Base64.parse(str).toString(CryptoJS.enc.Utf8);const window = { atob };${res1.body};return ${script[0].replace(/%/g, '%25')}})();`); // eslint-disable-line no-eval
+          // return html.match(/src='(.*?)'/)[1];
         } catch (error) {
+          console.log(error);
           return null;
         }
       }
@@ -610,10 +506,374 @@ let libs = [
       title: '18岁大一漂亮学妹，水嫩性感，再爽一次！',
       uploader: '千岁九王爷',
       duration: 431,
-      videoDirect: /91p52.com\/\/mp43\/116241.mp4/
+      videoDirect: /91p\d+.com\/\/mp43\/\d+.mp4/,
+      exceedLimit: false
     }
   },
 
+  // 国内-第三方
+  { // papapa.info
+    name: 'papapa.info',
+    filter: /(papapa.info|yase\d+.xyz)\/vod\/play\/id\/(\d+)/,
+    request: {
+      headers: {
+        Cookie: process.env.Cookie_For_Papapa,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36'
+      }
+    },
+    beforeGetInfo: res => res.request.uri.href.match(/(papapa.info|yase1.xyz)\/vod\/play\/id\/(\d+)/)[2],
+    getInfo: {
+      id: (res, id) => id,
+      title: '.video-title>h1',
+      uploader: '.hr-director+a[href*="/director/"]',
+      videoHLS: async (res, id) => {
+        const res1 = await req({
+          uri: `https://papapa.info/vod/getPlayUrl?id=${id}&is_win=true`,
+          headers: {
+            Cookie: process.env.Cookie_For_Papapa,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.198 Safari/537.36'
+          }
+        }, {
+          check: res => {
+            try {
+              const json = JSON.parse(res.body);
+              return json.data;
+            } catch (error) {}
+          }
+        });
+        let url = res1.json.data.url.replace(/-/g, '/').replace(/_/g, '+');
+        url = CryptoJS.enc.Base64.parse(url).toString(CryptoJS.enc.Utf8);
+
+        let key = res.$('#play-ads').html();
+
+        let url1 = '';
+        for (let i = 0; i < url.length; i++) {
+          url1 += String.fromCharCode(url.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+        }
+
+        if (!url1.startsWith('aHR0cHM6')) {
+          key = `${id}content`;
+          url1 = '';
+          for (let i = 0; i < url.length; i++) {
+            url1 += String.fromCharCode(url.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+          }
+        }
+
+        url1 = CryptoJS.enc.Base64.parse(url1).toString(CryptoJS.enc.Utf8);
+        return url1;
+      }
+    },
+    link: id => `https://papapa.info/vod/play/id/${id}/sid/1/nid/1.html`,
+    test: {
+      url: 'https://papapa.info/vod/play/id/100/sid/1/nid/1.html',
+      name: 'papapa.info',
+      id: '100',
+      title: '带验证，匆匆忙忙拍的，下次改进吧',
+      uploader: 'Lareine',
+      videoHLS: /(papapa.info|yase\d+.xyz)\/video\/complete\/.*?\/index.m3u8/
+    }
+  },
+  { // 3atv.cc
+    name: '3atv.cc',
+    filter: /(3atv.cc|3a\d+.com|app\d+.com)\/play\/([\d-]+).html/,
+    getInfo: {
+      id: res => res.request.uri.href.match(/(3atv.cc|3a\d+.com|app\d+.com)\/play\/([\d-]+).html/)[2],
+      title: '.bread>a:last-child',
+      videoHLS: async res => {
+        try {
+          const script = res.$('script[src^="/upload/playdata/"]').attr('src');
+          const res1 = await req(new URL(script, res.request.uri.href).href);
+          const url = eval(`(function (){${res1.body};return mac_url;})();`); // eslint-disable-line no-eval
+          return url;
+        } catch (error) {
+          return null;
+        }
+      }
+    },
+    link: id => `http://3atv.cc/play/${id}.html`,
+    test: {
+      url: 'http://3atv.cc/play/9921-1-1.html',
+      name: '3atv.cc',
+      id: '9921-1-1',
+      title: 'c2020121_6',
+      videoHLS: /play\d+.com\/.*?\/index.m3u8/
+    }
+  },
+  { // zmxx22
+    name: 'zmxx22',
+    filter: /(zm[a-z]{2}\d{2}.com)\/video\/show\/id\/(\d+)/,
+    getInfo: {
+      id: res => res.request.uri.href.match(/(zm[a-z]{2}\d{2}.com)\/video\/show\/id\/(\d+)/)[2],
+      title: '.watch>.title:nth-child(1)',
+      videoHLS: async res => res.body.match(/url = '(.*?)'/)[1]
+    },
+    link: id => `https://www.zmxx22.com/video/show/id/${id}`,
+    test: {
+      url: 'https://www.zmxx22.com/video/show/id/40754',
+      name: 'zmxx22',
+      id: '40754',
+      title: 'BBAN-242 色情的身体邀请性感模特',
+      videoHLS: /videozm.whqhyg.com:8091\/.*?\/index\.m3u8/
+    }
+  },
+  { // avtb01
+    name: 'avtb01',
+    filter: /(avtb\d+.com)\/(\d+)\//,
+    getInfo: {
+      id: res => res.request.uri.href.match(/(avtb\d+.com)\/(\d+)\//)[2],
+      title: '#video>h1',
+      uploader: '.content-container>div>div>a[href^="/users/"]',
+      duration: ['[property="og:video:duration"]', 'content'],
+      videoDirect: async res => {
+        const sources = res.$('#player>source').toArray().map(i => ({
+          src: res.$(i).attr('src'),
+          label: res.$(i).attr('label')
+        })).sort((a, b) => -Math.sign(a.label.match(/^(\d+)/)[1] - b.label.match(/^(\d+)/)[1]));
+        return sources[0].src;
+      }
+    },
+    link: id => `https://www.avtb01.com/${id}/`,
+    test: {
+      url: 'https://www.avtb2047.com/231472/',
+      name: 'avtb01',
+      id: '231472',
+      title: '我要给老公戴绿帽！快操我 淫水喷不停 ！有露脸',
+      uploader: 'A淘小管家',
+      duration: '249',
+      videoDirect: /rachno2.rubinclass.com\/media\/videos\/(mobile|mp4)\/\d+.mp4\?st=.*/
+    }
+  },
+  { // 4hu.tv
+    name: '4hu.tv',
+    filter: /(4hu.tv|4hu[a-z]\d{2}.com)\/vod\/html(.*?)\.html/,
+    getInfo: {
+      id: res => res.request.uri.href.match(/(4hu.tv|4hu[a-z]\d{2}.com)\/vod\/html(.*?)\.html/)[2].replace(/\//g, '-'),
+      title: '.detail-title>h2',
+      videoHLS: async res => {
+        for (const url of res.$('.playlist>ul>li>a[href*="_play_"]').toArray().map(i => res.$(i).attr('href'))) {
+          const res1 = await req(url);
+          const [, serverNumber, pathname] = res1.body.match(/new Clappr\.Player\(\{source: "https:\/\/"\+(CN\d+)\+"(.*?\.m3u8)"/);
+
+          const script = await req({ uri: '/html5/html5.min.hls.js', cache: true });
+          const server = eval(`(function (){${script.body}; return ${serverNumber};})()`); // eslint-disable-line no-eval
+
+          // const res2 = await req.head(`https://${server}${pathname}`);
+          // if (res2 && res.statusCode === 200)
+          return `https://${server}${pathname}`;
+        }
+      },
+      videoDirect: async res => {
+        for (const url of res.$('.playlist>ul>li>a[href*="_down_"]').toArray().map(i => res.$(i).attr('href'))) {
+          const res1 = await req(url);
+          if (res1.body.match(/httpurl = "(.*?\.mp4)"/)) return res1.body.match(/httpurl = "(.*?\.mp4)"/)[1];
+        }
+      }
+    },
+    link: id => `https://4hu.tv/vod/html${id.replace(/-/g, '/')}.html`,
+    test: {
+      url: 'https://4hu.tv/vod/html9/html22/40863.html',
+      name: '4hu.tv',
+      id: '9-html22-40863',
+      title: '110219_199 已婚妇女的淫秽比赛 つるのゆう,菊池くみこ',
+      videoHLS: /m3u8.\d+cdn.com\/videos\/.*?\/hls\/.*?.m3u8/,
+      videoDirect: /d1.xia12345.com\/dl2\/videos\/.*?\/downloads\/.*?.mp4/
+    }
+  },
+  { // 8x8x
+    name: '8x8x',
+    filter: /(8x8x.com|8x\w{4}.com)\/html\/(\d+)\//,
+    getInfo: {
+      id: res => res.request.uri.href.match(/(8x8x.com|8x\w{4}.com)\/html\/(\d+)\//)[2],
+      title: '.w_z>h3',
+      videoHLS: async res => {
+        const res1 = await req({ uri: '/static/main/main.js', cache: true });
+        const servers = res1.body.match(/window.globalConfig = \{\r\n\s*item\s*:\s*'\[(.*?)\]'/)[1].split(',').map(i => i.match(/^"(.*)"$/)[1]);
+        const server = servers[Math.floor(Math.random() * servers.length)]; // 随机挑选
+        return server + res.$('#vpath').text();
+      },
+      videoDirect: ['#downallurl', 'href']
+    },
+    link: id => `https://8x8x.com/html/${id}/`,
+    test: {
+      url: 'https://8x7n9m.com/html/35995/',
+      name: '8x8x',
+      id: '35995',
+      title: '无码：年轻貌美的女孩为了钱,任人玩弄玉体',
+      videoHLS: /\/v\/.*?\/index.m3u8/,
+      videoDirect: /ppp.downloadxx.com\/assets\/.*?.mp4/
+    }
+  },
+  { // avgle // TODO
+    name: 'avgle',
+    filter: /(avgle.com)\/video\/([^/]+)\//,
+    puppeteer: true,
+    getInfo: async (page, url, requests) => {
+      const info = await page.evaluate(function () {
+        return {
+          name: 'avgle',
+          id: window.location.href.match(/(avgle.com)\/video\/([^/]+)\//)[2],
+          title: document.querySelector('[property="og:title"]').getAttribute('content'),
+          duration: document.querySelector('[property="video:duration"]').getAttribute('content') * 1
+        };
+      });
+      info.videoHLS = JSON.parse(requests.find(i => i.resourceType === 'xhr' && i.url.includes('video-url.php')).response.body).url;
+      // TODO
+      // to debugger videoJs.xhr)(options, function(error, response) {
+      return info;
+    },
+    link: id => `https://avgle.com/video/${id}/`,
+    test: {
+      url: 'https://avgle.com/video/5_J8p8pfq8I/',
+      name: 'avgle',
+      id: '5_J8p8pfq8I',
+      title: '91汤先生最新高端精品大片为国争光系列_编号sm017_175CM娃娃脸金发美女洋妞',
+      duration: 2170,
+      videoHLS: /qooqlevideo.com/
+    }
+  },
+
+  // 国外-第一方
+  { // xvideos
+    name: 'xvideos',
+    filter: /\.xvideos.com\/video(\d+)|xvideos.com\/prof-video-click\/upload/,
+    request: {
+      headers: {
+        'Accept-Language': 'zh-CN'
+      }
+    },
+    getInfo: {
+      id: res => res.request.uri.href.match(/\/video(\d+)\//)[1],
+      title: ['[property="og:title"]', 'content'],
+      uploader: '.video-metadata .uploader-tag>.name',
+      duration: ['[property="og:duration"]', 'content'],
+      videoHLS: res => res.body.match(/html5player.setVideoHLS\('(.*?)'\);/)[1],
+      videoDirect: res => res.body.match(/html5player.setVideoUrlHigh\('(.*?)'\);/)[1]
+    },
+    link: id => `https://www.xvideos.com/video${id}/`,
+    test: {
+      url: 'https://www.xvideos.com/video59537313/_-_',
+      name: 'xvideos',
+      id: '59537313',
+      title: '撕裂连裤袜和体内射精 - 欺骗妻子得到硬的丈夫从邻居回来后性交',
+      uploader: 'Perfecthelen',
+      duration: '418',
+      videoHLS: /xvideos-cdn.com\/.*?\/videos\/hls\/.*?\/hls.m3u8/,
+      videoDirect: /xvideos-cdn.com\/.*?\/.*?.mp4/
+    }
+  },
+  { // pornhub
+    name: 'pornhub',
+    filter: /pornhub.com\/view_video.php\?viewkey=([a-z0-9]+)/,
+    getInfo: async (res) => {
+      if (res.request.uri.href.match(/modelhub.com\/video/)) { // TODO modelhub
+        return { failed: true };
+      }
+
+      const $ = cheerio.load(res.body);
+      const script = $('script').toArray().map(i => $(i).html()).find(i => i.match(/var\s+(flashvars_\d+)\s+=\s+/));
+      let flashvars;
+      try {
+        const name = script.match(/var\s+(flashvars_\d+)\s+=\s+/)[1];
+        flashvars = eval(`(function (){var playerObjList = {}; ${script}; return ${name};})()`); // eslint-disable-line no-eval
+      } catch (error) {
+        console.log(error);
+        // return {};
+      }
+      if (!flashvars || !flashvars.mediaDefinitions) {
+        if (!res.request.uri.href.match(/[a-z]+\.pornhub\.com/)) return {};
+        const lib = libs.find(i => i.name === 'pornhub-ph666');
+        const url = res.request.uri.href.replace(/[a-z]+\.pornhub\.com/, 'ph666.me');
+        console.log(`Try ph666.me:\t${url}`);
+        const res1 = await req(Object.assign({ uri: url }, lib.request || {}));
+        return lib.getInfo(res1);
+      }
+      return {
+        id: res.request._rp_options.uri.match(/(pornhub.com|pornhubpremium.com|ph666.me)\/view_video.php\?viewkey=([a-z0-9]+)/)[2],
+        name: 'pornhub',
+        title: flashvars.video_title,
+        uploader: $('.video-detailed-info>.userRow>.userInfo>.usernameWrap a').text(),
+        duration: flashvars.video_duration,
+        videoHLS: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'hls').videoUrl,
+        // videoDirect: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'mp4').videoUrl,
+        chapters: flashvars.actionTags ? JSON.stringify(flashvars.actionTags.split(',').map(i => {
+          const chapter = i.match(/^(?<title>.*?):(?<start>\d+)$/).groups;
+          chapter.start = chapter.start * 1000;
+          return chapter;
+        })) : ''
+      };
+    },
+    link: id => `https://cn.pornhub.com/view_video.php?viewkey=${id}`,
+    test: {
+      url: 'https://cn.pornhub.com/view_video.php?viewkey=ph5e6f7c6e43ed1',
+      name: 'pornhub',
+      id: 'ph5e6f7c6e43ed1',
+      title: '最新汤不热阿黑颜COS女神『Maste』大尺度私拍流出 口爆女神 灵舌搅动给你舔到爆 高清私拍60P 高清720P版',
+      uploader: 'z5805246',
+      duration: '1100',
+      videoHLS: /(phncdn.com|phprcdn.com)\/hls\/videos\/.*?\/master.m3u8/,
+      // videoDirect: /phncdn.com\/videos\/.*?.mp4/,
+      chapters: '[{"title":"Blowjob","start":48000},{"title":"Facial","start":839000}]'
+    }
+  },
+  { // pornhub-ph666
+    name: 'pornhub-ph666',
+    filter: /ph666.me\/view_video.php\?viewkey=([a-z0-9]+)/,
+    request: {
+      headers: {
+        Cookie: 'fanClubInfoPop=1; authToken=2bd7671dcc71be9d; __cfduid=d3f9a622ca3dbf5daf8dc927a4866465e1603711336'
+      }
+    },
+    getInfo: async (res) => {
+      const $ = cheerio.load(res.body);
+      if (!$('.video-wrapper>#player').length || $('.video-wrapper>#player>.lockedFanclub').length) {
+        return { failed: true };
+      }
+      return libs.find(i => i.name === 'pornhub' && i.filter.source.startsWith('pornhub.com')).getInfo(res);
+    },
+    link: id => `https://ph666.me/view_video.php?viewkey=${id}`,
+    test: {
+      url: 'https://ph666.me/view_video.php?viewkey=ph5fd25f4b8d256',
+      name: 'pornhub',
+      id: 'ph5fd25f4b8d256',
+      title: 'CUTIE CREAM TEEN LIZ JORDAN FIRST TIME THREESOME CREAMPIE + CUM MOUTH',
+      uploader: 'Spank Monster',
+      duration: '2693',
+      videoHLS: /(phncdn.com|phprcdn.com)\/hls\/videos\/.*?\/master.m3u8/,
+      // videoDirect: /(phncdn.com|phprcdn.com)\/videos\/.*?.mp4/,
+      chapters: '[{"title":"Blowjob","start":290000},{"title":"Handjob","start":326000},{"title":"Doggystyle","start":896000},{"title":"Blowjob","start":1932000}]'
+    }
+  },
+
+  // 国外-第三方
+  { // tokyomotion osakamotion
+    name: 'tokyomotion',
+    filter: /(tokyo|osaka)motion.net\/video\/\d+/,
+    request: {
+      gzip: false
+    },
+    getInfo: {
+      name: res => res.request.uri.host.match(/^(www.)?(?<site>(tokyo|osaka)motion).net$/).groups.site,
+      id: res => res.request.uri.href.match(/\/video\/(\d+)\//)[1],
+      title: ['[property="og:title"]', 'content'],
+      uploader: '.user-container>a>span',
+      duration: ['[property="video:duration"]', 'content'],
+      videoDirect: ['#vjsplayer>source:nth-child(1)', 'src']
+    },
+    link: id => `https://www.tokyomotion.net/video/${id}/`,
+    test: {
+      url: 'https://www.tokyomotion.net/video/1563523/ncy-021',
+      name: 'tokyomotion',
+      id: '1563523',
+      title: 'NCY-021',
+      uploader: 'zhaoji987',
+      duration: '2311.04',
+      videoDirect: /tokyomotion.net\/vsrc\/hd\//
+    }
+  },
+  { // osakamotion
+    name: 'osakamotion',
+    link: id => `https://www.osakamotion.net/video/${id}/`
+  },
   { // DaftSex
     name: 'DaftSex',
     filter: /(daftsex.com)\/watch\/(-?\d+_\d+)/,
@@ -663,12 +923,12 @@ let libs = [
       title: 'Abigaile Johnson - CaribbeancomPR 042315_182 - 1',
       uploader: /Abigaile Johnson/i,
       duration: 2735,
-      videoDirect: /daxab.com\/videos\/-31257429\/456239254\/720.mp4\?extra=.*/
+      videoDirect: /daxab.com\/videos\/-?\d+\/\d+\/\d+.mp4\?extra=.*/
     }
   },
   { // xHamster
     name: 'xHamster',
-    filter: /(xhamster.com)\/videos\/[^/]*(\d+)/,
+    filter: /(?<hostname>xhamster.com)\/videos\/(?<title>[^/]*-)?(?<id>[a-zA-Z0-9]+)(?<end>\/|#|$)/,
     getInfo: async res => {
       const script = res.$('#initials-script').html();
       const info = {};
@@ -689,14 +949,14 @@ let libs = [
     },
     link: id => `https://xhamster.com/videos/${id}`,
     test: {
-      url: 'https://xhamster.com/videos/3263960',
+      url: 'https://xhamster.com/videos/met-a-young-girl-on-the-train-and-fucked-her-in-compartment-xhyw0M4',
       name: 'xHamster',
-      id: '3263960',
-      title: 'kinpatu86-0002 hd',
-      uploader: 'notaprofessional',
-      duration: 2044,
-      videoHLS: /xhamster.com\/video-hls\/m3u8\/\d+\/a.m3u8/,
-      videoDirect: /cdn\d+.com\/.*?\/720p.h264.mp4/
+      id: 'xhyw0M4',
+      title: 'met a young girl on the train and fucked her in compartment',
+      uploader: 'Nik_Rock_XxX',
+      duration: 736,
+      videoHLS: /xhamster.com\/video-hls\/m3u8\/(?<id>[a-zA-Z0-9]+)\/a.m3u8/,
+      videoDirect: /cdn\d+.com\/.*?.mp4/
     }
   },
   { // SpankBang
@@ -720,7 +980,13 @@ let libs = [
           uploader: res.$('#video>div>h1>a[href^="/s/"]').toArray().map(i => res.$(i).text()).join(),
           duration: json.length,
           videoHLS: json.m3u8[0],
-          videoDirect: json[bestSize][0]
+          videoDirect: json[bestSize][0],
+          chapters: JSON.stringify(res.$('.positions>li[onclick]').toArray().map(i => {
+            return {
+              title: res.$(i).text(),
+              start: res.$(i).attr('data-timestamp') * 1000
+            };
+          }))
         });
       } catch (error) {
         console.log(error);
@@ -736,35 +1002,88 @@ let libs = [
       uploader: 'abigaile johnson',
       duration: 2786,
       videoHLS: /hls.sb-cd.com\/hls\/.*?\/master.m3u8/,
-      videoDirect: /.sb-cd.com\/.*?-1080p.mp4/
+      videoDirect: /.sb-cd.com\/.*?-1080p.mp4/,
+      chapters: '[{"title":"blowjob","start":1614000},{"title":"missionary","start":1878000},{"title":"doggy","start":2094000},{"title":"missionary","start":2382000}]'
     }
   },
-  { // 3atv.cc
-    name: '3atv.cc',
-    filter: /(3atv.cc|3a\d+.com|app\d+.com)\/play\/(\d+)-1-1.html/,
+  { // TNAFlix
+    name: 'TNAFlix',
+    filter: /(tnaflix.com)\/hd-videos(\/[^/]+)?\/video(?<id>\d+)/,
     getInfo: {
-      id: res => res.request.uri.href.match(/(3atv.cc|3a\d+.com|app\d+.com)\/play\/(\d+)-1-1.html/)[2],
-      title: '.bread>a:last-child',
-      videoHLS: async res => {
-        try {
-          const script = res.$('script[src^="/upload/playdata/"]').attr('src');
-          const res1 = await req(new URL(script, res.request.uri.href).href);
-          const url = eval(`(function (){${res1.body};return mac_url;})();`); // eslint-disable-line no-eval
-          return url;
-        } catch (error) {
-          return null;
-        }
+      id: res => res.request.uri.href.match(/(tnaflix.com)\/hd-videos(\/[^/]+)?\/video(?<id>\d+)/).groups.id,
+      title: ['[property="og:title"]', 'content'],
+      uploader: ['.avatar-link>img', 'alt'],
+      duration: res => {
+        const duration = res.$('[itemprop="duration"]').attr('content');
+        const [, , hours, minutes, seconds] = duration.match(/T((\d+)H)?(\d+)M(\d+)S/);
+        return (hours ? hours * 60 * 60 : 0) + minutes * 60 + seconds * 1;
+      },
+      videoDirect: async res => {
+        const site = 'tnaflix';
+        const vkey = res.$('#ajax_content #vkey').val();
+        const nkey = res.$('#ajax_content #nkey').val();
+        const VID = res.$('#ajax_content #VID').val();
+        const thumb = res.$('#ajax_content #thumb').val();
+
+        const res1 = await req(`https://cdn-fck.${site}.com/${site}/${vkey}${site === 'empflix' ? '-1' : ''}.fid?key=${nkey}&VID=${VID}&nomp4=1&catID=0&rollover=1&startThumb=${thumb}&embed=0&utm_source=0&multiview=0&premium=1&country=0user=0&vip=1&cd=0&ref=0&alpha`);
+        const items = res1.$('quality>item').toArray().map(i => {
+          return ({
+            res: res1.$(i).find('res').text(),
+            dl: res1.$(i).find('videoLinkDownload').html().match(/<!--\[CDATA\[(.*?)\]\]-->/)[1]
+          });
+        });
+        return 'https:' + items.sort((a, b) => -Math.sign(a.res.match(/^(\d+)/)[1] - b.res.match(/^(\d+)/)[1]))[0].dl;
       }
     },
-    link: id => `http://3atv.cc/play/${id}-1-1.html`,
+    link: id => `https://www.tnaflix.com/hd-videos/video${id}`,
     test: {
-      url: 'http://3atv.cc/play/9921-1-1.html',
-      name: '3atv.cc',
-      id: '9921',
-      title: 'c2020121_6',
-      videoHLS: /index.m3u8/
+      url: 'https://www.tnaflix.com/hd-videos/video4845881',
+      name: 'TNAFlix',
+      id: '4845881',
+      title: 'PNME-79',
+      uploader: 'aileen89',
+      duration: 4009,
+      videoDirect: /fck-cl\d+.tnaflix.com\/dl\/.*?.mp4/
     }
   },
+  { // Netflav
+    name: 'Netflav',
+    filter: /(netflav.com)\/video\?id=(?<id>[a-zA-Z0-9]+)/,
+    beforeGetInfo: res => JSON.parse(res.$('#__NEXT_DATA__').html()),
+    getInfo: {
+      id: (res, json) => json.query.id, // res.request.uri.href.match(/(netflav.com)\/video\?id=(?<id>[a-zA-Z0-9]+)/).groups.id
+      title: (res, json) => json.props.initialState.video.data.title,
+      uploader: (res, json) => json.props.initialState.video.data.actors.filter(i => i.startsWith('jp:')).map(i => i.substr(3)).join(','),
+      duration: (res, json) => json.props.initialState.video.data.duration.match(/\d+/)[0],
+      videoDirect: async (res, json) => {
+        const res1 = await req({
+          method: 'POST',
+          uri: `https://www.avple.video/api/source/${json.props.initialState.video.data.src.match(/\/v\/(.*)/)[1]}`,
+          form: {
+            r: `https://netflav.com/video?id=${json.query.id}`,
+            d: 'www.avple.video'
+          }
+        });
+        let url = res1.json.data.sort((a, b) => -Math.sign(a.label.match(/^(\d+)/)[1] - b.label.match(/^(\d+)/)[1]));
+        url = url[0].file;
+
+        const res2 = await req.head(url);
+        return res2.request.uri.href;
+      }
+    },
+    link: id => `https://www.tnaflix.com/hd-videos/video${id}`,
+    test: {
+      url: 'https://netflav.com/video?id=XtwPK2ISMr',
+      name: 'Netflav',
+      id: 'XtwPK2ISMr',
+      title: /SW-448/,
+      uploader: '相澤ゆりな,埴生みこ,あず希',
+      duration: '198',
+      videoDirect: /www\d+.ff-\d+.com\/token=.*?\/(?<timestamp>\d+)\/(?<ip>[\d.]+)\/.*?.mp4/
+    }
+  },
+
+  // 示例
   { // puppeteer-demo
     name: 'puppeteer-demo',
     // filter: /pornhub.com\/view_video.php\?viewkey=([a-z0-9]+)/,
@@ -814,10 +1133,10 @@ let libs = [
       return {
         id: url.match(/(pornhub.com|pornhubpremium.com|ph666.me)\/view_video.php\?viewkey=([a-z0-9]+)/)[2],
         title: flashvars.video_title,
-        // uploader: $('.video-detailed-info .userInfo .usernameBadgesWrapper>a').text(),
+        // uploader: $('.video-detailed-info>.userRow>.userInfo>.usernameWrap a').text(),
         duration: flashvars.video_duration,
-        videoHLS: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'hls').videoUrl,
-        videoDirect: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'mp4').videoUrl
+        videoHLS: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'hls').videoUrl
+        // videoDirect: flashvars.mediaDefinitions.sort((a, b) => -Math.sign(a.quality - b.quality)).find(i => i.format === 'mp4').videoUrl
       };
     },
     link: id => `https://cn.pornhub.com/view_video.php?viewkey=${id}`,
@@ -827,15 +1146,16 @@ let libs = [
       id: 'ph5fba7f726d0b5',
       title: '黑丝袜美女酒店狗狗做爱',
       uploader: 'Harvey2258',
-      videoHLS: /phncdn.com\/hls\/videos\/.*?\/master.m3u8/,
-      videoDirect: /phncdn.com\/videos\/.*?.mp4/
+      duration: '595',
+      videoHLS: /phncdn.com\/hls\/videos\/.*?\/master.m3u8/
+      // videoDirect: /phncdn.com\/videos\/.*?.mp4/
     }
   }
 ];
 const main = async () => {
   req.config.init(config.reqConfig);
 
-  program.version('0.0.1').description('download video according to list');
+  program.version('1.1.0').description('download video according to list');
   program.option('-c, --config <path>', 'path of config.json to read', (file) => {
     try {
       const content = fs.readFileSync(file, 'utf-8');
@@ -873,6 +1193,7 @@ const main = async () => {
     for (let i = 0; i < list.length; i++) {
       const url = list[i];
       if (!url || !url.trim().match(/^https?:/i)) continue;
+      console.log('\n- - - - - - - - - - -\n');
       console.log(`Url-${i}/${list.length}:\t${url}`);
 
       let info;
@@ -904,7 +1225,7 @@ const main = async () => {
         continue;
       }
 
-      const filename = `[${info.name}][${info.id}][${info.uploader ? info.uploader.trim() : 'null'}]${info.title.trim()}`.replace(/[\\/:*?"<>|]/g, '-'); // .normalize('NFKD').replace(/[\u0300-\u036F]/g, '')
+      const filename = `[${info.name}][${info.id}][${info.uploader ? info.uploader.trim() : 'null'}]${info.title.trim()}`.replace(/[\\/:*?"<>|]/g, '-').substr(0, 200 - config.workDir.length); // .normalize('NFKD').replace(/[\u0300-\u036F]/g, '')
       console.log(`File-${i}/${list.length}:\t${filename}`);
 
       // 下载前检查
@@ -930,9 +1251,9 @@ const main = async () => {
 
       // 下载
       let downloadError;
-      if (!info.videoDirect || ['hls', 'auto'].includes(config.downloadMode)) {
+      if (info.videoHLS && (!info.videoDirect || ['hls', 'auto'].includes(config.downloadMode))) {
         downloadError = await downloadWith.HLS(info, filename, url);
-      } else if (!info.videoHLS || ['direct'].includes(config.downloadMode)) {
+      } else if (info.videoDirect && (!info.videoHLS || ['direct'].includes(config.downloadMode))) {
         downloadError = await downloadWith.Direct(info, filename, url);
       }
       if (downloadError) continue;
@@ -942,7 +1263,36 @@ const main = async () => {
       if (fs.existsSync(file)) {
         const check = info.duration ? await checkDurationVideo(info.duration, file) : (info.videoHLS ? await checkDurationHLS(info.videoHLS, file) : null);
         console.log(`Check-${i}:\t${check}`);
-        if (check === true) succeedList.push(url);
+        if (check === true) {
+          succeedList.push(url);
+          if (info.chapters) {
+            fs.writeFileSync('./ffmetadata', [
+              ';FFMETADATA1',
+              `title=${info.title}`,
+              `artist=${info.uploader}`,
+              '',
+              ...JSON.parse(info.chapters).map(i => {
+                return `[CHAPTER]\nTIMEBASE=1/1000\nSTART=${i.start}\nEND=${i.start}\ntitle=${i.title}\n`;
+              })
+            ].join('\n'));
+            const pathInfo = path.parse(file);
+
+            let order = 1;
+            let fileNew;
+            do {
+              fileNew = path.join(pathInfo.dir, `${pathInfo.name}[${order}]${pathInfo.ext}`);
+              order++;
+            } while (fs.existsSync(fileNew));
+            const end = await spawnSync(config.executable.ffmpeg, ['-hide_banner', '-loglevel', 'panic', '-i', file, '-i', 'ffmetadata', '-map_metadata', '1', '-codec', 'copy', fileNew]);
+            fs.unlinkSync('./ffmetadata');
+            if (end === 'error') {
+              if (fs.existsSync(fileNew)) fs.unlinkSync(fileNew);
+            } else if (end === true) {
+              fs.unlinkSync(file);
+              fs.renameSync(fileNew, file);
+            }
+          }
+        }
       }
     }
 
@@ -951,6 +1301,7 @@ const main = async () => {
   program.command('test [names...]').description('test libs that filtered by names').action(async (names) => {
     const $libs = names.length ? libs.filter(i => names.some(j => i.name.match(j))) : libs;
     for (const lib of $libs) {
+      console.log('\n- - - - - - - - - - -\n');
       if (!lib.test) {
         console.error(`Error:\tNo "test" in "${lib.name}"`);
         continue;
@@ -958,6 +1309,11 @@ const main = async () => {
 
       console.log(`Note:\tChecking ${lib.name}`);
       const url = lib.test.url;
+      if (!url) {
+        console.error(`Error:\tNo "url" in "${lib.name}" when "test"`);
+        continue;
+      }
+
       const info = Object.assign({ name: lib.name }, await getRemoteInfo(url, lib));
       for (const key in info) {
         const value = info[key];
@@ -965,10 +1321,10 @@ const main = async () => {
         let valid = false;
         if (typeof value === 'undefined' || typeof prefer === 'undefined') {
           valid = false;
-        } else if (typeof prefer === 'string' || typeof prefer === 'number') {
-          valid = value === prefer;
-        } else if (prefer instanceof RegExp) {
+        } else if (typeof value === 'string' && prefer instanceof RegExp) {
           valid = value.match(prefer);
+        } else {
+          valid = value === prefer;
         }
         if (!valid) {
           console.error(`Error:\t"${lib.name}" "${key}" Failed/Changed`);
@@ -990,7 +1346,7 @@ const main = async () => {
         const lib = libs.find(i => i.name === name);
         if (!lib.link) continue;
 
-        list.push(lib.link(id));
+        list.push(await lib.link(id));
       }
     }
     fs.appendFileSync(output, '\n' + list.join('\n') + '\n');

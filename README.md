@@ -36,7 +36,7 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 [diff](_lib/diff.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/_lib/diff.js) | 1.0.2 | 2020/7/13 10:54:53 | 2020-07-13 10:54:35 | diff
 [log](_lib/log.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/_lib/log.js) | 1.0.0 | 2020-05-23 20:45:56 | 2020-05-23 20:45:56 | log
 [replaceWithDict](_lib/replaceWithDict.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/_lib/replaceWithDict.js) | 1.0.66 | 2020/9/15 15:10:35 | 2020-04-02 20:57:43 | replaceWithDict
-[req](_lib/req.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/_lib/req.js) | 1.0.156 | 2020/12/8 21:06:48 | 2020-05-23 20:46:13 | req
+[req](_lib/req.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/_lib/req.js) | 1.0.170 | 2021/1/6 18:00:07 | 2020-05-23 20:46:13 | req
 [timeFormat](_lib/timeFormat.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/_lib/timeFormat.js) | 1.0.1 | 2020/7/13 11:14:46 | 2020-07-13 11:14:36 | timeFormat
 
 ##### @public
@@ -132,13 +132,13 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[task](task/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/task/index.js) | 1.0.95 | 2020/12/13 13:04:58 |  | 自动更新头部信息(Headers)
+[task](task/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/task/index.js) | 1.0.96 | 2021/2/15 10:03:55 |  | 自动更新头部信息(Headers)
 
 ##### webVideo
 
 Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
-[webVideo](webVideo/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/webVideo/index.js) | 1.0.0 | 2020/12/13 13:04:01 | 2020-10-27 15:58:28 | 根据list.txt下载网页视频（主要是NSFW）
+[webVideo](webVideo/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/webVideo/index.js) | 1.1.598 | 2021/2/14 20:02:12 | 2020-10-27 15:58:28 | 根据list.txt下载网页视频（主要是NSFW）
 
 
 #### 捐赠

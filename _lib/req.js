@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               req
 // @Description:        req
-// @Version:            1.0.160
+// @Version:            1.0.170
 // @Author:             dodying
 // @Created:            2020-05-23 20:46:13
-// @Modified:           2020/12/20 13:41:07
+// @Modified:           2021/1/6 18:00:07
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            cheerio,deepmerge,iconv-lite,request,request-promise,socks5-http-client,socks5-https-client
@@ -221,7 +221,11 @@ async function reqHEAD (uriOrOption, optionUser = {}) {
         if (config.logLevel.includes('warn')) console.warn(`Redirect:\t${this.uri.href}`);
       }).on('response', async res => {
         reses.push(res);
-        if (['application', 'binary'].some(i => res.headers['content-type'] && res.headers['content-type'].match(i)) || (res.headers['content-disposition'] && res.headers['content-disposition'].match(/^attachment/))) {
+        if (
+          ['application', 'binary', 'image', 'audio', 'video', 'font', 'model'].some(i => res.headers['content-type'] && res.headers['content-type'].match(i)) ||
+          (res.headers['content-disposition'] && res.headers['content-disposition'].match(/^attachment/)) ||
+          res.headers.etag
+        ) {
           req.abort();
           resolve(reses);
           return;

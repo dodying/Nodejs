@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.597
+// @Version:            1.0.598
 // @Author:             dodying
-// @Modified:           2020/10/12 14:24:06
+// @Modified:           2021-08-05 20:38:45
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,image-size,jszip
@@ -102,8 +102,8 @@ const moveFile = (oldpath, newpath, date = undefined) => {
   }
 };
 const unique = arr => [...(new Set(arr))];
-const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
-const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
+const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
+const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
 const sortFileBySpecialRule = (info, rules, root, first) => {
   const result = [];
   for (let rule of rules) {

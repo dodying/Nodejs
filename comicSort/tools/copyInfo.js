@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               copyInfo
 // @Description:        copyInfo
-// @Version:            1.0.364
+// @Version:            1.0.365
 // @Author:             dodying
 // @Created:            2020-01-18 15:55:20
-// @Modified:           2020/7/13 10:56:04
+// @Modified:           2021-08-05 20:39:24
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,fs-extra,jszip,readline-sync
@@ -30,8 +30,8 @@ const findData = require('./../js/findData');
 
 // Function
 const unique = arr => [...(new Set(arr))];
-const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '');
-// const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(_.emojiRegExp, '')
+const escape = text => text.replace(/[\\/:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '');
+// const escape2 = text => text.replace(/[:*?"<>|]/g, '-').replace(/\.$/, '').replace(/\p{Extended_Pictographic}/gu, '')
 
 // Main
 const main = async () => {

@@ -1,9 +1,9 @@
 // ==Headers==
 // @Name:               task
 // @Description:        自动更新头部信息(Headers)
-// @Version:            1.0.95
+// @Version:            1.0.97
 // @Author:             dodying
-// @Modified:           2020/12/13 13:04:58
+// @Modified:           2021/2/26 20:21:45
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,inquirer
@@ -78,6 +78,7 @@ async function init () {
     for (let i = start + 1; i < end; i++) {
       if (!arr[i].match(/^(.*?)@(.*?)(\s+)(.*)$/)) continue;
       const [, pre, key, space, value] = arr[i].match(/^(.*?)@(.*?)(\s+)(.*)$/);
+      _[`__script_${key}`] = value;
 
       if (key === 'version') {
         const version = value.split('.');
@@ -108,6 +109,7 @@ async function init () {
       for (let i = start + 1; i < end; i++) {
         if (!arr[i].match(/^(.*?)@(.*?):(\s*)(.*?)$/)) continue;
         const [, pre, key, space, value] = arr[i].match(/^(.*?)@(.*?):(\s*)(.*?)$/);
+        _[`__script_${key}`] = value;
 
         if (key === 'Version') {
           const version = value.split('.');
@@ -143,13 +145,16 @@ async function init () {
           }).filter(i => i);
           if (libs.length === 0) libs = ['null'];
           arr[i] = `${pre}@${key}:${space}${libs.sort().join(',')}`;
+        } else if (key === 'task-next-line') {
+          arr[i + 1] = replaceWithDict(value, _);
+          i = i + 1;
         }
       }
       fs.writeFileSync(item, arr.join(eof));
     }
 
     if (mode === 'deno') {
-      await spawnSync('deno', ['fmt', item]);
+      // await spawnSync('deno', ['fmt', item]);
     }
   } else if (mode === 'bookmarklet') {
     const { dir, name } = path.parse(item);

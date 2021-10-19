@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1315
+// @Version:            1.0.1364
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2020/10/5 19:39:07
+// @Modified:           2021-10-10 15:59:25
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -85,6 +85,8 @@ const keyHelp = {
 const imageExt = ['.png', '.jpg', '.gif', '.webp'];
 const videoExt = ['.mp4', '.m4v'];
 const supportedExt = [].concat(imageExt, videoExt);
+let isTopLast, isBottomLast;
+let keypressLastTime = 0;
 
 // 设置
 const viewTimeMin = 10 * 1000; // 最小阅读时间，当停留当前本子时间超过该时间时，才会记录
@@ -503,18 +505,36 @@ const scrollTop = (top, left = 0, speed, absolute = false) => {
     scrollElement.scrollLeft = absolute ? left : scrollElement.scrollLeft + left;
   }
 };
+const isTopNow = () => {
+  let isTop = scrollElement.scrollTop === 0;
+  isTop = isTop && fileList.indexOf(viewInfo.page) === 0;
+  return isTop;
+};
+const isBottomNow = () => {
+  let isBottom = $('.content').height() + scrollElement.scrollTop + fixHeight >= scrollElement.scrollHeight;
+  isBottom = isBottom && (!fileList || pageAnchor >= fileList.length);
+  return isBottom;
+};
 
 // Main
 const main = async () => {
   await showFile();
 
   // 内容-点击翻页
-  $('.content').on('click', 'div>img,div>video', (e) => {
-    scrollTop(scrollElement.clientHeight);
+  $('.content').on('click', 'div>img,div>video', async (e) => {
+    if (isBottomNow() && isBottomLast) {
+      await showFile({ relativeBook: 'next' });
+    } else {
+      scrollTop(scrollElement.clientHeight);
+    }
   });
   let lastScrollTop = 0;
   let lastScrollEnd = true;
   $('.content').on('scroll', async (e) => {
+    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
+    isTopLast = isTopNow();
+    isBottomLast = isBottomNow();
+
     getCurrentPage();
     if ($('.content').attr('disable-scroll')) return;
     const thisScrollTop = scrollElement.scrollTop;
@@ -547,6 +567,7 @@ const main = async () => {
     lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
 
     electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
+    keypressLastTime = new Date().getTime();
   });
 
   // 内容-鼠标移动
@@ -616,17 +637,28 @@ const main = async () => {
   });
 
   // 翻页
-  $('.sidebar').on('click', (e) => {
+  $('.sidebar').on('click', async (e) => {
     getCurrentPage();
-    let elem = $(`.content>div[name="${viewInfo.page}"]`);
+    const elem = $(`.content>div[name="${viewInfo.page}"]`);
     if ($(e.target).is('.side-left')) {
-      elem = elem.prev().length ? elem.prev() : elem;
-      scrollTop(elem.offset().top);
-    } else {
-      if (elem.next().length) {
-        scrollTop(elem.next().offset().top);
+      if (isTopNow() && isTopLast) {
+        await showFile({ relativeBook: 'prev' });
       } else {
-        scrollTop(elem.offset().top + elem.height());
+        if (elem.prev().length) {
+          scrollTop(elem.prev().offset().top);
+        } else {
+          scrollTop(-parseFloat(window.getComputedStyle(elem.parent().get(0), ':before').height) - parseFloat(elem.css('margin-top')) - parseFloat(elem.css('padding-top')));
+        }
+      }
+    } else {
+      if (isBottomNow() && isBottomLast) {
+        await showFile({ relativeBook: 'next' });
+      } else {
+        if (elem.next().length) {
+          scrollTop(elem.next().offset().top);
+        } else {
+          scrollTop(elem.offset().top + elem.height());
+        }
       }
     }
   });
@@ -637,14 +669,15 @@ const main = async () => {
   });
 
   // 右键菜单
-  let rightClickPosition = null;
+  let rightEvent;
   const menuItem = [
     {
       label: '打开文件夹',
       click: () => {
         ipcRenderer.send('open-external', viewInfo.file, 'item');
       }
-    }, {
+    },
+    {
       label: '外部浏览',
       click: () => {
         ipcRenderer.send('open-external', viewInfo.file, 'path');
@@ -654,14 +687,15 @@ const main = async () => {
     {
       label: 'Inspect Element',
       click: () => {
-        electron.remote.getCurrentWindow().inspectElement(rightClickPosition.x, rightClickPosition.y);
+        electron.remote.getCurrentWindow().openDevTools();
+        console.log(rightEvent);
       }
     }
   ];
   const contextMenu = Menu.buildFromTemplate(menuItem);
   $('.content').on('contextmenu', (e) => {
     e.preventDefault();
-    rightClickPosition = { x: e.x, y: e.y };
+    rightEvent = e;
     contextMenu.popup(electron.remote.getCurrentWindow());
   });
 
@@ -682,8 +716,6 @@ const main = async () => {
   });
 
   // 全局快捷键
-  let keypressLastTime = 0;
-  let isTopLast, isBottomLast;
   Mousetrap.bind(keyMap.openFile, function (e, combo) { // 打开另一本书
     openFile();
     return false;
@@ -775,24 +807,17 @@ const main = async () => {
   });
   Mousetrap.bind([].concat(keyMap.up, keyMap.down), async (e, combo) => { // 上下键
     if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
-    let isTop = scrollElement.scrollTop === 0;
-    isTop = isTop && fileList.indexOf(viewInfo.page) === 0;
-    let isBottom = $('.content').height() + scrollElement.scrollTop + fixHeight >= scrollElement.scrollHeight;
-    isBottom = isBottom && (!fileList || pageAnchor >= fileList.length);
-
-    if (keyMap.up.includes(combo) && !isTop) { // 向上滚动
-      scrollTop(-scrollHeight);
-    } else if (keyMap.down.includes(combo) && !isBottom) { // 向下滚动
-      scrollTop(scrollHeight);
-    } else if (keyMap.up.includes(combo) && isTop && isTopLast) { // 打开上一本书籍
+    if (keyMap.up.includes(combo) && isTopNow() && isTopLast) { // 打开上一本书籍
       await showFile({ relativeBook: 'prev' });
-    } else if (keyMap.down.includes(combo) && isBottom && isBottomLast) { // 打开下一本书籍
+    } else if (keyMap.down.includes(combo) && isBottomNow() && isBottomLast) { // 打开下一本书籍
       await showFile({ relativeBook: 'next' });
+    } else if (keyMap.up.includes(combo)) { // 向上滚动
+      scrollTop(-scrollHeight);
+    } else if (keyMap.down.includes(combo)) { // 向下滚动
+      scrollTop(scrollHeight);
     }
 
     keypressLastTime = new Date().getTime();
-    isTopLast = isTop;
-    isBottomLast = isBottom;
     return false;
   });
   Mousetrap.bind([].concat(keyMap.shiftAndUp, keyMap.shiftAndDown), (e, combo) => { // shift+上下键 滚动到顶部或底部
@@ -804,24 +829,18 @@ const main = async () => {
     return false;
   }, 'keyup');
   Mousetrap.bind([].concat(keyMap.left, keyMap.right), async (e, combo) => { // 左右键
-    let isTop = scrollElement.scrollTop === 0;
-    isTop = isTop && fileList.indexOf(viewInfo.page) === 0;
-    let isBottom = $('.content').height() + scrollElement.scrollTop + fixHeight >= scrollElement.scrollHeight;
-    isBottom = isBottom && (!fileList || pageAnchor >= fileList.length);
     const step = scrollElement.clientHeight;
 
-    if (keyMap.left.includes(combo) && !isTop) { // 向上滚动
-      scrollTop(-step);
-    } else if (keyMap.right.includes(combo) && !isBottom) { // 向下滚动
-      scrollTop(step - 10);
-    } else if (keyMap.left.includes(combo) && isTop && isTopLast) { // 打开上一本书籍
+    if (keyMap.left.includes(combo) && isTopNow() && isTopLast) { // 打开上一本书籍
       await showFile({ relativeBook: 'prev' });
-    } else if (keyMap.right.includes(combo) && isBottom && isBottomLast) { // 打开下一本书籍
+    } else if (keyMap.right.includes(combo) && isBottomNow() && isBottomLast) { // 打开下一本书籍
       await showFile({ relativeBook: 'next' });
+    } else if (keyMap.left.includes(combo)) { // 向上滚动
+      scrollTop(-step);
+    } else if (keyMap.right.includes(combo)) { // 向下滚动
+      scrollTop(step - 10);
     }
 
-    isTopLast = isTop;
-    isBottomLast = isBottom;
     return false;
   });
   Mousetrap.bind([].concat(keyMap.plus, keyMap.minus), async (e, combo) => { // 放大缩小
@@ -967,6 +986,15 @@ const main = async () => {
     files = files.sort((a, b) => new Date(a.value).getTime() > new Date(b.value).getTime() ? -1 : 1).map(i => i.key);
 
     showFileList(files, 'History List:');
+  });
+  $('.content').on('wheel', async (e) => {
+    if (new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
+    if (e.originalEvent.deltaY < 0 && isTopNow() && isTopLast) {
+      await showFile({ relativeBook: 'prev' });
+    } else if (e.originalEvent.deltaY > 0 && isBottomNow() && isBottomLast) {
+      await showFile({ relativeBook: 'next' });
+    }
+    keypressLastTime = new Date().getTime();
   });
 
   window.onbeforeunload = (e) => {

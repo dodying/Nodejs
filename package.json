@@ -16,6 +16,7 @@
     "commander": "^6.2.0",
     "crypto-js": "^4.0.0",
     "deepmerge": "4.2.2",
+    "dotenv": "^8.2.0",
     "electron": "8.0.0",
     "electron-reload": "1.5.0",
     "entities": "^2.0.0",
@@ -30,16 +31,19 @@
     "m3u8-parser": "^4.4.3",
     "mysql2": "2.1.0",
     "pixl-xml": "1.0.13",
-    "puppeteer": "^5.4.1",
+    "puppeteer": "^7.1.0",
     "readline-sync": "1.4.10",
     "request": "2.88.0",
     "request-promise": "4.2.5",
     "simplebig": "0.0.3",
     "socks5-http-client": "1.0.4",
-    "socks5-https-client": "1.2.1"
+    "socks5-https-client": "1.2.1",
+    "xlsx": "^0.16.9"
   },
   "private": true,
   "keywords": [],
   "bin": {},
-  "devDependencies": {}
+  "devDependencies": {
+    "eslint-config-airbnb-base": "^14.2.1"
+  }
 }

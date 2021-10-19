@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        浏览comic
-// @Version:            1.0.969
+// @Version:            1.0.970
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2021-10-19 20:45:33
+// @Modified:           2021-10-19 20:47:00
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload,fs-extra,jszip,mysql2
@@ -448,6 +448,7 @@ ipcMain.on('open-external', async (event, url, name) => {
     fse.writeFileSync(fullpath, content);
     const cover = path.resolve(path.dirname(fullpath), path.parse(fullpath).name + '.jpg');
     if (fse.existsSync(cover)) fse.unlinkSync(cover);
+    await connection.query('DELETE FROM files WHERE ' + `path=${connection.escape(url)}`);
   } else if (name === 'everything') {
     if (config.everything && fse.existsSync(config.everything)) cp.execFileSync(config.everything, ['-search', url]);
   } else if (!name) {

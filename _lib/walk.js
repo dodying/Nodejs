@@ -32,10 +32,6 @@ class Option {
     this.matchDir = getValue(this.matchDir, null);
     this.matchFile = getValue(this.matchFile, null);
   }
-
-  toString () {
-    return '(' + this.x + ', ' + this.y + ')';
-  }
 }
 
 /**
@@ -49,7 +45,10 @@ const walk = function (dir, option = {}) {
   option = new Option(dir, option);
 
   let output = [];
-  const list = fs.readdirSync(dir);
+  let list = [];
+  try {
+    list = fs.readdirSync(dir);
+  } catch (error) {}
   list.forEach(function (file) {
     const fullpath = path.join(dir, file);
     if (option.ignore.some(i => fullpath.match(i))) return;
