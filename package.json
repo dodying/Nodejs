@@ -38,7 +38,7 @@
     "simplebig": "0.0.3",
     "socks5-http-client": "1.0.4",
     "socks5-https-client": "1.2.1",
-    "xlsx": "^0.16.9"
+    "xlsx": "^0.17.0"
   },
   "private": true,
   "keywords": [],
