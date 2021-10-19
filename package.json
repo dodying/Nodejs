@@ -27,7 +27,7 @@
     "iconv-lite": "0.5.1",
     "image-size": "0.8.3",
     "inquirer": "7.0.4",
-    "jszip": "3.2.2",
+    "jszip": "3.7.0",
     "m3u8-parser": "^4.4.3",
     "mysql2": "2.1.0",
     "pixl-xml": "1.0.13",
