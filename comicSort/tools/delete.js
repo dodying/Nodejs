@@ -1,12 +1,12 @@
 // ==Headers==
 // @Name:               delete
 // @Description:        删除漫画
-// @Version:            1.0.195
+// @Version:            1.0.196
 // @Author:             dodying
-// @Modified:           2020/7/20 10:37:51
+// @Modified:           2023-01-01 10:38:25
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            jszip,readline-sync
+// @Require:            readline-sync,jszip
 // ==/Headers==
 
 // usage: []file
@@ -31,7 +31,7 @@ const JSZip = require('jszip');
 
 // Main
 const main = async () => {
-  const list = process.argv.splice(2).filter((i) => extensions.includes(path.parse(i).ext));
+  const list = process.argv.slice(2).filter((i) => extensions.includes(path.parse(i).ext));
   for (const i of list) {
     const fullpath = path.resolve(process.cwd(), i);
     const { name } = path.parse(fullpath);

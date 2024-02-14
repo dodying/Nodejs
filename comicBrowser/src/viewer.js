@@ -1,14 +1,17 @@
+/* eslint-disable import/no-extraneous-dependencies */
+/* eslint-disable no-param-reassign */
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1364
+// @Version:            1.0.1594
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2021-10-10 15:59:25
+// @Modified:           2024-02-14 21:08:35
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
 // ==/Headers==
+/* eslint-env browser */
 /* global $ Mousetrap */
 
 // 全局变量
@@ -44,7 +47,8 @@ const viewInfo = new Proxy({
 });
 let fileInfo = null;
 let viewTime = null;
-const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+const mainTag = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
+const viewModes = ['fall', 'single'];
 const scrollElement = $('.content').get(0);
 const keyHelp = {
   help: '显示帮助',
@@ -55,6 +59,7 @@ const keyHelp = {
   readingList: '显示阅读列表',
   starList: '显示星标列表',
   historyList: '显示历史列表',
+  openDevTools: '打开开发者工具',
   deletePage: '删除当前页',
   deleteFile: '删除当前文件',
   reload: '重载页面',
@@ -63,6 +68,8 @@ const keyHelp = {
   starFile: '星标书籍',
   plus: '放大',
   minus: '缩小',
+  toggleViewMode: `切换浏览模式(${viewModes.join(',')})`,
+  Save: '保存记录(Mark)',
 
   // 全局通用
   separator: '全局通用',
@@ -85,13 +92,17 @@ const keyHelp = {
 const imageExt = ['.png', '.jpg', '.gif', '.webp'];
 const videoExt = ['.mp4', '.m4v'];
 const supportedExt = [].concat(imageExt, videoExt);
-let isTopLast; let
-  isBottomLast;
+let isTopLast, isBottomLast;
 let keypressLastTime = 0;
+let resultList = null;
+let lastScrollTop = 0;
+let lastScrollEnd = true;
 
 // 设置
 const viewTimeMin = 10 * 1000; // 最小阅读时间，当停留当前本子时间超过该时间时，才会记录
-const viewPageMin = 3; // 最小阅读页数，当当前页数超过该页数时，才会记录
+const viewPageMin = 5; // 最小阅读页数，当当前页数超过该页数时，才会记录
+const viewPageMax = -3; // 当阅读到最后几页时，不保存记录
+let viewMode = viewModes[0];
 const mousemoveDelay = 50; // mousemove时间的延迟
 const fixHeight = 1; // TO ENHANCEMENT 1px 待测试
 const keypressTimeout = 80; // 小于此时间的keypress事件不触发
@@ -123,6 +134,7 @@ const keyMap = { // 按键事件
   readingList: ['f6'],
   starList: ['f7'],
   historyList: ['f8'],
+  openDevTools: ['f12'],
   deletePage: ['del'],
   deleteFile: ['shift+del'],
   reload: ['r'],
@@ -131,6 +143,8 @@ const keyMap = { // 按键事件
   starFile: ['z'],
   plus: ['+', '='],
   minus: ['-'],
+  toggleViewMode: ['v'],
+  Save: ['m'],
 
   up: ['w', 'up', '8'],
   down: ['s', 'down', '5'],
@@ -142,7 +156,7 @@ const keyMap = { // 按键事件
 keyMap.shiftAndUp = keyMap.up.map((i) => `shift+${i}`);
 keyMap.shiftAndDown = keyMap.down.map((i) => `shift+${i}`);
 const pageLoadCount = 5; // 一次载入多少页
-const nextPageTop = 1 / 2 * document.documentElement.clientHeight; // 图片距离顶部多远视为下一页
+const nextPageTop = (1 / 2) * document.documentElement.clientHeight; // 图片距离顶部多远视为下一页
 
 // 导入原生模块
 const fs = require('fs');
@@ -164,21 +178,29 @@ const { Menu } = electron.remote;
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 // Function
-const getCurrentPage = () => {
-  let onView = $('.content>div').eq(-1);
-  for (const ele of $('.content>div').toArray()) {
-    if ($(ele).offset().top > nextPageTop) {
-      onView = $('.content>div').eq($(ele).index() - 1);
-      break;
+function getCurrentPage() {
+  let onView;
+  if (viewMode === 'single') {
+    onView = $('.content>div.current');
+  } else {
+    onView = $('.content>div').eq(-1);
+    for (const ele of $('.content>div').toArray()) {
+      if ($(ele).offset().top > nextPageTop) {
+        onView = $('.content>div').eq($(ele).index() - 1);
+        break;
+      }
     }
+
+    $('.content>div.current').removeClass('current');
+    onView.addClass('current');
   }
 
   viewInfo.page = onView.attr('name');
 
-  const html = $(`.content>div[name="${viewInfo.page}"]`).html();
+  const html = onView.text();
   $('.preview>div:nth-child(2)').attr('name', viewInfo.page).html(html);
-};
-const loadImage = async (reverse) => {
+}
+async function loadImage(reverse, loadCount = pageLoadCount) {
   $('.content').attr('disable-scroll', 'true');
 
   let count = 0;
@@ -186,12 +208,12 @@ const loadImage = async (reverse) => {
   for (; ;) {
     if (i < 0 || i >= fileList.length) break;
     const name = fileList[i];
-    if (count >= pageLoadCount) break;
-    count++;
+    if (count >= loadCount && count >= pageLoadCount) break;
+    count = count + 1;
+    $('.titlebar').html(`加载图片中，第${count}张`).show();
     const blob = await zipContent.files[name].async('blob');
     const imageUrl = URL.createObjectURL(blob);
-    let elem; let width; let
-      height;
+    let elem, width, height;
     await new Promise((resolve, reject) => {
       const tag = imageExt.includes(path.extname(name)) ? 'img' : 'video';
       elem = $(`<div name="${name}"><${tag} src="${imageUrl}" /></div>`).hide();
@@ -208,53 +230,65 @@ const loadImage = async (reverse) => {
     });
 
     elem.css({
-      width: width * zoomPercent / 100,
-      'max-width': height / width > 1.1 ? maxWidth : maxHeight * width / height,
+      width: width * zoomPercent * 0.01,
+      'max-width': height / width > 1.1 ? maxWidth : maxHeight * (width / height),
     }).show();
-    // ele.css('width', width / height * document.documentElement.clientHeight * 0.6); // TODO
+    // elem.css('width', (width / height) * document.documentElement.clientHeight * 0.6); // TODO
 
     if (reverse) {
       elem.prependTo('.content');
-      i--;
+      i = i - 1;
     } else {
       elem.appendTo('.content');
-      i++;
+      i = i + 1;
     }
   }
   if (!reverse) pageAnchor = i;
 
   $('.content').removeAttr('disable-scroll');
+  $('.titlebar').hide();
   getCurrentPage();
   const goon = reverse ? i >= 0 : i < fileList.length;
-  return count >= pageLoadCount && goon; // 是否可以继续加载
-};
-const jumpToImage = async (page) => {
+  if (fileList[0] === $('.content>div').eq(0).attr('name')) $('.content').attr('is-top', 'true');
+  if (fileList.slice(-1)[0] === $('.content>div').eq(-1).attr('name')) $('.content').attr('is-bottom', 'true');
+  return count >= loadCount && goon; // 是否可以继续加载
+}
+async function jumpToImage(page) {
   if (!fileList.includes(page)) return;
   const index = fileList.indexOf(page);
   const indexFirst = fileList.indexOf($('.content>div').attr('name'));
   const reverse = index < indexFirst;
   let pageLeft = true;
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const pageFind = $(`.content>div[name="${page}"]`);
     if (pageFind.length) {
       $('.content').attr('disable-scroll', 'true');
-      scrollTop(pageFind.offset().top);
+      scrollTop({ top: pageFind.offset().top, noEvent: true });
       $('.content').removeAttr('disable-scroll');
       break;
     } else if (pageLeft) {
-      pageLeft = await loadImage(reverse);
+      pageLeft = await loadImage(reverse, Math.abs(index - indexFirst));
     } else {
       break;
     }
   }
 
+  if (viewMode === 'single') {
+    $('.content>div.current').removeClass('current');
+    $(`.content>div[name="${page}"]`).addClass('current');
+    getCurrentPage();
+  }
+
   electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(page) + 1) / fileList.length);
-};
-const rememberPosition = async (noTooltip) => {
-  if (!viewInfo.file || isNaN(viewTime) || new Date().getTime() - viewTime < viewTimeMin || fileList.indexOf(viewInfo.page) < viewPageMin) return;
+}
+async function rememberPosition(noTooltip, force) {
+  if (!viewInfo.file) return;
+  if (!force && (fileList.indexOf(viewInfo.page) < viewPageMin || Number.isNaN(viewTime) || new Date().getTime() - viewTime < viewTimeMin)) return;
   await configChange((obj) => {
     if (!('lastViewPosition' in obj)) obj.lastViewPosition = {};
     obj.lastViewPosition[viewInfo.file] = viewInfo.page;
+    if (fileList.indexOf(viewInfo.page) >= fileList.length + viewPageMax) delete obj.lastViewPosition[viewInfo.file];
 
     if (!('lastViewTime' in obj)) obj.lastViewTime = {};
     const date = new Date();
@@ -266,12 +300,12 @@ const rememberPosition = async (noTooltip) => {
       for (const key in viewInfo) {
         if (viewInfo[key] && !(['page'].includes(key))) params.set(key, viewInfo[key]);
       }
-      obj.history.unshift(`./src/viewer.html?${params.toString()}`);
+      obj.history = Array.from(new Set([`./src/viewer.html?${params.toString()}`].concat(obj.history)));
     }
   }, 'store');
   if (!noTooltip) await tooltip('记录已保存', viewInfo.file);
-};
-const showFile = async (option = {}) => {
+}
+async function showFile(option = {}) {
   // option:
   //  page: string
   //  relativeBook: string 'prev','next'
@@ -284,33 +318,25 @@ const showFile = async (option = {}) => {
     return;
   }
   const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
-  let { page } = option;
+  let { page, relativeBook } = option;
   const condition = params.get('condition');
 
   let fullpath = path.resolve(libraryFolder, file);
 
-  if (option.relativeBook) {
+  if (relativeBook) {
     let files;
     if (condition) {
-      const resultList = ipcRenderer.sendSync('store', 'get', 'resultList', {});
-      if (condition in resultList) {
-        files = resultList[condition];
-      } else {
-        const conditionArr = JSON.parse(condition);
-        const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
-        files = rows.map((i) => i.path);
-        configChange((obj) => {
-          if (!('resultList' in obj)) obj.resultList = {};
-          obj.resultList[condition] = files;
-        }, 'store');
-      }
+      const conditionArr = JSON.parse(condition);
+      const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
+      files = rows.map((i) => i.path);
     } else {
       const dirname = path.dirname(file);
       files = fs.readdirSync(path.dirname(fullpath));
       files = files.filter((i) => ['.cbz', '.zip'].includes(path.extname(i))).map((i) => path.join(dirname, i)).sort(collator.compare);
     }
+    resultList = files;
     let index = files.indexOf(file);
-    if (option.relativeBook === 'prev') {
+    if (relativeBook === 'prev') {
       if (index - 1 >= 0) {
         fullpath = path.resolve(libraryFolder, files[index - 1]);
         while (!fs.existsSync(fullpath)) {
@@ -325,7 +351,7 @@ const showFile = async (option = {}) => {
         onLoadEnd();
         return;
       }
-    } else if (option.relativeBook === 'next') {
+    } else if (relativeBook === 'next') {
       if (index + 1 <= files.length - 1) {
         fullpath = path.resolve(libraryFolder, files[index + 1]);
         while (!fs.existsSync(fullpath)) {
@@ -380,10 +406,19 @@ const showFile = async (option = {}) => {
   }
 
   fileList = fileList.filter((i) => supportedExt.includes(path.extname(i))).sort(collator.compare); // 过滤图片
+  if (fileList.length === 0) {
+    await tooltip('空书籍，继续读取前/后一本书籍', fullpath);
+    loading = false;
+    viewInfo.file = file;
+    viewInfo.condition = condition;
+    updateTitleUrl();
+    await showFile({ relativeBook: relativeBook || 'next' });
+    return;
+  }
 
   const lastViewPosition = ipcRenderer.sendSync('store', 'get', 'lastViewPosition', {});
   if (!page && lastViewPosition[file]) page = lastViewPosition[file];
-  if (!page || !fileList.includes(page)) page = fileList[0];
+  if (!page || !fileList.includes(page)) [page] = fileList;
 
   Object.assign(viewInfo, { file, page, condition });
 
@@ -398,14 +433,13 @@ const showFile = async (option = {}) => {
   // page = fileList.slice(-1)[0]; // TODO
   pageAnchor = fileList.includes(page) ? fileList.indexOf(page) : 0;
   await jumpToImage(page);
+  getCurrentPage();
 
   $('.content').removeAttr('disable-scroll');
   document.title = `${path.basename(file)}\\${page || ''}`;
   onLoadEnd();
-
-  // if (fileList.length === 0) return showFile({ relativeBook: 'next' });
-};
-const openFile = async () => {
+}
+async function openFile() {
   const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
   const result = electron.remote.dialog.showOpenDialogSync({
     defaultPath: path.resolve(libraryFolder, viewInfo.file ? path.dirname(viewInfo.file) : ''),
@@ -425,8 +459,8 @@ const openFile = async () => {
     updateTitleUrl();
     await showFile();
   }
-};
-const onLoadEnd = () => {
+}
+function onLoadEnd() {
   $('.titlebar').hide();
   if (viewInfo.file) {
     const value = fileList.indexOf(viewInfo.page) + 1;
@@ -440,12 +474,12 @@ const onLoadEnd = () => {
   }
   loading = false;
   updateTitleUrl();
-};
-const onLoadError = () => {
+}
+function onLoadError() {
   // viewInfo.file = ''
   onLoadEnd();
-};
-const updateTitleUrl = () => {
+}
+function updateTitleUrl() {
   let title = 'VIEWER';
   let url = null;
   if (!viewInfo.file) {
@@ -460,8 +494,8 @@ const updateTitleUrl = () => {
   }
   document.title = title;
   window.history.pushState(null, title, url);
-};
-const showFileList = (files, title) => {
+}
+function showFileList(files, title) {
   const html = [
     '<div style="text-align:justify;">',
     '<ul>',
@@ -489,12 +523,14 @@ const showFileList = (files, title) => {
       });
     },
   });
-};
-const scrollTop = (top, left = 0, speed, absolute = false) => {
+}
+function scrollTop({
+  top, left = 0, speed, absolute = false, noEvent = false,
+}) {
   if (scorllMode === 'jquery') {
     $(scrollElement).css('scroll-behavior', 'unset');
     if (!speed) {
-      speed = Math.abs(absolute ? scrollElement.scrollTop - top : top) / scrollElement.clientHeight * scrollTime;
+      speed = (Math.abs(absolute ? scrollElement.scrollTop - top : top) / scrollElement.clientHeight) * scrollTime;
       speed = Math.min(speed, scrollTimeMax);
     }
     $(scrollElement).finish().animate({
@@ -506,54 +542,55 @@ const scrollTop = (top, left = 0, speed, absolute = false) => {
     scrollElement.scrollTop = absolute ? top : scrollElement.scrollTop + top;
     scrollElement.scrollLeft = absolute ? left : scrollElement.scrollLeft + left;
   }
-};
-const isTopNow = () => {
+  if (!noEvent) scrollEvent(top > 0 ? 'down' : 'up');
+}
+function isTopNow() {
   let isTop = scrollElement.scrollTop === 0;
   isTop = isTop && fileList.indexOf(viewInfo.page) === 0;
   return isTop;
-};
-const isBottomNow = () => {
+}
+function isBottomNow() {
   let isBottom = $('.content').height() + scrollElement.scrollTop + fixHeight >= scrollElement.scrollHeight;
   isBottom = isBottom && (!fileList || pageAnchor >= fileList.length);
   return isBottom;
-};
+}
+async function scrollEvent(type = 'down') {
+  isTopLast = isTopNow();
+  isBottomLast = isBottomNow();
 
-// Main
-const main = async () => {
-  await showFile();
-
-  // 内容-点击翻页
-  $('.content').on('click', 'div>img,div>video', async (e) => {
-    if (isBottomNow() && isBottomLast) {
-      await showFile({ relativeBook: 'next' });
-    } else {
-      scrollTop(scrollElement.clientHeight);
+  getCurrentPage();
+  if ($('.content').attr('disable-scroll')) return;
+  const thisScrollTop = scrollElement.scrollTop;
+  if (viewMode === 'single') {
+    const raw = $('.content>div.current');
+    if (type === 'up') {
+      if ($('.content>.current:nth-child(1)').length) await loadImage(true);
+      $('.content>div.current').prev().addClass('current');
+    } else if (type === 'down') {
+      if ($('.content>.current:nth-last-child(1)').length) await loadImage();
+      $('.content>div.current').next().addClass('current');
     }
-  });
-  let lastScrollTop = 0;
-  let lastScrollEnd = true;
-  $('.content').on('scroll', async (e) => {
-    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
-    isTopLast = isTopNow();
-    isBottomLast = isBottomNow();
-
+    raw.removeClass('current');
     getCurrentPage();
-    if ($('.content').attr('disable-scroll')) return;
-    const thisScrollTop = scrollElement.scrollTop;
-    if (thisScrollTop > lastScrollTop) { // 向下滚动
-      const { scrollHeight } = scrollElement;
-      const height = $('.content').height() + thisScrollTop;
-      if (height + loadPageHeight >= scrollHeight) {
-        await loadImage();
-      }
-    } else if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
-      lastScrollEnd = false;
-      const { page } = viewInfo;
-      await loadImage(true);
-      await waitInMs(500);
+  } else if (thisScrollTop > lastScrollTop) { // 向下滚动
+    // eslint-disable-next-line no-shadow
+    const { scrollHeight } = scrollElement;
+    const height = $('.content').height() + thisScrollTop;
+    if (height + loadPageHeight >= scrollHeight) {
+      await loadImage();
+    }
+  } else if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
+    lastScrollEnd = false;
+    await loadImage(true);
+    await waitInMs(500);
+
+    const offset = $(`.content>div[name="${viewInfo.page}"]`).offset();
+    if (offset) {
       $('.content').attr('disable-scroll', 'true');
-      const preferTop = scrollElement.scrollTop + $(`.content>div[name="${page}"]`).offset().top;
-      scrollTop(preferTop, 0, 100, true);
+      const preferTop = scrollElement.scrollTop + offset.top;
+      scrollTop({
+        top: preferTop, left: 0, speed: 100, absolute: true, noEvent: true,
+      });
       let scrollEnd;
       scrollEnd = setInterval(() => {
         if (Math.abs(preferTop - scrollElement.scrollTop) <= fixHeight) {
@@ -564,10 +601,41 @@ const main = async () => {
         }
       }, 200);
     }
-    lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
+  }
+  lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
+  electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
+  updateTitleUrl();
+}
 
-    electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
+// Main
+async function main() {
+  await showFile();
+
+  // 内容-点击翻页
+  $('.content').on('click', 'div>img,div>video', async (e) => {
+    if (isBottomNow() && isBottomLast) {
+      await showFile({ relativeBook: 'next' });
+    } else {
+      scrollTop({ top: scrollElement.clientHeight });
+    }
+  });
+  $('.content').on('wheel', async (e) => {
+    if (new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
+    if (e.type === 'wheel') {
+      scrollEvent(e.originalEvent.deltaY < 0 ? 'up' : 'down');
+      e.preventDefault();
+    }
+
+    if (e.originalEvent.deltaY < 0 && isTopNow() && isTopLast) {
+      await showFile({ relativeBook: 'prev' });
+    } else if (e.originalEvent.deltaY > 0 && isBottomNow() && isBottomLast) {
+      await showFile({ relativeBook: 'next' });
+    }
+
     keypressLastTime = new Date().getTime();
+  });
+  $('.content').on('scroll', async (e) => {
+    if (viewMode === 'single') scrollElement.scrollTop = 0;
   });
 
   // 内容-鼠标移动
@@ -579,13 +647,12 @@ const main = async () => {
       clearTimeout(mousemoveTimeoutId);
       mousemoveTimeoutId = null;
     }
-    const leftPercent = Math.round(e.clientX / $('body').prop('clientWidth') * 100);
-    const topPercent = Math.round(e.clientY / $('body').prop('clientHeight') * 100);
+    const leftPercent = Math.round((e.clientX / $('body').prop('clientWidth')) * 100);
+    const topPercent = Math.round((e.clientY / $('body').prop('clientHeight')) * 100);
     if (leftPercent >= 80 && topPercent >= 80) {
       $('.preview').show();
     } else if (topPercent <= 10 && leftPercent >= 20 && leftPercent <= 80) {
       $('.titlebar').html(`${viewInfo.file}\\${viewInfo.page || ''}`).show();
-      updateTitleUrl();
     } else if (topPercent >= 90 && leftPercent >= 20 && leftPercent <= 80) {
       $('.statusbar').show();
       const value = fileList.indexOf(viewInfo.page) + 1;
@@ -603,10 +670,12 @@ const main = async () => {
     mousemoveLastTime = new Date().getTime();
   });
   $('.statusbar>[name="range"]').on('change', async (e) => {
+    e.target.disabled = true;
     const value = $(e.target).val();
     await jumpToImage(fileList[value - 1]);
     $(e.target).val(value);
     $('.statusbar>[name="current"]').text(value);
+    e.target.disabled = false;
   });
   $('.preview>div:nth-child(1)').on('mousemove', (e) => {
     const target = $('.preview>div:nth-child(2)');
@@ -632,7 +701,7 @@ const main = async () => {
     const name = $('.preview>div:nth-child(2)').attr('name');
     const elem = $(`.content>div[name="${name}"]`);
     $('.content').css('scroll-behavior', 'unset');
-    scrollTop(elem.offset().top + elem.height() * y, elem.offset().left + elem.width() * x, 20);
+    scrollTop({ top: elem.offset().top + elem.height() * y, left: elem.offset().left + elem.width() * x, speed: 20 });
     $('.content').css('scroll-behavior', 'smooth');
   });
 
@@ -644,16 +713,16 @@ const main = async () => {
       if (isTopNow() && isTopLast) {
         await showFile({ relativeBook: 'prev' });
       } else if (elem.prev().length) {
-        scrollTop(elem.prev().offset().top);
+        scrollTop({ top: elem.prev().offset().top });
       } else {
-        scrollTop(-parseFloat(window.getComputedStyle(elem.parent().get(0), ':before').height) - parseFloat(elem.css('margin-top')) - parseFloat(elem.css('padding-top')));
+        scrollTop({ top: -parseFloat(window.getComputedStyle(elem.parent().get(0), ':before').height) - parseFloat(elem.css('margin-top')) - parseFloat(elem.css('padding-top')) });
       }
     } else if (isBottomNow() && isBottomLast) {
       await showFile({ relativeBook: 'next' });
     } else if (elem.next().length) {
-      scrollTop(elem.next().offset().top);
+      scrollTop({ top: elem.next().offset().top });
     } else {
-      scrollTop(elem.offset().top + elem.height());
+      scrollTop({ top: elem.offset().top + elem.height() });
     }
   });
 
@@ -679,7 +748,7 @@ const main = async () => {
     },
     { type: 'separator' },
     {
-      label: 'Inspect Element',
+      label: '打开开发者工具',
       click: () => {
         electron.remote.getCurrentWindow().openDevTools();
         console.log(rightEvent);
@@ -715,7 +784,7 @@ const main = async () => {
     return false;
   });
   Mousetrap.bind(keyMap.closeAndSave, async (e, combo) => { // 关闭并保存本书记录
-    await rememberPosition();
+    await rememberPosition(false, true);
     $('.content').attr('disable-scroll', 'true').empty();
     $('.openfile').show();
     return false;
@@ -734,8 +803,8 @@ const main = async () => {
     await tooltip('记录已清除', viewInfo.file);
     return false;
   }, 'keyup');
-  Mousetrap.bind(keyMap.jumpToPageTop, (e, combo) => { // 对位到当前页顶部
-    scrollTop($(`.content>div[name="${viewInfo.page}"]`).offset().top);
+  Mousetrap.bind(keyMap.jumpToPageTop, (e, combo) => { // 定位到当前页顶部
+    scrollTop({ top: $(`.content>div[name="${viewInfo.page}"]`).offset().top });
   });
   Mousetrap.bind(keyMap.deletePage, async (e, combo) => { // 删除当前页
     const confirm = await tooltip({
@@ -744,19 +813,32 @@ const main = async () => {
       autoClose: null,
       backgroundDismiss: 'cancel',
       buttons: {
-        ok: {
-          text: 'OK',
+        only: {
+          text: '仅当前页面(Enter)',
           keys: ['enter'],
           btnClass: 'btn-red',
         },
+        more: {
+          text: '包括之后页面(Shift)',
+          keys: ['shift'],
+          btnClass: 'btn-red',
+        },
         cancel: {
-          text: 'Cancel',
+          text: 'Cancel(Esc)',
           btnClass: 'btn-blue',
         },
       },
     });
-    if (confirm !== 'ok') return;
-    zipContent.remove(viewInfo.page);
+    if (!confirm || confirm === 'cancel') return;
+
+    let pages;
+    const index = fileList.indexOf(viewInfo.page);
+    if (confirm === 'only') {
+      pages = fileList.splice(index, 1);
+    } else if (confirm === 'more') {
+      pages = fileList.splice(index);
+    }
+    for (const page of pages) zipContent.remove(page);
     const content = await zipContent.generateAsync({
       type: 'nodebuffer',
       compression: 'DEFLATE',
@@ -767,24 +849,39 @@ const main = async () => {
     const libraryFolder = ipcRenderer.sendSync('config', 'get', 'libraryFolder');
     const fullpath = path.resolve(libraryFolder, viewInfo.file);
     fs.writeFileSync(fullpath, content);
-    await tooltip('页面已删除', `${viewInfo.file}\\${viewInfo.page}`);
+    await tooltip('页面已删除', pages.map((page) => `${viewInfo.file}\\${page}`).join('\n'));
     await configChange((obj) => {
-      if (!('delete' in obj)) obj.delete = [];
-      obj.delete.push(`${viewInfo.file}\\${viewInfo.page}`);
+      const arr = pages.map((i) => i.split('/')[1]);
+      if ((fileInfo.page || []).filter((i) => arr.includes(i.name)).length) {
+        obj.deletePageId = Array.from(new Set(fileInfo.page.filter((i) => arr.includes(i.name)).map((i) => i.id).concat(obj.deletePageId || [])));
+      } else {
+        obj.deletePage = Array.from(new Set(pages.map((page) => `${viewInfo.file}\\${page}`).concat(obj.deletePage || [])));
+      }
     }, 'store');
-    viewInfo.page = $(`.content>div[name="${viewInfo.page}"]`).prev().attr('name');
-    await rememberPosition(true);
-    await showFile();
+
+    $('.statusbar>[name="range"]').attr('max', fileList.length).val(index - 1);
+    $('.statusbar>[name="current"]').text(index);
+    $('.statusbar>[name="max"]').text(fileList.length);
+    for (const page of pages) $(`.content>div[name="${page}"]`).remove();
+    if ($('.content>div').length === 0) {
+      pageAnchor = fileList.length - 1;
+      await jumpToImage(fileList[index - 1]);
+    }
   });
   Mousetrap.bind(keyMap.deleteFile, async (e, combo) => { // 删除当前文件
     const confirm = await tooltip({
-      title: '是否删除文件',
+      title: '是否清空/删除文件',
       content: viewInfo.file,
       autoClose: null,
       backgroundDismiss: 'cancel',
       buttons: {
-        ok: {
-          text: 'OK',
+        empty: {
+          text: '清空(Shift)',
+          keys: ['shift'],
+          btnClass: 'btn-red',
+        },
+        delete: {
+          text: '删除(Enter)',
           keys: ['enter'],
           btnClass: 'btn-red',
         },
@@ -794,28 +891,33 @@ const main = async () => {
         },
       },
     });
-    if (confirm !== 'ok') return;
-    ipcRenderer.send('open-external', viewInfo.file, 'empty');
-    await tooltip('文件已删除', viewInfo.file);
+    if (!confirm || confirm === 'cancel') return;
+
     showFile({ relativeBook: 'next' });
+    ipcRenderer.send('open-external', viewInfo.file, confirm);
+    await tooltip('文件已清空/删除', viewInfo.file);
   });
-  Mousetrap.bind([].concat(keyMap.up, keyMap.down), async (e, combo) => { // 上下键
-    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
-    if (keyMap.up.includes(combo) && isTopNow() && isTopLast) { // 打开上一本书籍
+  Mousetrap.bind([].concat(keyMap.up, keyMap.down, 'home', 'end'), async (e, combo) => { // 上下键
+    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return false;
+    if ([].concat(keyMap.up, 'home').includes(combo) && isTopNow() && isTopLast) { // 打开上一本书籍
       await showFile({ relativeBook: 'prev' });
-    } else if (keyMap.down.includes(combo) && isBottomNow() && isBottomLast) { // 打开下一本书籍
+    } else if ([].concat(keyMap.down, 'end').includes(combo) && isBottomNow() && isBottomLast) { // 打开下一本书籍
       await showFile({ relativeBook: 'next' });
     } else if (keyMap.up.includes(combo)) { // 向上滚动
-      scrollTop(-scrollHeight);
+      scrollTop({ top: -scrollHeight });
     } else if (keyMap.down.includes(combo)) { // 向下滚动
-      scrollTop(scrollHeight);
+      scrollTop({ top: scrollHeight });
+    } else if (['home', 'end'].includes(combo)) {
+      scrollEvent(combo === 'end' ? 'down' : 'up');
     }
 
     keypressLastTime = new Date().getTime();
     return false;
   });
   Mousetrap.bind([].concat(keyMap.shiftAndUp, keyMap.shiftAndDown), (e, combo) => { // shift+上下键 滚动到顶部或底部
-    scrollTop(keyMap.shiftAndUp.includes(combo) ? 0 : scrollElement.scrollHeight, 0, null, true);
+    scrollTop({
+      top: keyMap.shiftAndUp.includes(combo) ? 0 : scrollElement.scrollHeight, left: 0, speed: null, absolute: true,
+    });
     return false;
   });
   Mousetrap.bind([].concat(keyMap.upLeft, keyMap.upRight), async (e, combo) => { // 打开上/下一本书籍
@@ -830,9 +932,9 @@ const main = async () => {
     } else if (keyMap.right.includes(combo) && isBottomNow() && isBottomLast) { // 打开下一本书籍
       await showFile({ relativeBook: 'next' });
     } else if (keyMap.left.includes(combo)) { // 向上滚动
-      scrollTop(-step);
+      scrollTop({ top: -step });
     } else if (keyMap.right.includes(combo)) { // 向下滚动
-      scrollTop(step - 10);
+      scrollTop({ top: step - 10 });
     }
 
     return false;
@@ -842,7 +944,7 @@ const main = async () => {
     tooltip(`当前缩放: ${zoomPercent}%`, viewInfo.file);
     for (const ele of $('.content>div').toArray()) {
       const width = $(ele).find('img').prop('naturalWidth');
-      $(ele).css('width', width * zoomPercent / 100);
+      $(ele).css('width', width * zoomPercent * 0.01);
     }
     await jumpToImage(viewInfo.page);
     return false;
@@ -864,6 +966,7 @@ const main = async () => {
       `<li>web: <a href="${fileInfo.web}">${fileInfo.web}</a></li>`,
       `<li>Uploader: <a name="native" href="./src/index.html?condition=${encodeURIComponent(`[[false,"uploader","=","${fileInfo.Uploader}",null]]`)}" style="margin:0 5px;">${fileInfo.Uploader}</a></li>`,
     ];
+    // eslint-disable-next-line no-shadow
     for (const main of mainTag) {
       if (!(main in fileInfo)) continue;
       const mainChs = findData(main).cname;
@@ -891,7 +994,7 @@ const main = async () => {
     ];
     const table2 = [];
     let nextTable = false;
-    for (const key in keyHelp) {
+    for (const key of Object.keys(keyHelp)) {
       if (key === 'separator') nextTable = true;
       const bindings = keyMap[key].map((i) => `<span>${i}</span>`).join('');
       (nextTable ? table2 : html).push(`<tr><td class="keyBindings">${bindings}</td><td class="helpDescription">${keyHelp[key]}</td></tr>`);
@@ -907,7 +1010,7 @@ const main = async () => {
   });
   Mousetrap.bind(keyMap.reload, async (e, combo) => { // 重载页面
     window.onbeforeunload = null;
-    await rememberPosition(true);
+    await rememberPosition(true, true);
     window.location.reload();
   });
   Mousetrap.bind(keyMap.starFile, async (e, combo) => { // 星标书籍
@@ -935,9 +1038,9 @@ const main = async () => {
       onContentReady() {
         $(this.$content).find(`li:has(span[name="${window.CSS.escape(viewInfo.page)}"])`).css('color', 'red').get(0)
           .scrollIntoView();
-        $(this.$content).find('li>span[name]').on('click', async (e) => {
+        $(this.$content).find('li>span[name]').on('click', async (e1) => {
           this.close();
-          await jumpToImage($(e.target).attr('name'));
+          await jumpToImage($(e1.target).attr('name'));
         });
       },
     });
@@ -950,17 +1053,13 @@ const main = async () => {
 
     let files;
     if (condition) {
-      const resultList = ipcRenderer.sendSync('store', 'get', 'resultList', {});
-      if (condition in resultList) {
-        files = resultList[condition];
+      if (resultList) {
+        files = resultList;
       } else {
         const conditionArr = JSON.parse(condition);
         const [rows] = ipcRenderer.sendSync('query-by-condition', conditionArr);
         files = rows.map((i) => i.path);
-        configChange((obj) => {
-          if (!('resultList' in obj)) obj.resultList = {};
-          obj.resultList[condition] = files;
-        }, 'store');
+        resultList = files;
       }
     } else {
       const dirname = path.dirname(file);
@@ -982,24 +1081,28 @@ const main = async () => {
 
     showFileList(files, 'History List:');
   });
-  $('.content').on('wheel', async (e) => {
-    if (new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
-    if (e.originalEvent.deltaY < 0 && isTopNow() && isTopLast) {
-      await showFile({ relativeBook: 'prev' });
-    } else if (e.originalEvent.deltaY > 0 && isBottomNow() && isBottomLast) {
-      await showFile({ relativeBook: 'next' });
-    }
-    keypressLastTime = new Date().getTime();
+  Mousetrap.bind(keyMap.openDevTools, async (e, combo) => { // 打开开发者工具
+    electron.remote.getCurrentWindow().openDevTools();
+  });
+  Mousetrap.bind(keyMap.toggleViewMode, async (e, combo) => { // 切换浏览模式
+    viewMode = viewModes[(viewModes.indexOf(viewMode) + 1) % viewModes.length];
+    $('.content').attr('mode', viewMode);
+    $('.content>div.current').get(0).scrollIntoView();
+    await tooltip('当前浏览模式', viewMode);
+  });
+  Mousetrap.bind(keyMap.Save, async (e, combo) => { // 关闭并保存本书记录
+    await rememberPosition(false, true);
+    return false;
   });
 
   window.onbeforeunload = (e) => {
-    rememberPosition();
+    rememberPosition(true);
   };
-};
+}
 
 main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

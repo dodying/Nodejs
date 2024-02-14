@@ -1,20 +1,20 @@
 // ==Headers==
 // @Name:               mark-server
 // @Description:        mark-server
-// @Version:            1.0.237
+// @Version:            1.0.243
 // @Author:             dodying
 // @Created:            2020-07-09 15:39:26
-// @Modified:           2021-03-30 19:29:59
+// @Modified:           2023-11-09 19:18:39
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            body-parser,express,mysql2
+// @Require:            mysql2,express,body-parser
 // ==/Headers==
 
 // 设置
 const port = 5556;
 const config = {
-  host: 'localhost',
-  user: 'admin',
+  host: process.env.MYSQl_HOST,
+  user: 'root',
   password: '',
   database: 'mark',
 };
@@ -71,18 +71,22 @@ const createConnection = async (obj) => {
     console.log({ err: error, msg: error.message });
   }
   try {
+    const { database, ...objLeft } = obj;
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
       password: obj.password,
       keepAliveInitialDelay: 10000,
       enableKeepAlive: true,
+      dateStrings: true,
+      // timezone: '+00:00',
+      ...objLeft,
     });
     connection.on('error', (err) => {
       if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
         createConnection(obj);
       } else {
-        console.log('Database error:', err);
+        console.log('Database error:', { err });
       }
     });
     connectionLastTime = new Date().getTime();
@@ -258,5 +262,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

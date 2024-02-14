@@ -1,13 +1,14 @@
+/* eslint-disable no-shadow */
 // ==Headers==
 // @Name:               webVideo
 // @Description:        根据list.txt下载网页视频（主要是NSFW）
-// @Version:            1.1.704
+// @Version:            1.1.898
 // @Author:             dodying
 // @Created:            2020-10-27 15:58:28
-// @Modified:           2021/2/17 14:33:13
+// @Modified:           2022-09-11 11:17:06
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            cheerio,commander,crypto-js,dotenv,m3u8-parser,puppeteer
+// @Require:            cheerio,m3u8-parser,puppeteer,crypto-js,commander,dotenv
 // ==/Headers==
 
 // 设置
@@ -25,7 +26,7 @@ const config = {
   directDownloadMode: 'aria2c', // one of ['aria2c', 'IDMan']
   proxyHTTP: 'http://127.0.0.1:8118', // aria2c 代理
   reqConfig: {
-    proxy: 'socks5://127.0.0.1:1088',
+    proxy: 'http://127.0.0.1:8118',
     request: {
       timeout: 60 * 1000,
       followAllRedirects: false,
@@ -57,16 +58,16 @@ const config = {
   checkDurationFailed: 'skip', // one of ['retry', 'skip'] // 下载完成后，如果长度不匹配，则重试或跳过
   listFiles: {
     list: './list.txt',
-    exceedLimit: './exceedLimit.txt',
-    failed: './failed.txt',
-    succeed: './succeed.txt',
+    exceedLimit: './list-exceedLimit.txt',
+    failed: './list-failed.txt',
+    succeed: './list-succeed.txt',
     cookies: './cookies.txt',
-    checkFailed: './checkFailed.txt',
+    checkFailed: './list-checkFailed.txt',
   },
 };
 
 // 全局变量
-let list;
+let list = [];
 const succeedList = [];
 let workingHostname;
 let exiting = false;
@@ -88,7 +89,7 @@ require('dotenv').config();
 require('../_lib/log').hack();
 const wait = require('../_lib/wait');
 const req = require('../_lib/req');
-const walk = require('../_lib/walk');
+const walkEverything = require('../_lib/walkEverything');
 
 // Function
 const getVideoInfo = async (file, timeout = 10 * 1000) => {
@@ -147,7 +148,7 @@ function spawnSync(...argsForSpwan) {
 }
 const doExit = () => {
   exiting = true;
-  // fs.appendFileSync(config.listFiles.succeed, succeedList.join('\n') + '\n');
+  // fs.appendFileSync(config.listFiles.succeed, `${succeedList.join('\n')}\n`);
   if (list) fs.writeFileSync(config.listFiles.list, list.filter((i) => !succeedList.includes(i)).join('\n'));
   if (workingHostname) cp.spawnSync('wmic', ['process', 'where', `name='${path.basename(config.executable['N_m3u8DL-CLI'])}' and commandline like '%${workingHostname}%'`, 'Call', 'Terminate']);
   if (browser) browser.close();
@@ -197,13 +198,61 @@ const getRemoteInfo = async (url, lib) => {
   if (lib.puppeteer) {
     if (!browser) {
       try {
-        browser = await puppeteer.launch({ args: [`--proxy-server=${config.reqConfig.proxy}`] }); // https://github.com/puppeteer/puppeteer/blob/main/examples/proxy.js
+        browser = await puppeteer.launch({
+          // executablePath: `${__dirname}/chrome-win`,
+          args: [`--proxy-server=${config.reqConfig.proxy}`],
+          // devtools: true,
+        }); // https://github.com/puppeteer/puppeteer/blob/main/examples/proxy.js
       } catch (error) {
         console.log(error);
         process.exit();
       }
     }
     const page = await browser.newPage();
+    page.setDefaultNavigationTimeout(60 * 1000);
+    page.waitForNavigation({ waitUntil: 'networkidle2' });
+    await page.evaluateOnNewDocument(() => { // https://blog.51cto.com/xuedingmaojun/3079389
+      /* eslint-disable no-undef */
+      /* eslint-disable no-proto */
+
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+
+      const newProto = navigator.__proto__;
+      delete newProto.webdriver; // 删除navigator.webdriver字段
+      navigator.__proto__ = newProto;
+      window.chrome = {}; // 添加window.chrome字段，为增加真实性还需向内部填充一些值
+      window.chrome.app = {
+        InstallState: 'hehe', RunningState: 'haha', getDetails: 'xixi', getIsInstalled: 'ohno',
+      };
+      window.chrome.csi = function () {};
+      window.chrome.loadTimes = function () {};
+      window.chrome.runtime = function () {};
+      Object.defineProperty(navigator, 'userAgent', { // userAgent在无头模式下有headless字样，所以需覆写
+        get: () => 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.113 Safari/537.36',
+      });
+      Object.defineProperty(navigator, 'plugins', { // 伪装真实的插件信息
+        get: () => [{
+          description: 'Portable Document Format',
+          filename: 'internal-pdf-viewer',
+          length: 1,
+          name: 'Chrome PDF Plugin',
+        }],
+      });
+      Object.defineProperty(navigator, 'languages', { // 添加语言
+        get: () => ['zh-CN', 'zh', 'en'],
+      });
+      const originalQuery = window.navigator.permissions.query; // notification伪装
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications'
+          ? Promise.resolve({ state: Notification.permission })
+          : originalQuery(parameters)
+      );
+
+      /* eslint-enable no-undef */
+      /* eslint-enable no-proto */
+    });
 
     const requests = [];
     page.on('requestfinished', async (req) => {
@@ -249,6 +298,15 @@ const getRemoteInfo = async (url, lib) => {
       }
     }
 
+    fs.writeFileSync(config.listFiles.cookies, (await page.cookies('streamtape.com')).map((i) => [
+      i.domain,
+      'TRUE',
+      i.path,
+      i.secure ? 'TRUE' : 'FALSE',
+      i.expires ? Math.round(new Date(i.expires).getTime() / 1000) : '0',
+      i.name,
+      i.value,
+    ].join('\t')).join('\r\n'));
     await page.close();
   } else {
     const res = await req({ uri: url, ...lib.request || {} }, lib.requestUser || {});
@@ -318,6 +376,16 @@ const getRemoteInfo = async (url, lib) => {
         }
       }
     }
+
+    fs.writeFileSync(config.listFiles.cookies, (JSON.parse(JSON.stringify(req.config.get('request').jar))._jar.cookies || []).map((i) => [
+      `.${i.domain}`,
+      i.hostOnly ? 'TRUE' : 'FALSE',
+      i.path,
+      i.secure ? 'TRUE' : 'FALSE',
+      i.expires ? Math.round(new Date(i.expires).getTime() / 1000) : '0',
+      i.key,
+      i.value,
+    ].join('\t')).join('\r\n'));
   }
   return info;
 };
@@ -341,8 +409,6 @@ const downloadWith = { // 仅当错误时返回错误
   },
   Direct: async (info, filename, url) => {
     if (config.directDownloadMode === 'aria2c') {
-      fs.writeFileSync(config.listFiles.cookies, (JSON.parse(JSON.stringify(req.config.get('request').jar))._jar.cookies || []).map((i) => [`.${i.domain}`, i.hostOnly ? 'TRUE' : 'FALSE', i.path, i.secure ? 'TRUE' : 'FALSE', i.expires ? Math.round(new Date(i.expires).getTime() / 1000) : '0', i.key, i.value].join('\t')).join('\r\n'));
-
       const end = await spawnSync(config.executable.aria2c, [
         '--async-dns=false',
 
@@ -353,12 +419,12 @@ const downloadWith = { // 仅当错误时返回错误
         '--check-certificate=false', (config.reqConfig.withProxy.some((i) => url.match(i) || info.videoDirect.match(i)) && !config.reqConfig.withoutProxy.some((i) => url.match(i) || info.videoDirect.match(i)) ? `--all-proxy=${config.proxyHTTP}` : ''),
         '--auto-file-renaming=false', '--allow-overwrite=true',
         '--file-allocation=none',
-        '--min-split-size=1M', '--max-connection-per-server=64', '--split=64',
+        // '--min-split-size=1M', '--max-connection-per-server=64', '--split=64',
         '--console-log-level=error',
-        `--dir=${config.workDir}`, `--out=${filename}.mp4.!downloading`,
-        info.videoDirect,
+        `--dir="${config.workDir}"`, `--out="${filename}.mp4.!downloading"`,
+        `"${info.videoDirect}"`,
       ]);
-      fs.unlinkSync(config.listFiles.cookies);
+      // fs.unlinkSync(config.listFiles.cookies);
       if (end === 'error') {
         return new Error('Error:\tDownload Interrupt');
       } if (end === true) {
@@ -701,26 +767,85 @@ let libs = [
     name: 'avgle',
     filter: /(avgle.com)\/video\/([^/]+)\//,
     puppeteer: true,
+    // async beforeLoad(page, url, requests) {
+    //   await page.setRequestInterception(true);
+    //   page.on('request', (interceptedRequest) => {
+    //     if (interceptedRequest.url() === 'https://avgle.com/templates/frontend/videojs-contrib-hls.js') {
+    //       interceptedRequest.respond({
+    //         body: fs.readFileSync(`${__dirname}/src/videojs-contrib-hls.js`, 'utf-8'),
+    //       });
+    //     } else {
+    //       interceptedRequest.continue();
+    //     }
+    //   });
+    //   page.on('console', (msg) => {
+    //     for (let i = 0; i < msg.args().length; ++i) { console.log(`${i}: ${msg.args()[i]}`); }
+    //   });
+    // },
     getInfo: async (page, url, requests) => {
       const info = await page.evaluate(() => ({
+        /* eslint-disable no-undef */
         name: 'avgle',
         id: window.location.href.match(/(avgle.com)\/video\/([^/]+)\//)[2],
         title: document.querySelector('[property="og:title"]').getAttribute('content'),
         duration: document.querySelector('[property="video:duration"]').getAttribute('content') * 1,
+        test: window.test,
+        /* eslint-enable no-undef */
       }));
-      info.videoHLS = JSON.parse(requests.find((i) => i.resourceType === 'xhr' && i.url.includes('video-url.php')).response.body).url;
+      console.log(info);
+      // info.videoHLS = JSON.parse(requests.find((i) => i.resourceType === 'xhr' && i.url.includes('video-url.php')).response.body).url;
       // TODO
       // to debugger videoJs.xhr)(options, function(error, response) {
       return info;
     },
     link: (id) => `https://avgle.com/video/${id}/`,
     test: {
-      url: 'https://avgle.com/video/5_J8p8pfq8I/',
+      url: 'https://avgle.com/video/NxDTUTg51Tl/',
       name: 'avgle',
-      id: '5_J8p8pfq8I',
-      title: '91汤先生最新高端精品大片为国争光系列_编号sm017_175CM娃娃脸金发美女洋妞',
-      duration: 2170,
+      id: 'NxDTUTg51Tl',
+      title: '[FC2 PPV 1789879] [COSPACO] [UNCENSORED] 美脚さんでキョウカちゃんPart3♪へんたいふしんしゃさんにえちえちな女の子にさせられちゃいました【個人撮影】 - 1',
+      duration: 2058,
       videoHLS: /qooqlevideo.com/,
+    },
+  },
+  { // kisscos
+    name: 'kisscos',
+    filter: /kisscos.net\/([^/]+)\//,
+    puppeteer: true,
+    getInfo: async (page, url, requests) => {
+      /* eslint-disable no-undef */
+      // if (await page.evaluate(() => document.querySelector('.post-tape a.current').parentElement.nextElementSibling)) {
+      //   const url = await page.evaluate(() => document.querySelector('.post-tape a.current').parentElement.nextElementSibling.querySelector('a').href);
+      //   list.push(url);
+      // }
+      /* eslint-enable no-undef */
+
+      const value = await page.evaluate(async () => {
+        /* eslint-disable no-undef */
+        const url = [...document.querySelector('#serverSelect').options].find((i) => i.value.includes('stream')).value;
+        return url;
+        /* eslint-enable no-undef */
+      });
+      await page.select('select#serverSelect', value);
+      await wait.for(() => requests.find((i) => i.resourceType === 'media' && i.url.match(/tapecontent.net/)), 30 * 1000);
+
+      const info = await page.evaluate(() => ({
+        /* eslint-disable no-undef */
+        name: 'kisscos',
+        id: window.location.href.match(/kisscos.net\/([^/]+)\//)[1],
+        title: document.querySelector('.single-title').textContent + (document.querySelector('.post-tape a.current') ? (`[${document.querySelector('.post-tape a.current').textContent}]`) : ''),
+        /* eslint-enable no-undef */
+      }));
+      info.videoDirect = requests.find((i) => i.resourceType === 'media' && i.url.match(/tapecontent.net/)).url;
+      return info;
+    },
+    link: (id) => `https://kisscos.net/${id}/`,
+    test: {
+      url: 'https://kisscos.net/fc2-ppv-1789879/',
+      name: 'kisscos',
+      id: 'fc2-ppv-1789879',
+      title: 'FC2-PPV-1789879 美脚さんでキョウカちゃんPart3♪へんたいふしんしゃさんにえちえちな女の子にさせられちゃいました【個人撮影】[1]',
+      videoDirect: /tapecontent.net\/.*.mp4/,
     },
   },
 
@@ -881,8 +1006,9 @@ let libs = [
       videoDirect: async (res) => {
         const videoId = res.request.uri.href.match(/(daftsex.com)\/watch\/(-?\d+_\d+)/)[2];
 
-        const $ = cheerio.load(res.body);
-        const src = $('iframe[src*="/player/"]').attr('src');
+        // const $ = cheerio.load(res.body);
+        // const src = $('iframe[src*="/player/"]').attr('src');
+        const src = res.body.match(/window.globEmbedUrl = '([^']+)'/)[1] + res.body.match(/hash: "([^"]+)"/)[1];
         const res1 = await req({ uri: src, headers: { referer: 'https://daftsex.com/' } });
         const $1 = cheerio.load(res1.body);
         const script = $1('#globParams').html();
@@ -915,7 +1041,7 @@ let libs = [
       title: 'Abigaile Johnson - CaribbeancomPR 042315_182 - 1',
       uploader: /Abigaile Johnson/i,
       duration: 2735,
-      videoDirect: /daxab.com\/videos\/-?\d+\/\d+\/\d+.mp4\?extra=.*/,
+      videoDirect: /(daxab.com|crazycloud.ru)\/videos\/-?\d+\/\d+\/\d+.mp4\?extra=.*/,
     },
   },
   { // xHamster
@@ -1042,7 +1168,7 @@ let libs = [
       id: (res, json) => json.query.id, // res.request.uri.href.match(/(netflav.com)\/video\?id=(?<id>[a-zA-Z0-9]+)/).groups.id
       title: (res, json) => json.props.initialState.video.data.title,
       uploader: (res, json) => json.props.initialState.video.data.actors.filter((i) => i.startsWith('jp:')).map((i) => i.substr(3)).join(','),
-      duration: (res, json) => json.props.initialState.video.data.duration.match(/\d+/)[0],
+      duration: (res, json) => json.props.initialState.video.data.duration.match(/\d+/)[0] * 60,
       videoDirect: async (res, json) => {
         const res1 = await req({
           method: 'POST',
@@ -1115,8 +1241,10 @@ let libs = [
       // const html = await page.content();
       // fs.writeFileSync('./1.html', html);
       const flashvars = await page.evaluate(() => {
+        /* eslint-disable no-undef */
         const key = Object.keys(window).filter((i) => String(i).startsWith('flashvars_'));
         return window[key];
+        /* eslint-enable no-undef */
       });
       return {
         id: url.match(/(pornhub.com|pornhubpremium.com|ph666.me)\/view_video.php\?viewkey=([a-z0-9]+)/)[2],
@@ -1161,6 +1289,7 @@ const main = async () => {
     libs = libs.filter((i) => !i.puppeteer);
   });
   program.command('run [urls...]', { isDefault: true }).action(async (urls) => {
+    if (!fs.existsSync(config.workDir)) fs.mkdirSync(config.workDir, { recursive: true });
     list = urls.concat(fs.readFileSync(config.listFiles.list, 'utf-8').split(/\r*\n/));
     if (program.retryExceedLimit && fs.existsSync(config.listFiles.exceedLimit)) {
       list = [].concat(fs.readFileSync(config.listFiles.exceedLimit, 'utf-8').split(/\r*\n/), list);
@@ -1323,7 +1452,7 @@ const main = async () => {
   program.command('link <output> <directories...>').description('generator links from files under directories').option('-r, --recursive', 'recursively').action(async (output, directories, cmdObj) => {
     const list = [];
     for (const directory of directories) {
-      const files = walk(directory, { recursive: cmdObj.recursive, nodir: true, matchFile: /\.(mp4|ts)$/i });
+      const files = await walkEverything(`file:${cmdObj.recursive ? 'parent:' : 'path:'}${directory} <ext:mp4|ext:ts>`);
       for (const file of files) {
         const basename = path.basename(file);
         if (!basename.match(/^\[(?<name>[^[\]]+)\]\[(?<id>[^[\]]+)\]/)) continue;

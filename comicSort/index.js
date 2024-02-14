@@ -1,12 +1,13 @@
+/* eslint-disable no-loop-func */
 // ==Headers==
 // @Name:               comicSort
 // @Description:        将通过 [E-Hentai Downloader](https://github.com/ccloli/E-Hentai-Downloader) 下载的本子分类
-// @Version:            1.0.598
+// @Version:            1.0.720
 // @Author:             dodying
-// @Modified:           2021-08-05 20:38:45
+// @Modified:           2022-10-22 12:14:30
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            fs-extra,image-size,jszip
+// @Require:            jszip,image-size,fs-extra
 // ==/Headers==
 
 // 设置
@@ -29,7 +30,7 @@ const sizeOf = require('image-size');
 const fse = require('fs-extra');
 
 const waitInMs = require('../_lib/waitInMs');
-const walk = require('../_lib/walk');
+const walkEverything = require('../_lib/walkEverything');
 
 const replaceWithDict = require('../_lib/replaceWithDict');
 const parseInfo = require('./js/parseInfo');
@@ -37,7 +38,7 @@ const findData = require('./js/findData');
 
 const EHT = JSON.parse(fse.readFileSync(path.join(__dirname, 'EHT.json'), 'utf-8')).data;
 findData.init(EHT);
-const tags = ['language', 'reclass', 'artist', 'group', 'parody', 'character', 'female', 'male', 'misc'];
+const tags = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
 const tagsChs = tags.map((i) => `${i}:chs`);
 
 // Function
@@ -167,63 +168,60 @@ const sortFile = (info) => {
   if (!info.pageCount) {
     let subdir = escape(info.title).match(/[^()[\]_~!\s]/g);
     if (subdir.length < 2) subdir = [subdir[0] || '#', subdir[0] || '#'];
-    subdir = subdir.slice(0, 2).map(i => i.match(/\w/i) ? i.toUpperCase() : '#');
-    return _.subFolderDelete + '/' + subdir.join('/');
+    subdir = subdir.slice(0, 2).map((i) => (i.match(/\w/i) ? i.toUpperCase() : '#'));
+    return `${_.subFolderDelete}/${subdir.join('/')}`;
   } if (sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true)) {
     return sortFileBySpecialRule(info, _.specialRule, _.specialFolder, true);
-  } if (['multi-work series', 'soushuuhen', 'compilation'].some(i => info.tags.includes(i))) {
+  } if (['multi-work series', 'soushuuhen', 'compilation'].some((i) => (info.other || []).includes(i))) {
     if (info.artist || info.group) {
-      let value = [].concat(info.artist, info.group).filter(i => i)[0];
+      let value = [].concat(info.artist, info.group).filter((i) => i)[0];
       value = findData('artist', value).cname || findData('group', value).cname || value;
       value = escape(value);
-      return _.subFolder[0] + '/' + value;
-    } 
-      return _.subFolder[0];
-    
+      return `${_.subFolder[0]}/${value}`;
+    }
+    return _.subFolder[0];
   } if (info.genre.match(/^COSPLAY$/i)) {
     return _.subFolder[1];
-  } if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || ['artbook', 'variant set'].some(i => info.tags.includes(i)) || info.title.match(/\b(pixiv|artist)\b/i)) {
+  } if (info.genre.match(/^(IMAGESET|IMAGE SET)$/i) || ['artbook', 'variant set'].some((i) => (info.other || []).includes(i)) || info.title.match(/\b(pixiv|artist)\b/i)) {
     return _.subFolder[2];
   } if (info.genre.match(/^(game|artist) ?cg( set)?$/i)) {
     return _.subFolder[3];
   } if (info.genre.match(/^DOUJINSHI$/i) && info.parody) {
     if (info.parody.length > 1) {
-      return _.subFolder[4] + '/' + escape(info.parody.map(i => findData('parody', i).cname || i).sort().join(', '));
+      return `${_.subFolder[4]}/${escape(info.parody.map((i) => findData('parody', i).cname || i).sort().join(', '))}`;
       // return _.subFolder[4] + '/Various'
-    } 
-      let value = info.parody[0];
-      value = escape(findData('parody', value).cname || value);
-      if (info.character) {
-        const character = info.character.filter(i => !(_.removeCharacter.includes(i)));
-        const name = character.length >= 4 ? '###' + character.length : escape(character.map(i => findData('character', i).cname || i).sort().join(', '));
-        return _.subFolder[4] + '/' + value + '/' + name;
-      } 
-        return _.subFolder[4] + '/' + value;
-      
-    
+    }
+    let value = info.parody[0];
+    value = escape(findData('parody', value).cname || value);
+    if (info.character) {
+      const character = info.character.filter((i) => !(_.removeCharacter.includes(i)));
+      const name = character.length >= 4 ? `###${character.length}` : escape(character.map((i) => findData('character', i).cname || i).sort().join(', '));
+      return `${_.subFolder[4]}/${value}/${name}`;
+    }
+    return `${_.subFolder[4]}/${value}`;
   } if ('female' in info && info.female.includes('harem')) {
     return _.subFolder[5];
-  } else if (info.tags.includes('incest') || info.tags.includes('inseki')) {
+  } if (['incest', 'inseki'].some((i) => [].concat(info.mixed, info.female, info.male).includes(i))) {
+    const tagsRaw = [].concat(info.mixed, info.female, info.male);
     const tags = [];
     for (const i in _.incestTags) {
-      if (info.tags.some(tag => _.incestTags[i].includes(tag))) tags.push(i);
+      if (tagsRaw.some((tag) => _.incestTags[i].includes(tag))) tags.push(i);
     }
-    return _.subFolder[6] + (tags.length ? '/' + tags.sort().join(', ') : '');
-  } else if (info.tags.includes('story arc')) {
+    return _.subFolder[6] + (tags.length ? `/${tags.sort().join(', ')}` : '');
+  } if ((info.other || []).includes('story arc')) {
     return _.subFolder[7];
-  } else if ((info.tags.includes('anthology')) || (info.artist && info.artist.length > 2)) {
+  } if (((info.other || []).includes('anthology')) || (info.artist && info.artist.length > 2)) {
     return _.subFolder[8];
-  } else if (info.artist || info.group) {
-    let value = [].concat(info.artist, info.group).filter(i => i)[0];
+  } if (info.artist || info.group) {
+    let value = [].concat(info.artist, info.group).filter((i) => i)[0];
     const valueRaw = value;
     value = findData('artist', value).cname || findData('group', value).cname || value;
-    if (value === valueRaw) value = value.replace(/[a-z]+/gi, all => all.slice(0, 1).toUpperCase() + all.slice(1).toLowerCase());
+    if (value === valueRaw) value = value.replace(/[a-z]+/gi, (all) => all.slice(0, 1).toUpperCase() + all.slice(1).toLowerCase());
     value = escape(value);
 
-    return _.subFolder[9] + '/' + value;
-  } else {
-    return _.subFolder[10];
+    return `${_.subFolder[9]}/${value}`;
   }
+  return _.subFolder[10];
 };
 const moveByInfo = (info, target) => {
   info.file = target;
@@ -276,11 +274,10 @@ const main = async () => {
       hour12: false,
     });
     process.title = d;
-    lst = walk(_.comicFolder, {
-      matchFile: /.(cbz|zip)$/,
+    lst = await walkEverything('file: <ext:cbz|ext:zip>', {
+      root: _.comicFolder,
+      parents: _.globRecursive ? 0 : 1,
       fullpath: false,
-      nodir: true,
-      recursive: _.globRecursive,
     });
     lst = lst.filter((i) => !lstIgnore.includes(i));
     if (lst.length) console.log('当前任务数: ', colors.info(lst.length));
@@ -327,8 +324,58 @@ const main = async () => {
 
         // 读取info.txt
         const infoFile = fileList.find((item) => item.match(/(^|\/)info\.txt$/));
-        const data = await zip.files[infoFile].async('text');
-        const info = parseInfo(data);
+        let data = await zip.files[infoFile].async('text');
+        let info = parseInfo(data);
+        if (data.split(/\r*\n/)[3].match(/^#(\d+)$/)) { // NHentai
+          const arr = data.split(/\r*\n/);
+          info = {
+            Female: [], Male: [], Mixed: [], Other: [], ...info,
+          };
+          for (const tag of info.Tags.split(',').map((i) => i.trim())) {
+            // eslint-disable-next-line no-shadow
+            for (const main of ['female', 'male', 'mixed', 'other']) {
+              if (findData(main, tag).name) {
+                info[`${main.substring(0, 1).toUpperCase()}${main.substring(1)}`].push(tag);
+                break;
+              }
+            }
+          }
+          // eslint-disable-next-line no-shadow
+          for (const main of ['female', 'male', 'mixed', 'other']) {
+            info[`${main.substring(0, 1).toUpperCase()}${main.substring(1)}`] = info[`${main.substring(0, 1).toUpperCase()}${main.substring(1)}`].join(', ');
+          }
+          console.log(info);
+          const arrNew = [
+            ...arr.slice(0, 2),
+            `https://nhentai.net/g/${data.split(/\r*\n/)[3].match(/^#(\d+)$/)[1]}/`,
+            '',
+            `Category: ${info.Categories}`,
+            'Uploader: nhentai',
+            `Posted: ${info['Uploaded at']}`,
+            'Parent: None',
+            'Visible: Yes',
+            `Language: ${info.Languages.split(',')[0].trim()}${info.Languages.includes('translated') ? '  TR' : ''}`,
+            `File Size: ${(targetData.length / 1024 / 1024).toFixed(2)} MB`,
+            `Length: ${info.Pages} pages`,
+            'Favorited: 0 times',
+            'Rating: 5.00',
+            '',
+            'Tags:',
+            info.Languages ? `> language: ${info.Languages}` : '',
+            info.Parodies ? `> parody: ${info.Parodies}` : '',
+            info.Characters ? `> character: ${info.Characters}` : '',
+            info.Groups ? `> group: ${info.Groups}` : '',
+            info.Artists ? `> artist: ${info.Artists}` : '',
+            info.Female ? `> female: ${info.Female}` : '',
+            info.Male ? `> male: ${info.Male}` : '',
+            info.Mixed ? `> mixed: ${info.Mixed}` : '',
+            info.Other ? `> other: ${info.Other}` : '',
+            '',
+            `Downloaded at ${new Date().toLocaleString()}`,
+          ];
+          data = arrNew.filter((i) => i || '').join('\r\n');
+          info = parseInfo(data);
+        }
         info.pageCount = fileList.filter((i) => !i.match(/(info.txt|\/)$/)).length;
         if (info.parody && info.parody.includes('original')) info.parody.splice(info.parody.indexOf('original'), 1);
         if (info.parody && info.parody.length === 0) delete info.parody;
@@ -342,7 +389,7 @@ const main = async () => {
           info.parody = unique(info.parody);
         }
 
-        // 检测图片及大小
+        // 检测图片及大小(删除宣传图及过小图片)
         if ((_.delIntroPic || _.checkImageSize || _.checkImageRatio) && info.web.match(/e(-|x)hentai.org/)) {
           const imgs = fileList.filter((item) => item.match(/\.(jpg|png|gif)$/));
           for (let j = 0; j < imgs.length; j++) { // 跳过封面
@@ -366,7 +413,7 @@ const main = async () => {
                 continue;
               }
             }
-            if (_.checkImageRatio && !info.tags.includes('tankoubon') && !info.tags.includes('anthology')) { // 检查图片宽高
+            if (_.checkImageRatio && !(info.other || []).includes('tankoubon') && !(info.other || []).includes('anthology')) { // 检查图片宽高
               const img = await zip.files[imgs[j]].async('nodebuffer');
 
               let size;
@@ -395,18 +442,18 @@ const main = async () => {
               }
             }
           }
-        }
 
-        if (fileList.length !== Object.keys(zip.files).length) {
-          fileList = Object.keys(zip.files);
-          const content = await zip.generateAsync({
-            type: 'nodebuffer',
-            compression: 'DEFLATE',
-            compressionOptions: {
-              level: 9,
-            },
-          });
-          fse.writeFileSync(target, content);
+          if (fileList.length !== Object.keys(zip.files).length) {
+            fileList = Object.keys(zip.files);
+            const content = await zip.generateAsync({
+              type: 'nodebuffer',
+              compression: 'DEFLATE',
+              compressionOptions: {
+                level: 9,
+              },
+            });
+            fse.writeFileSync(target, content);
+          }
         }
 
         const img = data.match(/Image\s+1:\s+(.*)/);
@@ -426,11 +473,17 @@ const main = async () => {
           fse.utimesSync(targetCover, date, date);
         }
 
-        // 如果info不存在tags(EHD v1.23之前下载的)
-        if (!data.match(/Tags:/) && info.web.match(/e(-|x)hentai.org/)) {
-          lstIgnore.push(i);
-          console.log('Please use tools\\info.txt.js reInfo');
-          return;
+        // 跳过某些文件
+        if (info.pageCount && info.web.match(/e(-|x)hentai.org/)) { // 忽略空文件
+          if (!data.match(/Tags:/)) { // 如果info不存在tags(EHD v1.23之前下载的)
+            lstIgnore.push(i);
+            console.log('Please use tools\\info.txt.js reInfo');
+            return;
+          } if (info.misc) { // 旧版本标签（包含misc）
+            lstIgnore.push(i);
+            console.log('Please use tools\\info.txt.js reInfo:misc');
+            return;
+          }
         }
 
         // 整理
@@ -454,5 +507,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

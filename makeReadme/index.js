@@ -1,12 +1,12 @@
 // ==Headers==
 // @Name:               makeReadme
 // @Description:        根据 Headers 生产 `README.md`
-// @Version:            1.0.30
+// @Version:            1.0.66
 // @Author:             dodying
-// @Modified:           2020/12/13 13:22:32
+// @Modified:           2022-09-11 11:17:38
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            glob
+// @Require:            null
 // ==/Headers==
 
 // 设置
@@ -14,12 +14,12 @@ const _ = {
   'E:\\Desktop\\_\\GitHub\\UserJs': {
     repo: 'https://github.com/dodying/UserJs/tree/master/',
     ext: ['user.js'],
-    ignore: ['**\\*.private.user.js'],
+    ignore: ['.private.user.js'],
   },
   'E:\\Desktop\\_\\GitHub\\Nodejs': {
     repo: 'https://github.com/dodying/Nodejs/tree/master/',
     ext: ['js'],
-    ignore: ['**\\node_modules\\**', '**\\@private\\**', '**\\**.temp\\**', '**\\**.doing\\**', '**\\**.redoing\\**', '**\\**.starting\\**', '**\\**.private\\**', '**\\comicSort\\Extensions\\**', '**\\comicSort\\User Data\\**', '**\\*.main.js', '**\\*.meta.js'],
+    ignore: ['\\node_modules\\', '\\@private\\', '.temp\\', '.doing\\', '.redoing\\', '.starting\\', '.private\\', '\\comicSort\\Extensions\\', '\\comicSort\\User Data\\', '.main.js', '.meta.js'],
   },
 };
 const START = ['// ==UserScript==', '// ==Headers==', '# ==Headers=='];
@@ -30,17 +30,18 @@ const fs = require('fs');
 const path = require('path');
 
 // 导入第三方模块
-const glob = require('glob');
+const walkEverything = require('../_lib/walkEverything');
 
 // Function
 
 // Main
-Object.keys(_).forEach((i) => {
-  const lst = glob.sync(`**\\*.@(${_[i].ext.join('|')})`, {
-    cwd: i,
-    ignore: _[i].ignore || '',
+Object.keys(_).forEach(async (i) => {
+  const lst = await walkEverything(`<${_[i].ext.map((j) => `ext:${j}`).join('|')}> ${_[i].ignore.map((j) => `!"${j}"`).join(' ')}`, {
+    root: i,
+    fullpath: false,
+    slash: true,
   });
-  // console.log(lst)
+  // console.log(lst);
   let md = '{content}';
   if (fs.existsSync(path.resolve(i, 'README_RAW.md'))) md = fs.readFileSync(path.resolve(i, 'README_RAW.md'), 'utf-8');
   const info = {};
@@ -69,25 +70,25 @@ Object.keys(_).forEach((i) => {
   });
   // console.log(info);
   let content = '';
-  for (const j in info) {
+  for (const j of Object.keys(info)) {
     const folder = j;
     const readme = path.resolve(i, j, 'README.md');
     content = `${content}\r\n`;
     content = `${content}##### ${folder}\r\n\r\n`;
-    if (fs.existsSync(readme)) content = `${content}[README](${folder}/` + 'README.md)\r\n\r\n';
+    if (fs.existsSync(readme)) content = `${content}[README](${folder}/README.md)\r\n\r\n`;
     content = `${content}Name | Raw | Version | Last-Modified | Create-Time | Description\r\n`;
     content = `${content}--- | --- | --- | --- | --- | ---\r\n`;
-    for (const k in info[j]) {
+    for (const k of Object.keys(info[j])) {
       const item = k;
-      const _info = info[j][k];
+      const infoThis = info[j][k];
 
-      const name = _info['name:zh-CN'] || _info.name;
+      const name = infoThis['name:zh-CN'] || infoThis.name;
       const url = `${folder}/${item}`;
       const rawUrl = new URL(url, _[i].repo).href.replace('/tree/', '/raw/');
-      const version = _info.version.replace(/\.\d{13,}$/, '');
-      const modified = _info.modified || _info.date || '';
-      const created = _info.created || _info.date || '';
-      const description = _info['description:zh-CN'] || _info.description || '';
+      const version = infoThis.version.replace(/\.\d{13,}$/, '');
+      const modified = infoThis.modified || infoThis.date || '';
+      const created = infoThis.created || infoThis.date || '';
+      const description = infoThis['description:zh-CN'] || infoThis.description || '';
 
       content = `${content}[${name}](${url}) | [Raw](${rawUrl}) | ${version} | ${modified} | ${created} | ${description}\r\n`;
     }

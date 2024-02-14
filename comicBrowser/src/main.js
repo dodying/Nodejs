@@ -1,14 +1,15 @@
 // ==Headers==
 // @Name:               main
 // @Description:        main
-// @Version:            1.0.100
+// @Version:            1.0.102
 // @Author:             dodying
 // @Created:            2020-02-09 16:15:40
-// @Modified:           2020-3-10 10:23:38
+// @Modified:           2022-08-21 11:59:24
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            null
 // ==/Headers==
+/* eslint-env browser */
 /* global electron, ipcRenderer, Mousetrap */
 
 (async () => {
@@ -87,5 +88,5 @@
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

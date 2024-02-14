@@ -1,34 +1,29 @@
+/* eslint-disable no-shadow,no-param-reassign,no-use-before-define */
 // ==Headers==
 // @Name:               avRenamer
 // @Description:        将文件夹下的不可描述视频按规则分类并命名
-// @Version:            1.1.295
+// @Version:            1.1.771
 // @Author:             dodying
-// @Modified:           2020/10/6 23:11:33
+// @Modified:           2024-02-14 16:26:12
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            cheerio,fs-extra,iconv-lite,readline-sync,request-promise,socks5-http-client,socks5-https-client
+// @Require:            readline-sync,fs-extra,request-promise,socks5-http-client,socks5-https-client,cheerio,iconv-lite,chardet
 // ==/Headers==
 
 // usage: [options]
 //  options:
 //    -q                passive mode
 //    -t [keyword]      test selectors of libs
+//    -c [config]       -c image=2
 
 // 设置
+// eslint-disable-next-line import/order
 const _ = require('./config');
 
 // 导入原生模块
 const path = require('path');
+const cp = require('child_process');
 require('../_lib/log').hack();
-
-replaceWithDict.init({}, {
-  ifNotString: (key, value) => {
-    if (!value) return _.emptyStr;
-    if (value instanceof Array) {
-      return value.length ? value.sort().join(',') : _.emptyStr;
-    }
-  },
-});
 
 // 导入第三方模块
 const readlineSync = require('readline-sync');
@@ -38,16 +33,202 @@ const Agent = require('socks5-http-client/lib/Agent');
 const Agent2 = require('socks5-https-client/lib/Agent');
 const cheerio = require('cheerio');
 const iconv = require('iconv-lite');
+const chardet = require('chardet');
 const replaceWithDict = require('../_lib/replaceWithDict');
 
 const jar = request.jar();
 let uriLast = null;
 jar.setCookie(request.cookie('acc_accept_lang=japanese'), 'https://www.xxx-av.com');
 jar.setCookie(request.cookie('adc=1'), 'https://www.mgstage.com');
+jar.setCookie(request.cookie('_jdb_session=e5C06JY5v5Ok%2B6uYpxYXuJQuKdtCgx7zJhglIDEIW3I4yRT0QMocq0UsiUPFaXHjmLq5KvJg28IA82AnL%2F%2BgeRSFv0EJBdjru0w1hE4eqvsp8LaX7nCtb7HtGT%2FrDjvkAk2kc7N8XLcAN81AcpHIhFu6yqJLNXEREOoTsioGd6Q6SBdfRaGVngO7SzRthHLm1m8NHwQioLUcZ1ZhHgs6Bu6MAvwGrepStwBKs%2F87t3WpHHUT4vH%2FXTIt8hGnufCXBYIRuK8%2BVobtj50VTRWh%2FPlshsCE%2B89uGH9hL47RpDRms0mlQZ6iN%2FZ%2B0bUxMBPnLw9CGBCjQVdys22FG%2FHB9aNRl1a21nLd2WKPQ1%2Bt9xKUPQLhU%2F%2Bre0vu3uaTDwYfquzluDVIcmZKkKdrabYlbvs0%2FYgQ4KJoBlwzOxu9nMBcQl4RF0Kht3Gyd%2FyV02ur77jPsCagPYtx9PGBGiPaBfItexFuzcrDhSAHP%2BGr--CMP0MtKMLG9ap5G8--w2adSGg3UnNGmLp%2BhsS1vg%3D%3D'), 'https://javdb.com/');
+jar.setCookie(request.cookie('locale=zh'), 'https://javdb.com/');
+jar.setCookie(request.cookie('age=off'), 'https://db.msin.jp/');
+
+replaceWithDict.init({}, {
+  ifNotString: (key, value) => {
+    if (!value) return _.emptyStr;
+    if (value instanceof Array) {
+      return value.length ? value.sort().join(',') : _.emptyStr;
+    }
+    return String(value);
+  },
+});
 
 // Function
 const libs = [
-  { // 一本道
+  { // GETCHU
+    id: 'GETCHU',
+    name: [/^GETCHU-(\d+)$/i],
+    censored: 'COS',
+    test: 'GETCHU-4036082',
+    valid: async (name) => `https://dl.getchu.com/i/item${name.match(/^GETCHU-(\d+)$/i)[1]}`,
+    getInfo: {
+      id: (res, $) => `GETCHU-${new URL(res.request.uri.href).pathname.match(/\/i\/item(\d+)/)[1]}`,
+      title: '[style="color: #333333; padding: 3px 0px 0px 5px;"]',
+      cover: ['.m_main_c > table:nth-child(4) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > img:nth-child(1)', 'src'],
+      preview: ['.highslide', 'href'],
+      censored: () => 'COS',
+      actor: '.m_main_c > form:nth-child(9) > div:nth-child(1) > table:nth-child(19) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a:nth-child(1)',
+      release: '.m_main_c > form:nth-child(9) > div:nth-child(1) > table:nth-child(19) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(5) > td:nth-child(2)',
+      duration: (res, $) => $('.m_main_c > form:nth-child(9) > div:nth-child(1) > table:nth-child(19) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(4) > td:nth-child(2)').text().match(/(\d+)分/)[1],
+      genre: '.item-key>a',
+    },
+  },
+  { // FANTIA
+    id: 'FANTIA',
+    name: [/^FANTIA-(\d+)$/i],
+    censored: 'COS',
+    test: 'FANTIA-338753',
+    valid: async (name) => `https://fantia.jp/products/${name.match(/^FANTIA-(\d+)$/i)[1]}`,
+    getInfo: {
+      id: (res, $) => `FANTIA-${new URL(res.request.uri.href).pathname.match(/\/products\/(\d+)/)[1]}`,
+      title: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[0].name,
+      cover: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[1].thumbnailUrl,
+      preview: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[0].image.map((i) => i.replace(/\/micro/, '/main')),
+      censored: () => 'COS',
+      actor: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[0].brand.name,
+      release: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[1].uploadDate,
+    },
+  },
+  { // KissCos
+    id: 'KissCos',
+    name: [
+      /^-\d+/i,
+
+      /^SAD-\d+/i,
+      /^PCL-\d+/i,
+      /^MUDR-\d+/i,
+      /^anicosMax-Chapter\d+/i,
+      /^(\d{2})?ID-\d+/i,
+      /^[CPT]?TNOZ-\d+/i,
+      /^300MIUM-\d+/i,
+      /^328STVF-\d+/,
+      /^413INST-\d+/i,
+      /^AHP-\d+/i,
+      /^ALBAT-\d+/i,
+      /^ANICOSINC-\d+/i,
+      /^AZM-\d+/,
+      /^BBAN-\d+/i,
+      /^BBSS-\d+/i,
+      /^BDTR-\d+/i,
+      /^BUENA-\d+[a-z]?/i,
+      /^CIS-\d+/i,
+      /^COSHC?-\d+/i,
+      /^COSPURI-\d+/i,
+      /^DEAICHU-\d+/i,
+      /^COSS-\d+/i,
+      /^CPDE-\d+/i,
+      /^CSCT-\d+/i,
+      /^CSDX-\d+/i,
+      /^CSR-\d+/i,
+      /^DAP-\d+/i,
+      /^DAVC-\d+/i,
+      /^DEC-\d+/i,
+      /^FC2-?PPV-(\d+)/i,
+      /^GETCHU-\d+/i,
+      /^HITMA-\d+/i,
+      /^HOIZ-\d+/i,
+      /^HRM-\d+/i,
+      /^HYK-\d+/i,
+      /^KD-\d+/i,
+      /^KMHRS-\d+/i,
+      /^MESU-\d+/i,
+      /^MILK-\d+/i,
+      /^MIMK-\d+/i,
+      /^MMUS-\d+/i,
+      /^MOGI-\d+/i,
+      /^MUKC-\d+/i,
+      /^MYNK-\d+/i,
+      /^NCY-\d+/i,
+      /^NCY[FT]-\d+/i,
+      /^OKAZU-\d+/i,
+      /^OTS-\d+/i,
+      /^PC-\d+/i,
+      /^PCDE-\d+/i,
+      /^PFES-\d+/i,
+      /^PINKYWEBEVE-\d+/i,
+      /^PNMER?-\d+[a-z]?/i,
+      /^POW-\d+/i,
+      /^PXH-\d+/i,
+      /^SAIT-\d+/i,
+      /^SDTH-\d+/i,
+      /^SEE\d+/i,
+      /^SEIKI-\d+/i,
+      /^SEX-FRIEND-\d+/i,
+      /^SEX-FRIEND-PREMIUM-\d+/i,
+      /^SEX-SYNDROME-\d+(-d+)?/i,
+      /^SHC-\d+/i,
+      /^SMCP-\d+/i,
+      /^SNYZ-\d+/i,
+      /^TSAK-?\d+[_-]\d+/i,
+      /^UGYS-\d+/i,
+      /^TMAVR-\d+/i,
+      /^362SCOH-\d+/i,
+      /^413INSTC-\d+/i,
+      /^570DAVC-\d+/i,
+      /^DAPD-\d+/i,
+      /^AKAZU-\d+/i,
+      /^ICHINOSE-MOMO-\d+/i,
+      /^OCOS-\d+/i,
+      /^OCOS-\d+/i,
+      /^SCOH-\d+/i,
+      /^TSAK-\d+/i,
+      /^TPRO-\d+/i,
+
+      /^((\d+)?[A-Z]+-\d+).*COSPLAY JAV Streaming/i,
+    ],
+    censored: 'COS',
+    test: 'PNME-129',
+    valid: async (name) => {
+      const re = libs.find((i) => i.id === 'KissCos').name.find((i) => name.match(i));
+      let [keyword] = name.match(re);
+      if (keyword.match(/^FC2PPV-(\d+)/i)) keyword = `FC2-PPV-${keyword.match(/^FC2PPV-(\d+)/i)[1]}`;
+      if (keyword.match(/^((\d+)?[A-Z]+-\d+).*COSPLAY JAV Streaming/i)) [, keyword] = keyword.match(/^((\d+)?[A-Z]+-\d+).*COSPLAY JAV Streaming/i);
+
+      const [, $] = await getRes(`https://kisscos.net/${keyword}/`);
+      if ($('.single-title').length) return `https://kisscos.net/${keyword}/`;
+
+      const [, $1] = await getRes(`https://kisscos.net/?s=${keyword.replace(/-/g, ' ')}`);
+      const results = $1('.thumbBlock').toArray().map((i) => ({
+        id: new URL($1(i).find('.thumbInside>a').attr('href')).pathname.replace(/^\/|\/$/g, '').toUpperCase(),
+        text: $1(i).find('.thumbInside>a').attr('title'),
+        link: $1(i).find('.thumbInside>a').attr('href'),
+      }));
+      const result = results.find((i) => i.id === keyword || i.text.includes(keyword));
+      return result ? result.link : null;
+    },
+    getInfo: {
+      id: (res, $) => new URL(res.request.uri.href).pathname.replace(/^\/|\/$/g, '').toUpperCase(),
+      title: '.single-title',
+      cover: ['[property="og:image"]', 'content'],
+      censored: (res, $) => {
+        const name = new URL(res.request.uri.href).pathname.replace(/^\/|\/$/g, '').toUpperCase();
+        const re = libs.find((i) => i.id === 'KissCos').name.find((i) => name.match(i));
+        return re ? 'COS' : 'COS-Help';
+      },
+      actor: '.post-categories>a',
+      genre: '.post-tags>a',
+      related: ['.thumbBlock .thumbInside>a', 'href', /com\/(.*)\/$/],
+    },
+  },
+  { // KissCos
+    id: 'KissCosId',
+    name: [/^KissCos-(\d+)$/i],
+    censored: 'COS',
+    test: 'KissCos-10411',
+    valid: async (name) => `https://kisscos.net/?p=${name.match(/^KissCos-(\d+)$/i)[1]}`,
+    getInfo: {
+      id: (res, $) => `KissCos-${$('link[rel="shortlink"]').attr('href').match(/\?p=(\d+)/)[1]}`,
+      title: '.single-title',
+      cover: ['[property="og:image"]', 'content'],
+      censored: () => 'COS',
+      actor: '.post-categories>a',
+      genre: '.post-tags>a',
+      related: ['.thumbBlock .thumbInside>a', 'href', /com\/(.*)\/$/],
+    },
+  },
+
+  { // 一本道 // DEMO
     id: '1Pondo',
     keyword: ['一本道', /1Pondo/i], // 匹配搜索结果 // null（省略）则视为不匹配
     // keywordIgnore: [], // 匹配搜索结果，匹配则过滤
@@ -57,7 +238,7 @@ const libs = [
     test: '011516_227', // 用于测试valid/getInfo是否正确
     valid: async (name) => { // 根据id生成目标网站
       let id = name.match(/\d{6}[-_]\d{3}/);
-      if (!id) return;
+      if (!id) return false;
       id = id[0].replace('-', '_');
       return `https://www.1pondo.tv/dyn/phpauto/movie_details/movie_id/${id}.json`;
     },
@@ -70,7 +251,7 @@ const libs = [
        * 参数为 res, $, data
        */
       // ?getData async function => data
-      id: (res) => JSON.parse(res.body).MovieID, // id
+      id: (res) => `1pon_${JSON.parse(res.body).MovieID}`, // id
       title: (res) => JSON.parse(res.body).Title, // 标题
       cover: (res) => JSON.parse(res.body).ThumbHigh, // 封面
       censored: () => 'Uncensored', // 码
@@ -81,6 +262,7 @@ const libs = [
       genre: (res) => JSON.parse(res.body).UCNAME, // 类别或标签
       // preview 预览图
       // director 导演
+      // series 系列
       // studio 製作商
       // label 發行商
       // related 相关影片
@@ -94,12 +276,12 @@ const libs = [
     test: '100618_002',
     valid: async (name) => {
       let id = name.match(/\d{6}[-_]\d{3}/);
-      if (!id) return;
+      if (!id) return false;
       id = id[0].replace('-', '_');
       return `https://www.caribbeancompr.com/moviepages/${id}/index.html`;
     },
     getInfo: {
-      id: (res) => res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1],
+      id: (res) => `caribpr_${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}`,
       title: '.heading>h1', // '.video-detail>h1',
       cover: (res) => `/moviepages/${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}/images/l_l.jpg`,
       censored: () => 'Uncensored',
@@ -120,7 +302,7 @@ const libs = [
     test: '100716-275',
     valid: async (name) => {
       let id = name.match(/\d{6}[-_]\d{3}/);
-      if (!id) return;
+      if (!id) return false;
       id = id[0].replace('_', '-');
       const uri = `https://www.caribbeancom.com/moviepages/${id}/index.html`;
       const res = await req({
@@ -134,7 +316,7 @@ const libs = [
       return uri;
     },
     getInfo: {
-      id: (res) => res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1],
+      id: (res) => `carib_${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}`,
       title: '#moviepages h1',
       cover: (res) => `/moviepages/${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}/images/l_l.jpg`,
       preview: ['.fancy-gallery:not([data-is_sample="0"])', 'href'],
@@ -153,17 +335,16 @@ const libs = [
     censored: 'Uncensored',
     test: 'heyzo-1426',
     valid: async (name) => {
-      let id = name.match(/\d{4}/);
-      if (!id) return;
-      id = id[0];
-      return `http://www.heyzo.com/moviepages/${id}/index.html`;
+      const id = name.match(/\d{4}/);
+      if (!id) return false;
+      return `http://www.heyzo.com/moviepages/${id[0]}/index.html`;
     },
     getInfo: {
       id: (res) => `HEYZO-${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}`,
       title: '#movie>h1',
       cover: ['[property="og:image"]', 'content'],
       preview: async (res, $) => {
-        if (_.image !== 2) return;
+        if (parseInt(_.image, 10) !== 2) return [];
         let uris = res.body.match(/document.write\('<img src="(\/contents.*?)"/g);
         if (!uris) return [];
         uris = uris.map((i) => i.match(/document.write\('<img src="(\/contents.*?)"/)[1]).map((i) => new URL(i.replace('/member/', '/').replace('/thumbnail_', '/'), res.request.uri.href).href);
@@ -175,6 +356,7 @@ const libs = [
           });
           if (res.request.uri.href === 'https://www.heyzo.com/index2.html') return uris.splice(0, i);
         }
+        return [];
       },
       censored: () => 'Uncensored',
       actor: '.table-actor a',
@@ -191,16 +373,15 @@ const libs = [
     censored: 'Uncensored',
     test: 'n1120',
     valid: async (name) => {
-      let id = name.match(/\d{4}/);
-      if (!id) return;
-      id = id[0];
-      const uri = `https://my.tokyo-hot.com/product/?q=n${id}`;
+      const id = name.match(/\d{4}/);
+      if (!id) return false;
+      const uri = `https://my.tokyo-hot.com/product/?q=n${id[0]}`;
       const res = await req(uri);
       const $ = cheerio.load(res.body);
-      return `${(new URL($(`.detail:contains(${id})>a`).attr('href'), uri)).href}?lang=ja`;
+      return `${(new URL($(`.detail:contains(${id[0]})>a`).attr('href'), uri)).href}?lang=ja`;
     },
     getInfo: {
-      id: '.info>dt:contains("作品番号")+dd',
+      id: (res, $) => `TokyoHot_${$('.info>dt:contains("作品番号")+dd').text().trim()}`,
       title: '.contents>h2',
       cover: ['video', 'poster'],
       preview: ['.scap a', 'href'],
@@ -220,12 +401,12 @@ const libs = [
     test: '011618_01',
     valid: async (name) => { // 同一本道
       let id = name.match(/\d{6}[-_]\d{2}/);
-      if (!id) return;
+      if (!id) return false;
       id = id[0].replace('-', '_');
       return `https://www.10musume.com/dyn/phpauto/movie_details/movie_id/${id}.json`;
     },
     getInfo: { // 同一本道
-      id: (res) => JSON.parse(res.body).MovieID,
+      id: (res) => `10mu_${JSON.parse(res.body).MovieID}`,
       title: (res) => JSON.parse(res.body).Title,
       cover: (res) => JSON.parse(res.body).ThumbHigh,
       censored: () => 'Uncensored',
@@ -244,12 +425,12 @@ const libs = [
     test: '051518_272',
     valid: async (name) => {
       let id = name.match(/\d{6}[-_]\d{3}/);
-      if (!id) return;
+      if (!id) return false;
       id = id[0].replace('-', '_');
       return `https://www.pacopacomama.com/moviepages/${id}/index.html`;
     },
     getInfo: {
-      id: (res) => res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1],
+      id: (res) => `paco_${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}`,
       title: 'h1',
       cover: (res) => `/moviepages/${res.request.uri.href.match(/moviepages\/(.*?)\/index.html/)[1]}/images/l_hd.jpg`,
       preview: ['.gallery_con a:not(.fancy-alert)', 'href'],
@@ -265,22 +446,57 @@ const libs = [
     keyword: [/fc2[-_\s]*ppv/i],
     name: [/fc2[-_\s]*ppv/i],
     censored: 'FC2',
-    test: 'FC2PPV-994320',
+    test: 'FC2PPV-2538074',
     valid: async (name) => {
-      let id = name.match(/fc2[-_\s]*ppv[-_\s]*(\d+)/i);
-      if (!id) return;
-      id = id[1];
-      return `https://adult.contents.fc2.com/article/${id}/`;
+      const id = name.match(/fc2[-_\s]*ppv[-_\s]*(\d+)/i);
+      if (!id) return false;
+      return `https://adult.contents.fc2.com/article/${id[1]}/`;
     },
     getInfo: {
       id: (res, $) => `FC2PPV-${JSON.parse($('script[type="application/ld+json"]').html()).productID}`,
       title: (res, $) => JSON.parse($('script[type="application/ld+json"]').html()).name,
       cover: (res, $) => JSON.parse($('script[type="application/ld+json"]').html()).image.url,
-      preview: ['.items_article_SampleImagesArea img', 'src'],
+      preview: ['.items_article_SampleImagesArea a', 'href'],
       censored: () => 'FC2',
       actor: '.items_comment_sellerBox>div h4>a',
       release: ['.items_article_Releasedate', 'text', /([\d/]+)/],
       duration: '.items_article_info',
+      genre: '.tagTag',
+    },
+  },
+  { // FC2HUB
+    id: 'FC2HUB',
+    keyword: [/fc2[-_\s]*ppv/i],
+    name: [/fc2[-_\s]*ppv/i],
+    censored: 'FC2',
+    test: 'FC2PPV-2538074',
+    valid: async (name) => `https://fc2hub.com/search?kw=${name}`,
+    getInfo: {
+      id: (res, $) => $('.fc2-id').text().replace('FC2-PPV-', 'FC2PPV-'),
+      title: '.fc2-title',
+      preview: ['[data-fancybox="gallery"]', 'href'],
+      censored: () => 'FC2',
+      actor: (res, $) => $('.container>.row>:not(.col-xl-8) .col-8').contents().eq(0).text()
+        .trim(),
+      genre: '.card-text>.badge-primary',
+    },
+  },
+  { // FC2CM
+    id: 'FC2CM',
+    keyword: [/fc2[-_\s]*ppv/i],
+    name: [/fc2[-_\s]*ppv/i],
+    censored: 'FC2',
+    test: 'FC2PPV-2538074',
+    valid: async (name) => `https://fc2cm.com/?p=${name.match(/[-_](\d+)/)[1]}`,
+    getInfo: {
+      id: (res) => `FC2PPV-${res.request.uri.href.match(/p=(\d+)/)[1]}`,
+      title: '.entry-title>a',
+      cover: ['.single_art>a>img:nth-child(1)', 'data-src'],
+      preview: ['.single_art>a>img:not(:nth-child(1))', 'data-src'],
+      censored: () => 'FC2',
+      actor: '[rel="category"]',
+      release: '.single_art>table tr:nth-child(3)>td:nth-child(3)',
+      genre: '[rel="tag"]',
     },
   },
   { // AVEntertainments // TODO FIX
@@ -289,16 +505,15 @@ const libs = [
     censored: 'Uncensored',
     test: 'LLDV-37',
     valid: async (name) => {
-      let id = name.match(/([a-z\d-]+)/i);
-      if (!id) return;
-      id = id[1];
-      const [, $] = await getRes(`https://www.aventertainments.com/search_Products.aspx?languageID=2&dept_id=29&keyword=${id}&searchby=keyword`);
+      const id = name.match(/([a-z\d-]+)/i);
+      if (!id) return false;
+      const [, $] = await getRes(`https://www.aventertainments.com/search_Products.aspx?languageID=2&dept_id=29&keyword=${id[1]}&searchby=keyword`);
       const results = $('#ctl00_ContentPlaceHolder1_Rows5Items1_MyList>tbody>tr>td:has(table)').toArray().map((i) => ({
         text: $(i).find('tbody>tr:nth-child(2)>td>a').text(),
         id: $(i).find('tbody>tr:nth-child(2)>td').text().match(/番号:\s*([\w-]+)/)[1],
         link: $(i).find('tbody>tr:nth-child(2)>td>a').attr('href'),
       }));
-      const result = results.find((i) => i.id === id);
+      const result = results.find((i) => i.id === id[1]);
       return result ? result.link : null;
     },
     getInfo: {
@@ -322,10 +537,9 @@ const libs = [
     censored: 'Uncensored',
     test: 'xxx-av 23080',
     valid: async (name) => {
-      let id = name.match(/\d+/);
-      if (!id) return;
-      id = id[0];
-      return `https://www.xxx-av.com/mov/movie/${id}/`;
+      const id = name.match(/\d+/);
+      if (!id) return false;
+      return `https://www.xxx-av.com/mov/movie/${id[0]}/`;
     },
     getInfo: {
       id: (res) => `xxx-av ${res.request.uri.href.match(/movie\/(\d+)\//)[1]}`,
@@ -347,7 +561,7 @@ const libs = [
     test: 'heydouga-4037-352',
     valid: async (name) => {
       const matched = name.match(/hey(douga)?-(\d+)-(\d+)/);
-      if (!matched) return;
+      if (!matched) return false;
       return `https://www.heydouga.com/moviepages/${matched[2]}/${matched[3]}/index.html`;
     },
     getInfo: {
@@ -363,7 +577,7 @@ const libs = [
   { // MGStage
     id: 'MGStage',
     keyword: [/MGStage/i, /MGS動画/i],
-    name: [/^\d{3}[a-z]{3,4}-\d{3,4}$/i, /^(SIRO)-\d+$/i],
+    name: [/^\d{3}[a-z]{3,5}-\d{3,4}$/i, /^(SIRO)-\d+$/i],
     censored: 'Censored',
     test: '300MIUM-135', // '200GANA-1720'
     valid: async (name) => `https://www.mgstage.com/product/product_detail/${name.toUpperCase()}/`,
@@ -424,13 +638,118 @@ const libs = [
   },
   // gachinco closed
 
+  { // JavDB
+    id: 'JavDB',
+    nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
+    test: 'MIFD-070',
+    valid: async (name) => {
+      const [, $] = await getRes(`https://javdb.com/search?q=${name}&f=all`);
+      const results = $('.item').toArray().map((i) => ({
+        id: $(i).find('.video-title>strong').text().replace(/FC2/, 'FC2PPV'),
+        text: $(i).find('.video-title').text(),
+        link: $(i).find('a').attr('href'),
+      }));
+      const result = results.find((i) => i.id === name);
+      return result ? result.link : null;
+    },
+    getInfo: {
+      id: (res, $) => {
+        let id = $('.movie-panel-info>div:contains("番號")>span.value').text().replace(/FC2/, 'FC2PPV');
+        if ($('.title').text().match(/無碼/)) {
+          const label = $('.movie-panel-info>div:contains("片商")>span.value,.movie-panel-info>div:contains("賣家")>span.value').text().trim();
+          if (label === '一本道') {
+            id = `1pon_${id}`;
+          } else if (label === 'カリビアンコム') {
+            id = `carib_${id}`;
+          } else if (label === 'Tokyo-Hot') {
+            id = `TokyoHot_${id}`;
+          } else if (label === '10musume') {
+            id = `10mu_${id}`;
+          } else if (label === 'pacopacomama,パコパコママ') {
+            id = `paco_${id}`;
+          } else if (id.match(/^([A-Z]{2,6}-[0-9]{2,4}|MKB?D-S[0-9]{2,3}|S2MB?D?-[0-9]{3}|RED[0-9]{3}|S2MCR-[0-9]{2,4})$/i)) {
+            /* noop */
+          } else {
+            console.log({ label, url: res.request.uri.href });
+            // process.exit();
+          }
+        }
+        return id;
+      },
+      title: '.title',
+      cover: ['.video-cover', 'src'],
+      preview: ['.preview-images>a', 'href'],
+      censored: (res, $) => ($('.title').text().match(/無碼/) ? 'Uncensored' : 'Censored'),
+      actor: (res, $) => $('.movie-panel-info>div:contains("演員")>span.value>a').filter(function () { return $(this).next().is('.female'); }).toArray().map((i) => $(i).text()),
+      release: '.movie-panel-info>div:contains("日期")>span.value',
+      duration: '.movie-panel-info>div:contains("時長")>span.value',
+      genre: '.movie-panel-info>div:contains("類別")>span.value>a',
+      studio: '.movie-panel-info>div:contains("片商")>span.value,.movie-panel-info>div:contains("賣家")>span.value',
+    },
+  },
+  { // 女優と作品検索
+    id: 'MSIN.JP',
+    test: 'FC2PPV-3274087',
+    valid: async (name) => {
+      for (const search of ['jp.search/movie?str=', 'branch/search?sort=movie&str=']) {
+        if (name.match(/FC2PPV/i) && search === 'jp.search/movie?str=') continue;
+        const [res, $] = await getRes(`https://db.msin.jp/${search}${name.match(/FC2PPV/i) ? name.replace(/FC2PPV/i, 'FC2-PPV') : name}`);
+        if (res.request.uri.href.includes('/movie?id=')) return res.request.uri.href;
+        const results = $('.movie_info').toArray().map((i) => ({
+          id: $(i).find('.movie_pn').text().replace(/FC2-PPV/i, 'FC2PPV'),
+          text: $(i).find('.movie_title').text(),
+          link: $(i).find('.movie_title>a').attr('href'),
+        }));
+        const result = results.find((i) => i.id === name);
+        if (result) return result.link;
+      }
+      return false;
+    },
+    getInfo: {
+      id: (res, $) => ($('.mv_pn').text() || $('.mv_fileName').text()).replace(/FC2-PPV/i, 'FC2PPV').replace(/^(1pon|carib|10mu|paco)-/, '$1_'),
+      title: '.mv_title',
+      cover: (res, $) => $('.movie_img').attr('src'),
+      preview: '.mv_com1>div:not(.text)',
+      censored: (res, $) => ($('#breadcrumb>ol>li:nth-child(1)').text() === 'TOP（国内サイト）' ? 'Censored' : $('#breadcrumb>ol>li>a[href*="/sn?"]>span').text()),
+      actor: '.movie_info_ditail .performer_view:not(#ads-iframe~*) .performer_text',
+      release: (res, $) => $('.mv_releaseDate').text() || $('.mv_createDate').text(),
+      duration: '.mv_duration',
+      genre: '.mv_genre>label,.mv_tag>label',
+      director: '.mv_director,.mv_writer',
+      series: '.mv_series',
+      studio: '.mv_mfr',
+      label: '.mv_label',
+    },
+  },
   { // JavBus
     id: 'JavBus',
     nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
     test: 'MIFD-070',
     valid: async (name) => `https://www.javbus.com/${name}`,
     getInfo: {
-      id: (res, $) => res.request.uri.href.split('/')[3].toUpperCase(),
+      id: (res, $) => {
+        let id = res.request.uri.href.split('/')[3].toUpperCase();
+        if ($('.active>a[href*="uncensored"]').length) {
+          const label = $('.info>p:contains("製作商")>a:nth-child(2)').text().trim();
+          if (label === '一本道') {
+            id = `1pon_${id}`;
+          } else if (label === 'カリビアンコム') {
+            id = `carib_${id}`;
+          } else if (label === '東京熱') {
+            id = `TokyoHot_${id}`;
+          } else if (label === '天然むすめ') {
+            id = `10mu_${id}`;
+          } else if (label === 'パコパコママ') {
+            id = `paco_${id}`;
+          } else if (id.match(/^([A-Z]{2,6}-[0-9]{2,4}|MKB?D-S[0-9]{2,3}|S2MB?D?-[0-9]{3}|RED[0-9]{3}|S2MCR-[0-9]{2,4})$/i)) {
+            /* noop */
+          } else {
+            console.log({ label, url: res.request.uri.href });
+            // process.exit();
+          }
+        }
+        return id;
+      },
       title: 'h3',
       cover: ['.bigImage img', 'src'],
       preview: ['.sample-box', 'href'],
@@ -445,9 +764,80 @@ const libs = [
       related: ['#related-waterfall>.movie-box', 'href', /com\/(.*)$/],
     },
   },
-  { // JavSir // TODO FIX
-    id: 'JavSir',
+  { // JavLibrary
+    id: 'JavLibrary',
     nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
+    test: 'MIFD-070',
+    valid: async (name) => {
+      const [res, $] = await getRes(`https://www.javlibrary.com/cn/vl_searchbyid.php?keyword=${name}`);
+      if (res.request.uri.href.includes('/?v=ja')) return res.request.uri.href;
+      const results = $('.videos>.video').toArray().map((i) => ({
+        id: $(i).find('.id').text(),
+        text: $(i).find('.title').text(),
+        link: $(i).find('a').attr('href'),
+      }));
+      const result = results.find((i) => i.id === name);
+      return result ? result.link : null;
+    },
+    getInfo: {
+      id: (res, $) => $('#video_id .text').text(),
+      title: '#video_title a',
+      cover: ['#video_jacket_img', 'src'],
+      preview: ['.previewthumbs>img', 'src'],
+      censored: (res, $) => 'Censored',
+      actor: '#video_cast .text a',
+      release: '#video_date .text',
+      duration: '#video_length .text',
+      genre: '#video_genres .text a',
+      director: '#video_director .text a',
+      studio: '#video_maker .text a',
+      label: '#video_label .text a',
+    },
+  },
+  { // JAV321
+    id: 'JAV321',
+    nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
+    test: 'GANA-2348',
+    valid: async (name) => {
+      const [res, $] = await getRes({
+        method: 'POST',
+        uri: 'https://en.jav321.com/search',
+        form: {
+          sn: name,
+        },
+      });
+      return $('#vjs_sample_player').length ? res.request.uri.href : null;
+    },
+    getInfo: {
+      getData: (res, $) => {
+        const $1 = $($('.col-md-9').html().split('<br>').map((i) => `<div>${i}</div>`)
+          .join(''));
+        const data = {};
+        for (let i = 0; i < $1.length; i++) {
+          const root = $1.eq(i);
+          const key = root.find('b').text();
+          if (!key) continue;
+          const value = root.find('a').length ? root.find('a').toArray().map((i) => $(i).text()) : root.text().replace(`${key}:`, '').trim();
+          data[key] = value;
+        }
+        return data;
+      },
+      id: (res, $, data) => data.SN.toUpperCase(),
+      title: '.panel-heading>h3',
+      cover: (res, $) => $('body>.row>.col-md-3 .img-responsive').eq(0).attr('src'),
+      preview: (res, $) => $('body>.row>.col-md-3 .img-responsive').slice(1).toArray().map((i) => $(i).attr('src')),
+      censored: (res, $) => 'Censored',
+      actor: (res, $, data) => data.Stars,
+      release: (res, $, data) => data['Release Date'],
+      duration: (res, $, data) => formatTime(data['Play time']),
+      genre: (res, $, data) => data.Genre,
+      studio: (res, $, data) => data.Studio,
+      related: '[href^="/video/"]',
+    },
+  },
+  { // JavSir // ISDOWN
+    id: 'JavSir',
+    nameIgnore: [/./i],
     test: '091915_156',
     valid: async (name) => `https://www.javsir.com/dvd/${name}`,
     getInfo: {
@@ -511,68 +901,43 @@ const libs = [
       related: ['.card a[href*="/movie/"]', 'href', /com\/movie\/(.*)$/],
     },
   },
-  { // JavDB
-    id: 'JavDB',
-    nameIgnore: [/fc2[-_\s]*ppv/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
-    test: 'RHJ-199',
-    valid: async (name) => {
-      const [, $] = await getRes(`https://javdb.com/search?q=${name}&f=all`);
-      const results = $('#videos>div>div').toArray().map((i) => ({
-        id: $(i).find('.uid').text(),
-        text: $(i).find('.video-title').text(),
-        link: $(i).find('a').attr('href'),
-      }));
-      const result = results.find((i) => i.id === name);
-      return result ? result.link : null;
+  /*
+    { // 7mmtv
+      id: '7mmtv',
+      test: 'xxx-av 23424',
+      valid: async (name) => {
+        const [, $] = await getRes({
+          method: 'POST',
+          uri: 'https://7mmtv.tv/zh/searchform_search/all/index.html',
+          form: {
+            search_keyword: name,
+            search_type: 'uncensored',
+            op: 'search',
+          },
+        });
+        const results = $('.latest-korean-search>div>div').toArray().map((i) => ({
+          text: $(i).find('.latest-korean-box-text>a').text(),
+          link: $(i).find('.latest-korean-box-text>a').attr('href'),
+        }));
+        const result = results.find((i) => i.text.match(new RegExp(name, 'i')));
+        return result ? result.link : null;
+      },
+      getInfo: {
+        id: '.posts-headline:contains("番號")+.posts-message',
+        title: '.post-inner-details-heading>h2',
+        cover: ['.post-inner-details-img>img', 'src'],
+        preview: ['.video-introduction-images-list-row img', 'src'],
+        censored: (res, $) => ($('.breadcrumb-heading-row>ul>li:nth-child(2)>a').text() === '無碼AV' ? 'Uncensored' : 'Censored'),
+        actor: '.actor-right-details-images a',
+        release: '.posts-headline:contains("發行日期")+.posts-message',
+        duration: '.posts-headline:contains("影片時長")+.posts-message',
+        genre: '.posts-headline:contains("影片類別")+.posts-message a',
+        label: '.posts-headline:contains("發行商")+.posts-message',
+        studio: '.posts-headline:contains("製作商")+.posts-message',
+        director: '.posts-headline:contains("導演")+.posts-message',
+      },
     },
-    getInfo: {
-      id: '.video-panel-info>div:contains("番號")>span.value',
-      title: '.title',
-      cover: ['.video-cover', 'src'],
-      preview: ['.preview-images>a', 'href'],
-      censored: (res, $) => ($('.title').text().match(/無碼/) ? 'Uncensored' : 'Censored'),
-      actor: '.video-panel-info>div:contains("演員")>span.value>a',
-      release: '.video-panel-info>div:contains("時間")>span.value',
-      duration: '.video-panel-info>div:contains("時長")>span.value',
-      genre: '.video-panel-info>div:contains("類別")>span.value>a',
-      studio: '.video-panel-info>div:contains("片商")>span.value',
-    },
-  },
-  { // 7mmtv
-    id: '7mmtv',
-    test: 'xxx-av 23424',
-    valid: async (name) => {
-      const [, $] = await getRes({
-        method: 'POST',
-        uri: 'https://7mmtv.tv/zh/searchform_search/all/index.html',
-        form: {
-          search_keyword: name,
-          search_type: 'uncensored',
-          op: 'search',
-        },
-      });
-      const results = $('.latest-korean-search>div>div').toArray().map((i) => ({
-        text: $(i).find('.latest-korean-box-text>a').text(),
-        link: $(i).find('.latest-korean-box-text>a').attr('href'),
-      }));
-      const result = results.find((i) => i.text.match(new RegExp(name, 'i')));
-      return result ? result.link : null;
-    },
-    getInfo: {
-      id: '.posts-headline:contains("番號")+.posts-message',
-      title: '.post-inner-details-heading>h2',
-      cover: ['.post-inner-details-img>img', 'src'],
-      preview: ['.video-introduction-images-list-row img', 'src'],
-      censored: (res, $) => ($('.breadcrumb-heading-row>ul>li:nth-child(2)>a').text() === '無碼AV' ? 'Uncensored' : 'Censored'),
-      actor: '.actor-right-details-images a',
-      release: '.posts-headline:contains("發行日期")+.posts-message',
-      duration: '.posts-headline:contains("影片時長")+.posts-message',
-      genre: '.posts-headline:contains("影片類別")+.posts-message a',
-      label: '.posts-headline:contains("發行商")+.posts-message',
-      studio: '.posts-headline:contains("製作商")+.posts-message',
-      director: '.posts-headline:contains("導演")+.posts-message',
-    },
-  },
+  */
   { // Netflav
     id: 'Netflav',
     nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
@@ -582,7 +947,9 @@ const libs = [
       const results = JSON.parse($('#__NEXT_DATA__').html()).props.initialState.search.docs.map((i) => ({
         link: `https://netflav.com/video?id=${i.videoId}`,
         title: i.title,
+        // eslint-disable-next-line camelcase
         title_en: i.title_en,
+        // eslint-disable-next-line camelcase
         title_zh: i.title_zh,
       }));
       const result = results.find((i) => i.title.indexOf(name) === 0);
@@ -599,47 +966,6 @@ const libs = [
       duration: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.duration,
       genre: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.tags.filter((i) => i.match(/^jp:/)).map((i) => i.replace(/^jp:/, '')),
       label: (res, $) => JSON.parse($('#__NEXT_DATA__').html()).props.initialState.video.data.producer,
-    },
-  },
-  { // JAVNAP
-    id: 'JAVNAP',
-    nameIgnore: [/fc2[-_\s]*ppv/i, /xxx-av/i, /(h|c)(4610|0930)-[a-z]+\d+/i],
-    test: 'ABP-123', // 'GANA-2348',
-    valid: async (name) => {
-      const [res, $] = await getRes({
-        method: 'POST',
-        uri: 'https://www.javnap.com/search', // https://en.jav321.com/search
-        form: {
-          sn: name,
-        },
-      });
-      return $('#vjs_sample_player').length ? res.request.uri.href : null;
-    },
-    getInfo: {
-      getData: (res, $) => {
-        const $1 = $($('.col-md-9').html().split('<br>').map((i) => `<div>${i}</div>`)
-          .join(''));
-        const data = {};
-        for (let i = 0; i < $1.length; i++) {
-          const root = $1.eq(i);
-          const key = root.find('b').text();
-          if (!key) continue;
-          const value = root.find('a').length ? root.find('a').toArray().map((i) => $(i).text()) : root.text().replace(`${key}:`, '').trim();
-          data[key] = value;
-        }
-        return data;
-      },
-      id: (res, $, data) => data.SN.toUpperCase(),
-      title: '.panel-heading>h3',
-      cover: (res, $) => $('body>.row>.col-md-3 .img-responsive').eq(0).attr('src'),
-      preview: (res, $) => $('body>.row>.col-md-3 .img-responsive').slice(1).toArray().map((i) => $(i).attr('src')),
-      censored: (res, $) => 'Undefined',
-      actor: (res, $, data) => data.Stars,
-      release: (res, $, data) => data['Release Date'],
-      duration: (res, $, data) => data.minutes,
-      genre: (res, $, data) => data.Genre,
-      studio: (res, $, data) => data.Studio,
-      related: '[href^="/video/"]',
     },
   },
 ];
@@ -690,7 +1016,7 @@ const searchLibs = {
     search: async (keyword) => { // return string[]
       const page = 0;
       let apiKey = 'AIzaSyCWOFOM-rXF4tL7Uhg-RbzNP65S2a6GwF4AIzaSyDukgtdUTmmk5OppUGvEIp2mqsRyzdWgTIAIzaSyDpcKQorOu0oUX5asC_6-M1ZUsqj44QJPgAIzaSyAdGWEblloAiYegOVRWkWbVpJNzjAa1VCMAIzaSyDkSpb0-_F9l6Srg9Z82c1sz15Rbm7-v4YAIzaSyCae4Sf4sKeJfAf_OXoNJVca-SFlwi7P8UAIzaSyAeKr5R7dZe_5zQO3SS7rNWQxUHyP2uR9oAIzaSyAf3rXFbeP8G1bTaFNMwWUhL7gRESRPCMQAIzaSyAxaqEHJO-zCN4zxv_zRdyBV0yJQ-jSCMAAIzaSyCgYz1MAAp9I9xtyq6t4MPG26DhvR6f_3A';
-      apiKey = apiKey.substr(parseInt(Math.random() * 10) * 39, 39);
+      apiKey = apiKey.substr(parseInt(Math.random() * 10, 10) * 39, 39);
       const cx = '010023307804081171493:ooy1eodf_y0';
       const url = `https://www.googleapis.com/customsearch/v1?key=${apiKey}&cx=${cx}&num=10&alt=json&q=${keyword}&start=${page * 10 + 1}`;
 
@@ -718,7 +1044,7 @@ const req = async (option, retry = 0) => {
       'Cache-Control': 'max-age=0',
       Connection: 'keep-alive',
     },
-    timeout: _.timeout * 1000,
+    timeout: parseInt(_.timeout, 10) * 1000,
     resolveWithFullResponse: true,
     simple: false,
     jar,
@@ -738,7 +1064,7 @@ const req = async (option, retry = 0) => {
     option.agentClass = uri.match(/^http:/) ? Agent : Agent2;
     option.agentOptions = {
       socksHost: _.proxySocksHost || 'localhost',
-      socksPort: _.proxySocksPort,
+      socksPort: parseInt(_.proxySocksPort, 10),
     };
     if (_.proxySocksUsername && _.proxySocksPassword) {
       option.agentOptions.socksUsername = _.proxySocksUsername;
@@ -754,7 +1080,7 @@ const req = async (option, retry = 0) => {
     res = await request(option);
   } catch (error) {
     console.error(`${option.method}-${retry + 1}:\t${error.message}`);
-    if (retry < _.retry) {
+    if (retry < parseInt(_.retry, 10)) {
       if (error.cause.errno === 'ETIMEDOUT' && error.cause.port === 443 && uri.match('http://')) {
         option.uri = uri.replace('http://', 'https://');
         delete option.url;
@@ -798,8 +1124,8 @@ const nfoFile = (info, target) => { // 生成NFO文件
   if (info.duration) {
     let minute = new Date(`1970-01-01 ${info.duration}`).getTime() / 60 / 1000;
     minute = minute - new Date().getTimezoneOffset();
-    minute = parseInt(minute);
-    if (isNaN(minute)) minute = info.duration;
+    minute = parseInt(minute, 10);
+    if (Number.isNaN(minute)) minute = info.duration;
     content = `${content}  <runtime>${minute}</runtime>\r\n`;
   }
   if (info.cover) content = `${content}  <thumb aspect="poster" preview="${info.cover}">${info.cover}</thumb>\r\n`;
@@ -811,6 +1137,7 @@ const nfoFile = (info, target) => { // 生成NFO文件
     content = `${content}  </fanart>\r\n`;
   }
   if (info.release) content = `${content}  <premiered>${info.release}</premiered>\r\n`;
+  if (info.series) content = `${content}  <series>${info.series}</series>\r\n`;
   if (info.studio) content = `${content}  <studio>${info.studio}</studio>\r\n`;
   if (info.director) content = `${content}  <director>${info.director}</director>\r\n`;
   [].concat(info.genre || '').forEach((i) => {
@@ -889,6 +1216,7 @@ async function getRes(option) {
   let $ = cheerio.load(body);
   if ($('meta[http-equiv="Content-Type"][content*="charset"]').length || $('meta[charset]').length) {
     if ($('meta[http-equiv="Content-Type"][content*="charset"]').length) {
+      // eslint-disable-next-line prefer-destructuring
       charset = $('meta[http-equiv="Content-Type"][content*="charset"]').attr('content').match(/charset=(.*?)(;|$)/)[1];
     } else if ($('meta[charset]').length) {
       charset = $('meta[charset]').attr('charset');
@@ -944,6 +1272,7 @@ async function getInfo(site, res, $) {
     if (key === 'title') value = value.map((i) => i.split(info.id).join('').trim());
 
     if (value.length === 1) {
+      // eslint-disable-next-line prefer-destructuring
       info[key] = value[0];
     } else if (value.length) {
       info[key] = value;
@@ -953,7 +1282,7 @@ async function getInfo(site, res, $) {
 }
 
 // Main
-const args = process.argv.splice(2);
+const args = process.argv.slice(2);
 if (args.length) {
   if (args.includes('-q')) {
     args.splice(args.indexOf('-q'), 1);
@@ -968,6 +1297,11 @@ if (args.length) {
     };
     readlineSync.keyInYN = (query) => console.warn(`${query} [y/n]: n`) || false;
     readlineSync.keyInYNStrict = (query) => console.warn(`${query} [y/n]: n`) || false;
+  } else if (args.includes('-c')) {
+    let keyword = args[args.indexOf('-c') + 1];
+    if (keyword && keyword.match(/^-/)) keyword = null;
+    args.splice(args.indexOf('-c'), keyword ? 2 : 1);
+    Object.assign(_, Object.fromEntries(new URLSearchParams(keyword).entries()));
   }
 }
 
@@ -989,7 +1323,7 @@ const main = async () => {
           console.log(error);
         }
         if (!uri) {
-          console.error(`Error:\t${site.id} Maybe Changed`);
+          console.error(`Error:\t${site.id} Maybe Changed (NO URI)`);
           continue;
         }
 
@@ -998,7 +1332,7 @@ const main = async () => {
         // 获取视频信息
         const info = await getInfo(site, res, $);
         if (!info.id || !info.title) {
-          console.error(`Error:\t${site.id} Maybe Changed`);
+          console.error(`Error:\t${site.id} Maybe Changed (GET INFO FAILED)`);
           continue;
         }
         for (const key in site.getInfo) {
@@ -1014,125 +1348,167 @@ const main = async () => {
     }
   }
 
-  const workdir = [].concat(process.cwd(), process.argv.splice(2)).map((i) => path.resolve(process.cwd(), i)).filter((item, index, array) => array.indexOf(item) === index && fse.existsSync(item));
+  const workdir = [].concat(process.cwd(), args).map((i) => path.resolve(process.cwd(), i)).filter((item, index, array) => array.indexOf(item) === index && fse.existsSync(item));
   for (const thisdir of workdir) {
     const items = fse.readdirSync(thisdir).filter((i) => exts.includes(path.extname(i).toLowerCase()));
     console.log(`Amount:\t${items.length}`);
 
     for (const item of items) {
       const fullpath = path.resolve(thisdir, item);
+
       console.log('\n- - - - - - - - - - -\n');
       console.log(`File:\t${fullpath}`);
 
       const { name, ext } = path.parse(fullpath);
       const [, prefix, nameTrue, suffix] = name.match(/^(\[.*?\]|)(.*?)(\[.*?\]|)$/);
 
-      // 通过文件名判断lib，来获取网址
-      // let [site, uri] = await findLibInName(nameTrue);
-      let sites = await findLibInName(nameTrue);
-
-      // 当无法直接获得网址时，尝试搜索
-      if (sites.every((i) => !i.name)) { // 都是通用站点，即name为false
-        console.log(`Start Search:\t${nameTrue}`);
-
-        for (const searchLib in searchLibs) {
-          if (!_.searchLibsEnable.includes(searchLib)) continue;
-          console.log(`Search Engine:\t${searchLib}`);
-
-          let results;
-          if (typeof searchLibs[searchLib].search === 'string') {
-            const searchUri = searchLibs[searchLib].search.replace(/\{searchTerms\}/g, encodeURIComponent(nameTrue));
-            const res = await req(searchUri);
-
-            if (res instanceof Error) {
-              console.error(`Error:\t${res.message}`);
-              continue;
-            }
-            if (res.statusCode && res.statusCode !== 200) {
-              console.error(`statusCode:\t${res.statusCode}`);
-              continue;
-            }
-
-            const $ = cheerio.load(res.body);
-            results = $(searchLibs[searchLib].items).map((index, item) => $(item).text()).toArray();
-          } else {
-            results = await searchLibs[searchLib].search(nameTrue);
-          }
-          if (!results || !results.length) continue;
-          results.forEach((value, index) => console.log(`Result-${index}:\t${value.replace(/\s+/g, ' ').trim()}`));
-
-          const sitesThis = await findLibInResult(results);
-          sites = sitesThis.concat(sites);
-          if (sites.some((i) => i.name)) break;
-        }
-      }
-
-      // 找到的site与通用的站点一起测试
-      if (sites.every((i) => !i.name)) console.warn('Notice:\tCan\'t Find the Lib, Try common Libs');
       let info = {};
-      for (let site of new Set(sites)) {
-        console.log(`Try:\t${site.id}`);
+      if (!nameTrue.match(/[\p{sc=Han}\p{sc=Hiragana}\p{sc=Katakana}]/u)) { // 如果不匹配中文日文
+        // 通过文件名判断lib，来获取网址
+        // let [site, uri] = await findLibInName(nameTrue);
+        let sites = await findLibInName(nameTrue);
 
-        let uri;
-        try {
-          uri = await site.valid(nameTrue);
-        } catch (error) {}
-        if (!uri) continue;
-        if (uri instanceof Array) [site, uri] = uri;
+        // 当无法直接获得网址时，尝试搜索
+        if (sites.every((i) => !i.name)) { // 都是通用站点，即name为false
+          console.log(`Start Search:\t${nameTrue}`);
 
-        // 获取网页
-        const [res, $] = await getRes(uri);
-        if (res instanceof Error) continue;
+          for (const searchLib in searchLibs) {
+            if (!_.searchLibsEnable.includes(searchLib)) continue;
+            console.log(`Search Engine:\t${searchLib}`);
 
-        // 获取视频信息
-        let infoThis = await getInfo(site, res, $);
+            let results;
+            if (typeof searchLibs[searchLib].search === 'string') {
+              const searchUri = searchLibs[searchLib].search.replace(/\{searchTerms\}/g, encodeURIComponent(nameTrue));
+              const res = await req(searchUri);
 
-        if (site.name) { // 非通用
-          let [wayback] = await getRes(`https://archive.org/wayback/available?url=${uri}`);
-          wayback = JSON.parse(wayback.body);
+              if (res instanceof Error) {
+                console.error(`Error:\t${res.message}`);
+                continue;
+              }
+              if (res.statusCode && res.statusCode !== 200) {
+                console.error(`statusCode:\t${res.statusCode}`);
+                continue;
+              }
 
-          if (!infoThis.id || !infoThis.title) { // 获取信息失败
-            if (wayback.archived_snapshots.closest && wayback.archived_snapshots.closest.status === '200') { // 使用时间机器
-              const [res, $] = await getRes(wayback.archived_snapshots.closest.url);
-              if (res instanceof Error) continue;
-
-              infoThis = await getInfo(site, res, $);
-              if (infoThis.cover) infoThis.cover = infoThis.cover.replace(/^https?:\/\/web.archive.org\/web\/.*?\//, '');
-              if (infoThis.preview) infoThis.preview = [].concat(infoThis.preview).map((i) => i.replace(/^https?:\/\/web.archive.org\/web\/.*?\//, ''));
+              const $ = cheerio.load(res.body);
+              results = $(searchLibs[searchLib].items).map((index, item) => $(item).text()).toArray();
+            } else {
+              results = await searchLibs[searchLib].search(nameTrue);
             }
-          } else if (!wayback.archived_snapshots.closest) {
-            await getRes(`https://web.archive.org/save/${uri}`);
+            if (!results || !results.length) continue;
+            results.forEach((value, index) => console.log(`Result-${index}:\t${value.replace(/\s+/g, ' ').trim()}`));
+
+            const sitesThis = await findLibInResult(results);
+            sites = sitesThis.concat(sites);
+            if (sites.some((i) => i.name)) break;
           }
         }
 
-        // 检测是否获取到主要信息，否则放弃
-        if (!infoThis.id || !infoThis.title) {
-          continue;
-        } else {
-          info = Object.assign(infoThis, { prefix, suffix, homepage: uri });
-          break;
+        // 找到的site与通用的站点一起测试
+        if (sites.every((i) => !i.name)) console.warn('Notice:\tCan\'t Find the Lib, Try common Libs');
+        for (let site of new Set(sites)) {
+          console.log(`Try:\t${site.id}`);
+
+          let uri;
+          try {
+            uri = await site.valid(nameTrue);
+          } catch (error) { /* noop */ }
+          if (!uri) continue;
+          if (uri instanceof Array) [site, uri] = uri;
+
+          // 获取网页
+          const [res, $] = await getRes(uri);
+          if (res instanceof Error) continue;
+
+          // 获取视频信息
+          let infoThis = await getInfo(site, res, $);
+
+          if (site.name && ((!infoThis.id || !infoThis.title) || _.waybacks)) { // 非通用
+            let wayback;
+            for (let i = 0; i < 5; i++) {
+              try {
+                [wayback] = await getRes(`https://archive.org/wayback/available?url=${res.request.uri.href}`);
+                wayback = JSON.parse(wayback.body);
+                break;
+              } catch (error) {
+                // eslint-disable-next-line camelcase
+                wayback = { url: res.request.uri.href, archived_snapshots: {} };
+              }
+            }
+
+            if (!infoThis.id || !infoThis.title) { // 获取信息失败
+              if (wayback.archived_snapshots.closest && wayback.archived_snapshots.closest.status === '200') { // 使用时间机器
+                const [res, $] = await getRes(wayback.archived_snapshots.closest.url);
+                if (res instanceof Error) continue;
+
+                infoThis = await getInfo(site, res, $);
+                if (infoThis.cover) infoThis.cover = infoThis.cover.replace(/^https?:\/\/web.archive.org\/web\/.*?\//, '');
+                if (infoThis.preview) infoThis.preview = [].concat(infoThis.preview).map((i) => i.replace(/^https?:\/\/web.archive.org\/web\/.*?\//, ''));
+              }
+            } else if (!wayback.archived_snapshots.closest) {
+              await getRes({ uri: `https://web.archive.org/save/${res.request.uri.href}`, timeout: 0 });
+            }
+          }
+
+          // 检测是否获取到主要信息，否则放弃
+          if (!infoThis.id || !infoThis.title) {
+            continue;
+          } else {
+            info = {
+              homepage: uri, ...infoThis, prefix, suffix,
+            };
+            break;
+          }
         }
       }
 
       // 检测是否获取到主要信息，否则放弃
       if (!info.id || !info.title) {
         console.error('Skip:\tCan\'t Get Info');
+
+        if (_.moveUnfind) {
+          const targetBase = path.resolve(thisdir, _.UnfindDir, name);
+          const pathBase = path.dirname(targetBase);
+          if (!fse.existsSync(pathBase)) fse.mkdirsSync(pathBase);
+          let target = targetBase + ext;
+
+          const option = {};
+          if (!fse.existsSync(target) || readlineSync.keyInYNStrict(`File:\t${target}\nWarn:\tFile Exists, Overwrite?`)) {
+            option.overwrite = true;
+          } else {
+            let order = 2;
+            target = `${targetBase} (${order})${ext}`;
+            while (fse.existsSync(target)) {
+              target = `${targetBase} (${order})${ext}`;
+              order = order + 1;
+            }
+          }
+          console.log(`File Moved:\t${target}`);
+          fse.moveSync(fullpath, target, option);
+
+          // 生成视频缩略图
+          if (_.mtn && fse.existsSync(_.mtn)) {
+            cp.spawnSync(_.mtn, [].concat(_.mtnArgs, target));
+          }
+        }
+
         continue;
       }
 
-      let pathBase = replaceWithDict(_.folderSort, info).replace(/[:*?"<>|]/g, '-');
-      const nameBase = replaceWithDict(_.name, info).replace(/[:*?"<>|]/g, '-');
+      const infoLimited = Object.fromEntries(Object.keys(info).map((key) => [key, ['prefix', 'suffix'].includes(key) ? info[key] : [].concat(info[key]).map((i) => (i ? String(i).trim() : '')).join(',').substr(0, 20)]));
+      let pathBase = replaceWithDict(_.folderSort, infoLimited).replace(/[:*?"<>|]/g, '-');
+      const nameBase = replaceWithDict(_.name, infoLimited).replace(/[:*?"<>|]/g, '-');
       const targetBase = path.resolve(thisdir, pathBase, nameBase);
       pathBase = path.dirname(targetBase);
       if (!fse.existsSync(pathBase)) fse.mkdirsSync(pathBase);
 
       // 下载封面
-      if (info.cover && _.image) {
+      if (info.cover && parseInt(_.image, 10)) {
         await download(info.cover, `${targetBase}.jpg`);
       }
 
       // 下载预览图
-      if (info.preview && info.preview.length && _.image === 2) {
+      if (info.preview && info.preview.length && parseInt(_.image, 10) === 2) {
         for (let i = 0; i < info.preview.length; i++) {
           if (!info.preview[i].match(/^https?:/)) continue;
           await download(info.preview[i], `${targetBase}-${i + 1}.jpg`);
@@ -1150,18 +1526,24 @@ const main = async () => {
       if (!fse.existsSync(target) || readlineSync.keyInYNStrict(`File:\t${target}\nWarn:\tFile Exists, Overwrite?`)) {
         option.overwrite = true;
       } else {
-        let order = 1;
-        target = `${targetBase}-${order}${ext}`;
+        let order = 2;
+        target = `${targetBase} (${order})${ext}`;
         while (fse.existsSync(target)) {
-          target = `${targetBase}-${order}${ext}`;
+          target = `${targetBase} (${order})${ext}`;
           order = order + 1;
         }
       }
       console.log(`File Moved:\t${target}`);
       fse.moveSync(fullpath, target, option);
+
+      // 生成视频缩略图
+      if (_.mtn && fse.existsSync(_.mtn)) {
+        cp.spawnSync(_.mtn, [].concat(_.mtnArgs, target));
+      }
+
       if (info.release) {
         const data = new Date(info.release);
-        if (!isNaN(data.getTime())) fse.utimesSync(target, data, data);
+        if (!Number.isNaN(data.getTime())) fse.utimesSync(target, data, data);
       }
     }
   }
@@ -1173,5 +1555,5 @@ main().then(async () => {
 }, async (err) => {
   console.log('\n- - - - - - - - - - -\n');
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

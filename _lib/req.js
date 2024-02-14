@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               req
 // @Description:        req
-// @Version:            1.0.170
+// @Version:            1.0.175
 // @Author:             dodying
 // @Created:            2020-05-23 20:46:13
-// @Modified:           2021/1/6 18:00:07
+// @Modified:           2023-11-10 22:51:59
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            cheerio,deepmerge,iconv-lite,request,request-promise,socks5-http-client,socks5-https-client
+// @Require:            request,request-promise,socks5-http-client,socks5-https-client,cheerio,iconv-lite,deepmerge
 // ==/Headers==
 
 const request = require('request');
@@ -61,10 +61,12 @@ function reqOption(uriOrOption, optionUser = {}) {
   let { uri } = option;
 
   if (uriLast) uri = new URL(uri, uriLast).href;
+  const { formData } = option;
+  delete option.formData;
   option = merge.all([{
     method: 'GET',
     headers: {
-      Referer: uriLast && new URL(uriLast).hostname === new URL(uri).hostname ? uriLast : uri,
+      Referer: uriLast && new URL(uriLast).host === new URL(uri).host ? uriLast : uri,
     },
     timeout: 60 * 1000,
     strictSSL: false,
@@ -72,6 +74,7 @@ function reqOption(uriOrOption, optionUser = {}) {
     simple: false,
     gzip: true,
   }, config.request, option, { uri }]); // 不合并数组
+  if (formData) option.formData = formData;
 
   uri = option.uri || option.url;
   if (uri.match(/[^a-zA-Z0-9-_.~!*'();:@&=+$,/?#[\]%]/)) uri = encodeURI(uri);
@@ -80,7 +83,7 @@ function reqOption(uriOrOption, optionUser = {}) {
   option.uri = uri;
 
   if (config.proxy) {
-    const [, protocol,, username, password, hostname, port] = config.proxy.match(/(http|socks5):\/\/((.*?):(.*?)@)?(.*?):(\d+)/i);
+    const [, protocol, , username, password, hostname, port] = config.proxy.match(/(http|socks5):\/\/((.*?):(.*?)@)?(.*?):(\d+)/i);
     const uriHost = new URL(uri).hostname;
     let useProxy;
     if (!protocol || !hostname || !port) {
@@ -169,7 +172,7 @@ async function req(uriOrOption, optionUser = {}) {
 
           res.json = JSON.parse(res.body);
           // console.debug(res.json);
-        } catch (error) {}
+        } catch (error) { }
       }
       delete retryList[uri];
       if (option.cache) cacheList[uri] = res;
@@ -218,8 +221,8 @@ async function reqHEAD(uriOrOption, optionUser = {}) {
       reses.push(res);
       if (
         ['application', 'binary', 'image', 'audio', 'video', 'font', 'model'].some((i) => res.headers['content-type'] && res.headers['content-type'].match(i))
-          || (res.headers['content-disposition'] && res.headers['content-disposition'].match(/^attachment/))
-          || res.headers.etag
+        || (res.headers['content-disposition'] && res.headers['content-disposition'].match(/^attachment/))
+        || res.headers.etag
       ) {
         req.abort();
         resolve(reses);
@@ -244,6 +247,7 @@ async function reqHEAD(uriOrOption, optionUser = {}) {
         html = html + chunk;
       });
     }).on('error', async (error) => {
+      if (error.message === 'aborted') return;
       if (config.logLevel.includes('error')) console.error(`Failed-${retry}:\t${error.message}`);
       retry = retry + 1;
       useProxy = !useProxy;

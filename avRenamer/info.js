@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               info
 // @Description:        根据list.txt生成指定信息
-// @Version:            1.0.218
+// @Version:            1.0.219
 // @Author:             dodying
 // @Created:            2019-09-29 16:30:27
-// @Modified:           2020/9/17 14:27:19
+// @Modified:           2022-01-05 21:58:47
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:cheerio,fs-extra,iconv-lite,readline-sync,request-promise,socks5-http-client,socks5-https-client
@@ -639,5 +639,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

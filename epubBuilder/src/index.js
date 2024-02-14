@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1262
+// @Version:            1.0.1264
 // @Author:             dodying
 // @Created:            2020-01-11 13:06:39
-// @Modified:           2020/9/11 21:00:16
+// @Modified:           2022-09-10 20:11:25
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            archiver,chardet,iconv-lite
@@ -249,7 +249,7 @@ const funcPretreat = () => {
 
   // 设置本地参数
   // 设置本地元素属性
-  $('.tabContent[name="pretreat"]').find('[name="content"]').text(THIS.content.replace(/\r/g, '').split('\n').slice(0, 30).join('\n'));
+  $('.tabContent[name="pretreat"]').find('[name="content"]').text(THIS.content.replace(/\r/g, '').split(/\r*\n/).slice(0, 30).join('\n'));
 
   // 设置本地元素事件
   $('.tabContent[name="pretreat"]').find('input[type="button"][name]').off('click').on('click', (e) => {
@@ -1025,5 +1025,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

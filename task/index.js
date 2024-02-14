@@ -1,9 +1,10 @@
+/* eslint-disable prefer-destructuring */
 // ==Headers==
 // @Name:               task
 // @Description:        自动更新头部信息(Headers)
-// @Version:            1.0.97
+// @Version:            1.0.111
 // @Author:             dodying
-// @Modified:           2021/2/26 20:21:45
+// @Modified:           2023-04-02 19:50:20
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            clipboardy,inquirer
@@ -57,7 +58,7 @@ const spawnSync = (...argsForSpwan) => new Promise((resolve) => {
 
 // Main
 async function init() {
-  const argv = process.argv.splice(2);
+  const argv = process.argv.slice(2);
   console.log(argv);
   const mode = argv[0];
   const item = argv[1];
@@ -80,8 +81,8 @@ async function init() {
 
       if (key === 'version') {
         const version = value.split('.');
-        const temp = parseInt(version[version.length - 1]);
-        if (!isNaN(temp)) version[version.length - 1] = version[version.length - 1].replace(temp, temp + 1);
+        const temp = parseInt(version[version.length - 1], 10);
+        if (!Number.isNaN(temp)) version[version.length - 1] = version[version.length - 1].replace(temp, temp + 1);
         arr[i] = `${pre}@${key}${space}${version.join('.')}`;
       } else if (key === 'author') {
         arr[i] = `${pre}@${key}${space}${_.author}`;
@@ -111,8 +112,8 @@ async function init() {
 
         if (key === 'Version') {
           const version = value.split('.');
-          const temp = parseInt(version[version.length - 1]);
-          if (!isNaN(temp)) version[version.length - 1] = version[version.length - 1].replace(temp, temp + 1);
+          const temp = parseInt(version[version.length - 1], 10);
+          if (!Number.isNaN(temp)) version[version.length - 1] = version[version.length - 1].replace(temp, temp + 1);
           arr[i] = `${pre}@${key}:${space}${version.join('.')}`;
         } else if (key === 'Author') {
           arr[i] = `${pre}@${key}:${space}${_.author}`;
@@ -122,6 +123,8 @@ async function init() {
           let libs = arr.map((i) => {
             if (i.match(/require\(.*?\)/)) {
               i = i.match(/require\((.*?)\)/)[1];
+            } else if (i.match(/^import .* from (.*?)(;|\n)/m)) {
+              i = i.match(/^import .* from (.*?)(;|\n)/m)[1];
             } else {
               return null;
             }
@@ -133,15 +136,17 @@ async function init() {
             if (i.match(/\.\//)) {
               return null;
             } if (i.match('/')) {
-              i = i.split('/')[0];
+              const arr1 = i.split('/');
+              i = arr1[0].startsWith('@') ? arr1.slice(0, 2).join('/') : arr1[0];
             }
-            if (_.nativeModule.includes(i)) {
+            if (_.nativeModule.includes(i) || i.match(/^node:[a-z_]+(\/|$)/)) {
               return null;
             }
             return i;
           }).filter((i) => i);
+          libs = Array.from(new Set(libs));
           if (libs.length === 0) libs = ['null'];
-          arr[i] = `${pre}@${key}:${space}${libs.sort().join(',')}`;
+          arr[i] = `${pre}@${key}:${space}${libs.join(',')}`;
         } else if (key === 'task-next-line') {
           arr[i + 1] = replaceWithDict(value, _);
           i = i + 1;

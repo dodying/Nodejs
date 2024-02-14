@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               config
 // @Description:        config
-// @Version:            1.0.81
+// @Version:            1.0.82
 // @Author:             dodying
 // @Created:            2020-02-05 13:44:47
-// @Modified:           2020-3-10 10:23:29
+// @Modified:           2022-01-05 21:58:45
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron
@@ -95,5 +95,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

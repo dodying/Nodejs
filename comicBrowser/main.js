@@ -1,22 +1,23 @@
 // ==Headers==
 // @Name:               main
 // @Description:        浏览comic
-// @Version:            1.0.970
+// @Version:            1.0.1010
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2021-10-19 20:47:00
+// @Modified:           2023-04-23 18:56:20
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            electron,electron-reload,fs-extra,jszip,mysql2
+// @Require:            fs-extra,electron,electron-reload,mysql2,jszip
 // ==/Headers==
 
 // 设置
-const debug = false;
+const debug = process.env.DEBUG || false;
 let windowHistory = [];
 const windows = {};
 let config = {};
 let store = {};
 let tray = null;
+let isQuiting = false;
 
 let connection = null;
 let connectionLastTime = null;
@@ -40,11 +41,11 @@ const columns = {
   web: 'varchar(50)', // 网址
   language: 'varchar(2)', // 语言
   pages: 'int unsigned', // 页数
-  time_upload: 'timestamp', // 上传时间 '2020-01-02 21:14:16.000'
+  time_upload: 'datetime', // 上传时间 '2020-01-02 21:14:16.000'
   uploader: 'varchar(40)', // 上传者
   rating: 'float unsigned', // 评分
   favorited: 'int unsigned', // 收藏人数
-  time_download: 'timestamp', // 下载时间
+  time_download: 'datetime', // 下载时间
   tags: 'json', // 标签
 };
 
@@ -61,19 +62,18 @@ if (debug) require('electron-reload')(path.join(__dirname, 'src'));
 const mysql = require('mysql2/promise');
 const JSZip = require('jszip');
 
-const walk = require('../_lib/walk');
+const walkEverything = require('../_lib/walkEverything');
 const waitInMs = require('../_lib/waitInMs');
 const parseInfo = require('./js/parseInfo');
 const getTitleMain = require('./js/getTitleMain');
 
-const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+const mainTag = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
 
 // Function
 const openWindow = (url) => {
   if (!url.match(/^https?:/)) url = path.resolve(__dirname, url);
   console.debug('open', url);
-  let win; let
-    id;
+  let win, id;
 
   return new Promise((resolve, reject) => {
     win = new BrowserWindow({
@@ -175,18 +175,22 @@ const createConnection = async (obj) => {
     console.log({ err: error, msg: error.message });
   }
   try {
+    const { database, ...objLeft } = obj;
     connection = await mysql.createConnection({
       host: obj.host,
       user: obj.user,
       password: obj.password,
       keepAliveInitialDelay: 10000,
       enableKeepAlive: true,
+      dateStrings: true,
+      // timezone: '+00:00',
+      ...objLeft,
     });
     connection.on('error', (err) => {
       if (['PROTOCOL_CONNECTION_LOST'].includes(err.code)) {
         createConnection(obj);
       } else {
-        console.log('Database error:', err);
+        console.log('Database error:', { err });
       }
     });
     connectionLastTime = new Date().getTime();
@@ -217,8 +221,10 @@ const updateTableFiles = async (obj) => {
   console.log('database-update');
 
   console.time('walk');
-  let filesLocal = walk(obj.libraryFolder);
-  filesLocal = filesLocal.filter((i) => ['.cbz', '.zip'].includes(path.extname(i))).map((i) => path.relative(obj.libraryFolder, i));
+  const filesLocal = await walkEverything('file: <ext:cbz|ext:zip>', {
+    root: obj.libraryFolder,
+    fullpath: false,
+  });
   console.timeEnd('walk');
 
   console.time('query');
@@ -381,6 +387,7 @@ const rebuildTrayMenu = () => {
     {
       label: '保存并退出',
       click: (menuItem, browserWindow, event) => {
+        isQuiting = true;
         saveLastTabs();
         for (const id in windows) windows[id].close();
       },
@@ -388,6 +395,7 @@ const rebuildTrayMenu = () => {
     {
       label: '退出',
       click: (menuItem, browserWindow, event) => {
+        isQuiting = true;
         for (const id in windows) windows[id].close();
       },
     },
@@ -423,34 +431,35 @@ ipcMain.on('open-external', async (event, url, name) => {
   } else if (name === 'item') {
     const fullpath = path.resolve(config.libraryFolder, url);
     await shell.showItemInFolder(fullpath);
-  } else if (name === 'delete') {
+  } else if (['delete', 'empty'].includes(name)) {
     const fullpath = path.resolve(config.libraryFolder, url);
-    if (fse.existsSync(fullpath)) fse.unlinkSync(fullpath);
+    if (fse.existsSync(fullpath)) {
+      if (name === 'delete') {
+        fse.unlinkSync(fullpath);
+      } else if (name === 'empty') {
+        const targetData = fse.readFileSync(fullpath);
+        const zipContent = await new JSZip().loadAsync(targetData);
+        const fileList = Object.keys(zipContent.files).filter((i) => !i.match(/(info.txt|\/)$/));
+        for (const i of fileList) zipContent.remove(i);
+        const content = await zipContent.generateAsync({
+          type: 'nodebuffer',
+          compression: 'DEFLATE',
+          compressionOptions: {
+            level: 9,
+          },
+        });
+        fse.writeFileSync(fullpath, content);
+      }
+    }
     const cover = path.resolve(path.dirname(fullpath), `${path.parse(fullpath).name}.jpg`);
     if (fse.existsSync(cover)) fse.unlinkSync(cover);
 
-    if (!('delete' in store)) store.delete = [];
-    store.delete.push(url);
+    await connection.query('DELETE FROM files WHERE ' + `path=${connection.escape(url)}`);
+
+    store[name] = Array.from(new Set([].concat(store[name] || [], url)));
     if (store.lastViewPosition && url in store.lastViewPosition) delete store.lastViewPosition[url];
     if (store.lastViewTime && url in store.lastViewTime) delete store.lastViewTime[url];
     if (store.history && store.history.includes(url)) store.history.splice(store.history.indexOf(url), 1);
-  } else if (name === 'empty') {
-    const fullpath = path.resolve(config.libraryFolder, url);
-    const targetData = fse.readFileSync(fullpath);
-    const zipContent = await new JSZip().loadAsync(targetData);
-    const fileList = Object.keys(zipContent.files).filter((i) => !i.match(/(info.txt|\/)$/));
-    for (const i of fileList) zipContent.remove(i);
-    const content = await zipContent.generateAsync({
-      type: 'nodebuffer',
-      compression: 'DEFLATE',
-      compressionOptions: {
-        level: 9,
-      },
-    });
-    fse.writeFileSync(fullpath, content);
-    const cover = path.resolve(path.dirname(fullpath), `${path.parse(fullpath).name}.jpg`);
-    if (fse.existsSync(cover)) fse.unlinkSync(cover);
-    await connection.query('DELETE FROM files WHERE ' + `path=${connection.escape(url)}`);
   } else if (name === 'everything') {
     if (config.everything && fse.existsSync(config.everything)) cp.execFileSync(config.everything, ['-search', url]);
   } else if (!name) {
@@ -491,7 +500,6 @@ ipcMain.on('store', (event, todo = 'get', name, value) => {
 ipcMain.on('clear', (event) => {
   delete store.history;
   delete store.delete;
-  delete store.resultList;
   for (const i of ['lastViewPosition', 'lastViewTime']) {
     for (const file in store[i]) {
       const fullpath = path.resolve(config.libraryFolder, file);
@@ -576,7 +584,7 @@ ipcMain.on('query-by-condition', async (event, condition) => {
   // console.log('query-by-condition', condition)
   let query = 'SELECT * FROM files WHERE ';
   const querySegment = [];
-  let order = ['path', 'time_upload', 'time_download'];
+  let order = condition.some((i) => i[1] === 'order') ? [] : ['path', 'time_upload', 'time_download'];
   for (const i of condition) {
     let [not, column, comparison, value, value1] = i;
     const type = columns[column];
@@ -584,7 +592,10 @@ ipcMain.on('query-by-condition', async (event, condition) => {
 
     if (column === 'command') {
       continue;
-    } else if (type === 'timestamp') {
+    } else if (column === 'order') {
+      order.push(`${value} ${comparison}`);
+      continue;
+    } else if (type === 'datetime') {
       value = value ? mysql.escape(value) : 'CURDATE()';
 
       if (['=', '!=', '>', '>=', '<', '<='].includes(comparison)) {
@@ -727,5 +738,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

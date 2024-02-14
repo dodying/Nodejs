@@ -60,11 +60,16 @@ body {
   content: ">"
 }
 
-.content::before {
+.content[mode="fall"]::before,
+.content[mode="fall"]::after {
+  content: "滚动继续加载"
+}
+
+.content[mode="fall"][is-top]::before {
   content: "到顶啦"
 }
 
-.content::after {
+.content[mode="fall"][is-bottom]::after {
   content: "到底啦"
 }
 
@@ -76,6 +81,7 @@ body {
   overflow: auto;
   text-align: center;
   max-width: 100vw;
+  user-select: none;
   /* scroll-behavior: smooth; */
 }
 
@@ -84,7 +90,25 @@ body {
   margin: 5px 0;
 }
 
-.content>div>img,.content>div>video {
+.content[mode="single"] {
+  overflow: hidden;
+}
+
+.content[mode="single"]>div {
+  display: none;
+}
+
+.content[mode="single"]>div.current {
+  display: block;
+}
+
+.content[mode="single"]>div.current>img {
+  object-fit: contain;
+  height: 99vh;
+}
+
+.content>div>img,
+.content>div>video {
   width: 100%;
 }
 
@@ -181,6 +205,7 @@ body {
   opacity: 0.6;
 }
 
-.preview img,.preview video {
+.preview img,
+.preview video {
   width: 5vw;
 }

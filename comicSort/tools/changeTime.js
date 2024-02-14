@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               changeTime
 // @Description:        changeTime
-// @Version:            1.0.390
+// @Version:            1.0.391
 // @Author:             dodying
 // @Created:            2020-01-21 09:57:28
-// @Modified:           2020/7/13 11:15:11
+// @Modified:           2022-01-05 21:58:44
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,jszip,readline-sync
@@ -139,5 +139,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

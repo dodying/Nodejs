@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               info.txt
 // @Description:        info.txt
-// @Version:            1.0.530
+// @Version:            1.0.579
 // @Author:             dodying
 // @Created:            2020-01-21 12:15:39
-// @Modified:           2020/11/5 12:20:00
+// @Modified:           2022-10-22 19:09:11
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:entities,jszip,readline-sync
+// @Require:jszip,readline-sync,entities
 // ==/Headers==
 
 // usage: command []file
@@ -45,6 +45,10 @@ req.config.init({
 const fullWidth2Half = require('../../_lib/fullWidth2Half');
 const removeOtherInfo = require('../js/removeOtherInfo');
 require('../../_lib/log').hack();
+const findData = require('../js/findData');
+
+const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../EHT.json'), 'utf-8')).data;
+findData.init(EHT);
 
 // Function
 const digitalRomaji = {
@@ -65,7 +69,7 @@ const changeTitle = (text, titleJp) => {
   const title = fullWidth2Half(text).replace(/^\(.*?\)( |)/, '').replace(/[\\/:*?"<>]/g, '-').replace(/\s+/g, ' ')
     .trim();
 
-  // 去除标题中首尾的信息，如作者，组织，原作，语言，翻译组
+  // 去除标题中首尾的信息，如作者，团队，原作，语言，翻译组
   let mainTitleJp = removeOtherInfo(titleJp);
   mainTitleJp = removeOtherInfo(mainTitleJp, true);
 
@@ -130,16 +134,12 @@ const changeTitle = (text, titleJp) => {
 // Main
 const main = async () => {
   const [command, ...files] = process.argv.slice(2);
-  // command = 'add misc: multi-work series';
-  // command = 'reInfo';
-  // files = require('./../../_lib/walk')('F:\\H\\###ComicLibrary1', {
-  //   nodir: true,
-  //   matchFile: /.cbz$/,
-  //   recursive: false
-  // });
+  // command = 'add other: multi-work series';
+  // command = 'reInfo:misc';
+  // files = await require('../../_lib/walkEverything')('file:F:\\H\\###ComicLibrary1 <ext:cbz|ext:zip>');
   console.log({ command, files });
 
-  const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+  const mainTag = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
   const mainInfo = ['title', 'jTitle', 'web'];
   const otherInfo = ['Category', 'Uploader', 'Posted', 'Parent', 'Visible', 'Language', 'File Size', 'Length', 'Favorited', 'Rating'];
   const toDeleteInfo = ['page', 'length', 'genre', 'lang', 'bw', 'rating', 'tags'];
@@ -175,8 +175,22 @@ const main = async () => {
     const data = await zip.files[infoFile].async('text');
     const info = parseInfo(data);
 
-    // 如果info不存在tags(EHD v1.23之前下载的)
-    if (command.match(/^reInfo/) && info.web.match(/e(-|x)hentai.org/)) {
+    if (command === 'reInfo:misc') {
+      info.temp = [];
+      const misc = (info.misc || '').split(', ').filter((i) => i);
+      for (const sub of misc) {
+        let find;
+        for (const main of ['mixed', 'other']) {
+          if ('name' in findData(main, sub)) {
+            find = true;
+            if (!(main in info)) info[main] = [];
+            info[main].push(sub);
+            break;
+          }
+        }
+        if (!find) info.temp.push(sub);
+      }
+    } else if (command.match(/^reInfo/) && info.web.match(/e(-|x)hentai.org/)) { // 如果info不存在tags(EHD v1.23之前下载的)
       const url = info.web.replace(/^.*hentai.org/, 'https://e-hentai.org');
       const pram = url.split('/');
       const res = await req({
@@ -216,8 +230,7 @@ const main = async () => {
       infoNew.Rating = json.rating;
 
       for (const tag of json.tags) {
-        let [main, sub] = tag.split(':');
-        if (!sub) [main, sub] = ['misc', main];
+        const [main, sub] = tag.split(':');
         if (!(main in infoNew)) infoNew[main] = [];
         infoNew[main].push(sub);
       }
@@ -333,5 +346,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

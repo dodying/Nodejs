@@ -64,16 +64,24 @@
           <option value="BETWEEN AND">BETWEEN AND</option>
           <option value="NOT BETWEEN AND">NOT BETWEEN AND</option>
         </select>
-        <select class="comparison" name="comp-json">
+        <select class="comparison hide" name="comp-order">
+          <option value="ASC">升序</option>
+          <option value="DESC">降序</option>
+        </select>
+        <select class="comparison" name="comp-json-tags">
           <option value="tags:*">tags:*</option>
-          <option value="tags:language">tags:language</option>
-          <option value="tags:parody">tags:parody</option>
-          <option value="tags:character">tags:character</option>
-          <option value="tags:group">tags:group</option>
-          <option value="tags:artist">tags:artist</option>
-          <option value="tags:female">tags:female</option>
-          <option value="tags:male">tags:male</option>
-          <option value="tags:misc">tags:misc</option>
+          <option value="tags:language">tags:语言</option>
+          <option value="tags:artist">tags:作者</option>
+          <option value="tags:group">tags:团队</option>
+          <option value="tags:parody">tags:原作</option>
+          <option value="tags:character">tags:角色</option>
+          <option value="tags:cosplayer">tags:Coser</option>
+          <option value="tags:female">tags:女性</option>
+          <option value="tags:male">tags:男性</option>
+          <option value="tags:mixed">tags:混合</option>
+          <option value="tags:other">tags:其他</option>
+          <option value="tags:reclass">tags:重新分类</option>
+          <option value="tags:temp">tags:临时</option>
         </select>
 
         <input class="value" type="text" name="value-common" list="">

@@ -38,7 +38,7 @@ const findData = (main, sub = undefined, textOnly = true) => {
       cname = cname.replace(/!\[(.*?)\]\((.*?)\)/g, '').replace(/\p{Extended_Pictographic}/gu, '');
     }
     return {
-      name: main === 'misc' ? sub : `${main}:${sub}`,
+      name: `${main}:${sub}`,
       cname,
       info,
     };

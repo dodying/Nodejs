@@ -15,13 +15,13 @@ const parseInfo = (text) => {
   const lines = text.split(/\n/).map((i) => i.trimRight());
   const info = {};
   const output = {
-    title: lines[0],
+    title: lines[0] || '无',
     jTitle: (lines[1].match(/^http/) ? lines[0] : lines[1]) || lines[0],
     page: [],
     downloadTime,
     tagString: [],
   };
-  const tags = ['language', 'reclass', 'artist', 'group', 'parody', 'character', 'female', 'male', 'misc'];
+  const tags = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
   for (const i of lines) {
     if (i.match(/^http/)) {
       output.web = i.replace(/http:/, 'https:').replace(/#\d+$/, '').replace(/(g.|)e-hentai.org/, 'exhentai.org');
@@ -86,11 +86,11 @@ const parseInfo = (text) => {
 
   if (info.Language) output.lang = (info.Language.match('Chinese') || (info.language && info.language.includes('chinese'))) ? 'zh' : info.Language.match('English') ? 'en' : 'ja';
 
-  output.bw = !('misc' in info && info.misc.indexOf('full color') >= 0);
+  output.bw = !('other' in info && info.other.indexOf('full color') >= 0);
 
   if ('Rating' in info) output.rating = info.Rating;
 
-  output.tags = [].concat(info.male, info.female, info.misc).filter((i) => i).sort();
+  output.tags = [].concat(info.male, info.female).filter((i) => i).sort();
   output.tagString = output.tagString.join('\n');
 
   return output;

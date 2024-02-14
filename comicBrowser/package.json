@@ -5,6 +5,7 @@
   "author": "dodying",
   "scripts": {
     "start": "electron ./main.js",
+    "debug": "set debug=1 && electron ./main.js",
     "test": "node database.js test",
     "delete": "node database.js delete",
     "init": "node database.js init",

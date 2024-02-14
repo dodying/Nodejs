@@ -1,7 +1,7 @@
 // ==Headers==
 // @Name:               download
 // @Description:        download
-// @Version:            1.0.167
+// @Version:            1.0.168
 // @Author:             dodying
 // @Date:               2019-2-12 18:41:49
 // @Namespace:          https://github.com/dodying/Nodejs
@@ -79,5 +79,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

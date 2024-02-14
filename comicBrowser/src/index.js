@@ -1,14 +1,15 @@
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1875
+// @Version:            1.0.1926
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2021-10-10 16:00:17
+// @Modified:           2023-12-19 21:56:37
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
 // ==/Headers==
+/* eslint-env browser */
 /* global $ Mousetrap */
 
 // query
@@ -19,6 +20,7 @@ let scrollElement = $('html').get(0);
 let tagsAlert = null;
 let resultTable = null;
 let lastResult = null;
+let columns = null;
 
 // 可自定义
 const keypressTimeout = 80; // keypress事件延迟
@@ -37,8 +39,8 @@ const showInfo = { // 查询结果-显示列
   favorited: [false, '星标数'],
   event: [true, '事件'], // (#)
   uploader: [false, '上传者'],
-  'tag:artist': [true, '标签:作者'], // (#)标签:作者
-  artist: [false, '作者'],
+  'tag:artist': [false, '标签:作者'], // (#)标签:作者
+  artist: [true, '作者'],
   title_main: [true, '标题(主)'], // 英文标题的主要部分
   title_number: [true, '数字'], // 英文标题的数字部分
   title: [true, '标题'], // 英文标题
@@ -50,10 +52,9 @@ const showInfo = { // 查询结果-显示列
   'tag:parody': [true, '标签:原作'], // (#)标签:原作
   'tag:female': [true, '标签:女性'], // (#)标签:女性
   'tag:male': [true, '标签:男性'], // (#)标签:男性
-  'tag:misc': [true, '标签:杂项'], // (#)标签:杂项
-  'tag:group': [false, '标签:组织'], // (#)标签:组织
-  // tag:language
-  // tag:reclass
+  'tag:mixed': [false, '标签:混合'], // (#)标签:混合
+  'tag:other': [false, '标签:其他'], // (#)标签:其他
+  'tag:group': [false, '标签:团队'], // (#)标签:团队
 };
 const keyMap = { // 按键事件
   up: ['w', 'up', '8'], // 向上滚动scrollHeight高度
@@ -66,7 +67,7 @@ const keyMap = { // 按键事件
 const showColumns = { // 筛选条件要显示的类别
   // 按key顺序显示
   // [是否显示， 类型]
-  tags: [true, 'json'],
+  tags: [true, 'json-tags'],
   path: [true, 'text'],
   artist: [true, 'text'],
   title: [true, 'text'],
@@ -85,6 +86,7 @@ const showColumns = { // 筛选条件要显示的类别
   uploader: [true, 'text'],
   favorited: [true, 'number'],
   time_download: [true, 'datetime'],
+  order: [true, 'order'],
   command: [true, 'text'], // (#)
 };
 keyMap.shiftAndUp = keyMap.up.map((i) => `shift+${i}`); // 滚动到顶部
@@ -95,7 +97,7 @@ const pagerOption = { // 分页设置
   size: 100, // 每页数量
 };
 const autoCompleteOption = { // 自动填充条件
-  enbaleColumns: ['tags'].concat(Object.keys(showColumns).map((i) => [i, showColumns[i]]).filter((i) => i[1][0] && i[1][1] === 'text' && !(['command'].includes(i[0]))).map((i) => i[0])), // 支持tags或类型为text
+  enbaleColumns: ['tags', 'order'].concat(Object.keys(showColumns).map((i) => [i, showColumns[i]]).filter((i) => i[1][0] && i[1][1] === 'text' && !(['command'].includes(i[0]))).map((i) => i[0])), // 支持tags或类型为text
   minLength: 3, // 最小字符数时，显示
   limit: 50, // 填充结果数限制
 };
@@ -124,7 +126,7 @@ const { ipcRenderer } = electron;
 const { Menu } = electron.remote;
 const EHT = JSON.parse(fs.readFileSync(path.join(__dirname, './../../comicSort/EHT.json'), 'utf-8')).data;
 findData.init(EHT);
-const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+const mainTag = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 const randomColor = {};
 
@@ -132,7 +134,8 @@ const randomColor = {};
 const showResult = (page) => {
   // page为undefined时，自动跳转到上次阅读，否则跳转到第几页
   const store = ipcRenderer.sendSync('store');
-  const condition = encodeURIComponent(JSON.stringify(getCondition()));
+  const condition = getCondition();
+  const conditionStr = encodeURIComponent(JSON.stringify(condition));
 
   if (lastResult.length && !('time_view' in lastResult[0])) { // 仅在第一次，增加属性time_view，方便后续排序等操作
     for (const i of lastResult) {
@@ -153,7 +156,6 @@ const showResult = (page) => {
   let result = lastResult;
   if (pagerOption.enable && lastResult.length > pagerOption.minCount) { // 分页
     if (page === undefined) {
-      const condition = getCondition();
       const resultPosition = ipcRenderer.sendSync('store', 'get', 'resultPosition', {});
       let index = 0;
       if (JSON.stringify(condition) in resultPosition) {
@@ -185,6 +187,9 @@ const showResult = (page) => {
     $('.pager').hide();
   }
   for (const row of result) {
+    // fix mariadb
+    if (typeof row.tags === 'string') row.tags = JSON.parse(row.tags);
+
     // tr
     const tagString = encodeURIComponent(JSON.stringify(row.tags));
     const star = store.star && store.star.includes(row.path) ? 1 : 0;
@@ -198,11 +203,11 @@ const showResult = (page) => {
       if (showInfo[i][0]) {
         const attr = [`name="${i}"`];
         let text = '';
+        let sql = false;
         if (['time_upload', 'time_download', 'time_view'].includes(i)) {
           const time = row[i];
-
-          const data = new Date(time);
-          attr.push(`datetime="${time}"`, `title="${data.toLocaleString('zh-CN', { hour12: false })}"`);
+          const date = new Date(time);
+          text = `<span datetime="${time}" title="${date.toLocaleString('zh-CN', { hour12: false })}"></span>`;
         } else if (['rating'].includes(i)) {
           const precent = row.rating / 5 * 100;
           const color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00';
@@ -217,36 +222,40 @@ const showResult = (page) => {
             '<button name="star"></button>',
             '<button name="clear"></button>',
             '<br>',
-            `<a href="${row.path}" name="delete"></a>`,
-            `<a href="${row.path}" name="empty"></a>`,
+            `<a href="${row.path}" name="delete" title="删除"></a>`,
+            `<a href="${row.path}" name="empty" title="清空"></a>`,
             '<button name="invisible"></button>',
             '<br>',
             `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}">View</a>`,
-            `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${condition}">List</a>`,
+            `<a name="native" href="./src/viewer.html?file=${encodeURIComponent(row.path)}&condition=${conditionStr}">List</a>`,
           ].join('');
         } else if (['path'].includes(i)) {
+          sql = true;
           text = `<a href="${row.path}" name="item">${path.dirname(row[i]).replace(/\\(#[^\\]+)/g, (all, m1) => {
             const random = m1 in randomColor ? randomColor[m1] : Math.floor(Math.random() * 0x1000000);
             randomColor[m1] = random;
             return `\\<span style="background-color:#${random.toString(16)};color:#${(0x1000000 - random).toString(16)}">${m1}</span>`;
           })}</a>`;
         } else if (['title', 'title_main', 'title_jpn', 'title_jpn_main'].includes(i)) {
-          const condition = [[false, i, '=', row[i], undefined]];
-          text = `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify(condition))}"></a>`;
-          text = text + (row[i] + (['title', 'title_main'].includes(i) ? `<a href="${row[i]}" name="everything"></a>` : ''));
+          sql = true;
+          text = row[i] + (['title', 'title_main'].includes(i) ? `<a href="${row[i]}" name="everything"></a>` : '');
         } else if (i.match(/^tag:(.*)$/)) {
           const main = i.match(/^tag:(.*)$/)[1];
           if (row.tags && main in row.tags) {
             text = row.tags[main].map((sub) => {
               const condition = [[false, 'tags', `tags:${main}`, `${sub.split(' | ')[0]}`, undefined]];
               let color = '';
-              const full = main === 'misc' ? sub : `${main}:${sub}`;
+              const full = `${main}:${sub}`;
               if (full in tagsAlert) color = tagsAlert[full];
               return `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify(condition))}" color="${color}">${findData(main, sub).cname || sub}</a>`;
             }).sort().join(', ');
           }
         } else {
+          sql = true;
           text = row[i] instanceof Object ? JSON.stringify(row[i]) : row[i];
+        }
+        if (sql) {
+          text = `<a name="native" href="./src/index.html?condition=${encodeURIComponent(JSON.stringify([[false, i, '=', row[i], undefined]]))}"></a>${text}`;
         }
         tr = `${tr}<td ${attr.join(' ')}>${text}</td>`;
       }
@@ -258,6 +267,12 @@ const showResult = (page) => {
   html.push('</tbody>', '</table>', '</div>');
 
   $('.result').html(html.join('')).get(0).scrollIntoView();
+  if (condition.filter((i) => i[1] === 'order').length) {
+    const filter = condition.filter((i) => i[1] === 'order');
+    for (const find of filter) {
+      $('.result').find(`th[sort="${find[3]}"]`).prop('className', `tablesorter-header tablesorter-header${find[2].substring(0, 1).toUpperCase()}${find[2].substring(1).toLowerCase()}`);
+    }
+  }
   $('.tableBody').css('height', document.documentElement.clientHeight - 120);
 
   updateRelativeTime();
@@ -337,6 +352,8 @@ const getConditionReadable = () => {
       }
 
       text = text + (findData(main, i[3]).cname || i[3]);
+    } else if (i[1] === 'order') {
+      text = `${showInfo[i[3]][1]}:${i[2] === 'ASC' ? '升序' : '降序'}`;
     } else if ($('.comparison:not(.hide)').attr('name') === 'comp-datetime') {
       text = `${text}${i[1]}:${i[2]}`;
     } else if (i[2] === 'Duplicate') {
@@ -571,6 +588,15 @@ const main = async () => {
 
       html = Array.from(new Set(html));
       $('.datalist>ol').html(html.join(''));
+    } else if (column === 'order') {
+      if (!columns) {
+        const query = 'SHOW COLUMNS FROM files';
+        const [rows] = await ipcRenderer.sendSync('database-query', query);
+        columns = rows.map((i) => i.Field);
+      }
+      const html = [];
+      columns.filter((i) => i.includes(value)).forEach((i) => html.push(`<li>${i}</li>`));
+      $('.datalist>ol').html(html);
     } else if (showColumns[column][1] === 'text') {
       const query = `SELECT ${column} FROM files WHERE ${column} LIKE ${mysql.escape(`%${value.replace(/[%_\\]/g, '\\$&')}%`)} LIMIT ${autoCompleteOption.limit}`;
       const [rows] = await ipcRenderer.sendSync('database-query', query);
@@ -614,10 +640,6 @@ const main = async () => {
     const condition = getCondition();
 
     const [rows] = ipcRenderer.sendSync('query-by-condition', condition);
-    configChange((obj) => {
-      if (!('resultList' in obj)) obj.resultList = {};
-      obj.resultList[JSON.stringify(condition)] = rows.map((i) => i.path);
-    }, 'store');
     lastResult = rows;
     showResult();
     updateTitleUrl();
@@ -798,7 +820,7 @@ const main = async () => {
           const subChs = [];
           for (const sub of tags[main]) {
             let color = '';
-            const full = main === 'misc' ? sub : `${main}:${sub}`;
+            const full = `${main}:${sub}`;
             if (full in tagsAlert) color = tagsAlert[full];
             const html = `<span color="${color}">${findData(main, sub).cname || sub}</span>`;
             subChs.push(html);
@@ -882,21 +904,22 @@ const main = async () => {
     const key = $(e.target).attr('sort');
     const isAsc = $(e.target).is('.tablesorter-headerAsc');
 
-    lastResult = lastResult.sort((a, b) => collator.compare(a[key], b[key]));
-    if (isAsc) lastResult = lastResult.reverse();
-
-    configChange((obj) => {
-      if (!('resultList' in obj)) obj.resultList = {};
-      const condition = getCondition();
-      obj.resultList[JSON.stringify(condition)] = lastResult.map((i) => i.path);
-    }, 'store');
+    const condition = getCondition();
+    let elem;
+    if (condition.find((i) => i[1] === 'order' && i[3] === key)) {
+      elem = $('.filter>.condition').toArray().find((i) => $(i).find('[name="column"]').val() === 'order' && $(i).find('.value:visible').val() === key);
+    } else if (condition.find((i) => i[1] === 'order')) {
+      elem = $('.filter>.condition').toArray().find((i) => $(i).find('[name="column"]').val() === 'order');
+      elem = $(elem).clone().insertBefore(elem);
+    } else {
+      elem = $('.filter>.condition').eq(-1).clone().insertAfter($('.filter>.condition').eq(-1));
+    }
+    $(elem).find('[name="column"]').val('order').trigger('change');
+    $(elem).find('.value:visible').val(key);
+    $(elem).find('[name="comp-order"]').val(isAsc ? 'DESC' : 'ASC');
+    $('.filter').find('[name="query"]').click();
 
     showResult();
-    if (isAsc) {
-      $('.result').find(`th[sort="${key}"]`).prop('className', 'tablesorter-header tablesorter-headerDesc');
-    } else {
-      $('.result').find(`th[sort="${key}"]`).prop('className', 'tablesorter-header tablesorter-headerAsc');
-    }
   });
 
   // 侧边栏
@@ -939,7 +962,7 @@ const main = async () => {
         waitInMs(1000).then(() => {
           updateRelativeTime();
         });
-      } else if (name === 'empty') {
+      } else if (['delete', 'empty'].includes(name)) {
         parent.remove();
       }
     }
@@ -1078,5 +1101,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

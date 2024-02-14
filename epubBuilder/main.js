@@ -1,10 +1,10 @@
 // ==Headers==
 // @Name:               main
 // @Description:        根据txt快速创建epub
-// @Version:            1.0.31
+// @Version:            1.0.41
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2020/12/13 13:07:08
+// @Modified:           2023-07-22 20:38:37
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,electron-reload

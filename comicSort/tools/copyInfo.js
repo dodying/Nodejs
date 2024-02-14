@@ -1,13 +1,13 @@
 // ==Headers==
 // @Name:               copyInfo
 // @Description:        copyInfo
-// @Version:            1.0.365
+// @Version:            1.0.370
 // @Author:             dodying
 // @Created:            2020-01-18 15:55:20
-// @Modified:           2021-08-05 20:39:24
+// @Modified:           2022-10-21 22:55:08
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
-// @Require:            clipboardy,fs-extra,jszip,readline-sync
+// @Require:            jszip,fs-extra,readline-sync,clipboardy
 // ==/Headers==
 
 // usage: text []file
@@ -85,7 +85,7 @@ const main = async () => {
   const varsRe = /!{(.*?)}/;
   const kanaRe = /^[あアいイうウえエおオかカきキくクけケこコさサしシすスせセそソたタちチつツてテとトなナにニぬヌねネのノはハひヒふフへヘほホまマみミむムめメもモやヤゆユよヨらラりリるルれレろロわワをヲんンがガぎギぐグげゲごゴざザじジずズぜゼぞゾだダぢヂづヅでデどドばバびビぶブべベぼボぱパぴピぷプぺペぽポゃャゅュょョ]/;
 
-  const mainTag = ['language', 'reclass', 'parody', 'character', 'group', 'artist', 'female', 'male', 'misc'];
+  const mainTag = 'language,artist,group,parody,character,cosplayer,female,male,mixed,other,reclass,temp'.split(',');
   const toDeleteInfo = ['page'];
 
   const output = [];
@@ -219,5 +219,5 @@ main().then(async () => {
   //
 }, async (err) => {
   console.error(err);
-  process.exit();
+  process.exit(1);
 });

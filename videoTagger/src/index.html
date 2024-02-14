@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="UTF-8">
+  <title>videoTagger</title>
+  <link rel="stylesheet" href="./../src/index.css">
+  <link rel="stylesheet" href="./../src/tagify.css" />
+  <link rel="stylesheet" href="./../src/dragsort.css" />
+  <link rel="stylesheet" href="./../src/pure.css" />
+  <script>if (typeof module === "object") { window.module = module; module = undefined; }</script>
+  <script src="./../src/jquery.js"></script>
+  <script src="./../src/DPlayer.min.js"></script>
+  <script src="./../src/tagify.js"></script>
+  <script src="./../src/dragsort.js"></script>
+  <script src="./../src/pinyin-pro.js"></script>
+  <script src="./../src/stanz.js"></script>
+  <script>if (window.module) module = window.module;</script>
+</head>
+
+<body>
+  <div id="divLeft" style="display:none;">
+    <div id="explorerPath"></div>
+    <div id="explorerFile"></div>
+    <div class="viewer" name="video"></div>
+    <div class="viewer" name="image">
+      <img style="max-width:100%;max-height:80vh;" src="" alt="" />
+    </div>
+    <div style="overflow:auto;" class="viewer" name="plaintext">
+      <pre />
+    </div>
+  </div>
+  <div id="divRight">
+    <div id="btn">
+      <input type="button" value="Preview" id="preview" class="pure-button pure-button-primary button-secondary">
+      <input type="button" value="Execuate" id="execuate" class="pure-button pure-button-primary button-error">
+      <span id="moveto"
+        class="pure-button pure-button-primary button-warning pure-menu-item pure-menu-has-children pure-menu-allow-hover">
+        <a href="#" class="pure-menu-link">MoveTo</a>
+        <ul class="pure-menu-children" style="text-align:left;">
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK</a>
+          </li>
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK\10腚</a>
+          </li>
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK\11头腚</a>
+          </li>
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK\gc\00</a>
+          </li>
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK\gc\01头</a>
+          </li>
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK\gc\10腚</a>
+          </li>
+          <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link">OK\gc\11头腚</a>
+          </li>
+        </ul>
+      </span>
+    </div>
+    <hr>
+    <div id="info" class="pure-form">
+      <div>
+        <a id="nameSearch" href="">name</a>: <input type="text" name="name">
+      </div>
+      <div>people: <input type="text" name="people"></div>
+      <div>preview: <input type="text" disabled name="preview" style="color:red;"></div>
+    </div>
+    <hr>
+    <div id="prefix"></div>
+    <hr>
+    <div id="suffix-cos"><input type="text" name="suffix-cos"></div>
+    <div id="suffix"><input type="text" name="suffix"></div>
+    <div id="suffix-tags" style="overflow:auto"></div>
+  </div>
+  <script src="./../src/index.js"></script>
+</body>
+
+</html>
