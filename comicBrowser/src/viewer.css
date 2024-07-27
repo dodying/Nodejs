@@ -60,6 +60,20 @@ body {
   content: ">"
 }
 
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-height: 99vh;
+  overflow: auto;
+  text-align: center;
+  max-width: 100vw;
+  user-select: none;
+  overflow-x: hidden;
+  /* scroll-behavior: smooth; */
+}
+
 .content[mode="fall"]::before,
 .content[mode="fall"]::after {
   content: "滚动继续加载"
@@ -71,18 +85,6 @@ body {
 
 .content[mode="fall"][is-bottom]::after {
   content: "到底啦"
-}
-
-.content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-height: 99vh;
-  overflow: auto;
-  text-align: center;
-  max-width: 100vw;
-  user-select: none;
-  /* scroll-behavior: smooth; */
 }
 
 .content>div {

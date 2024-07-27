@@ -14,7 +14,7 @@
   display: none;
 }
 
-.sidebar > ul > li {
+.sidebar>ul>li {
   white-space: nowrap;
 }
 
@@ -26,7 +26,7 @@
   color: #fff;
 }
 
-.btnBox > button {
+.btnBox>button {
   border: 0;
   height: 75px;
   background: var(--main-bg-color);
@@ -37,7 +37,7 @@
   right: 0vw;
 }
 
-.query > .filter {
+.query>.filter {
   text-align: center;
   /* background-color: #fff; */
   /* margin: auto; */
@@ -45,16 +45,16 @@
   /* right: 0; */
 }
 
-.query [name="not-condition"]:checked + span {
+.query [name="not-condition"]:checked+span {
   font-weight: bold;
   color: red;
 }
 
-.query > .preview {
+.query>.preview {
   display: none;
 }
 
-.query > .preview[name="cover"] > img {
+.query>.preview[name="cover"]>img {
   position: fixed;
   max-width: 25vw;
   max-height: 50vh;
@@ -62,7 +62,7 @@
   top: 2vh;
 }
 
-.query > .preview[name="tags"] {
+.query>.preview[name="tags"] {
   position: fixed;
   padding: 5px 0;
   font-size: 16px;
@@ -76,25 +76,25 @@
   max-width: 25vw;
 }
 
-.datalist > ol {
+.datalist>ol {
   list-style: none;
   counter-reset: datalistOrder;
   max-height: 20vh;
   overflow: auto;
 }
 
-.datalist > ol > li {
+.datalist>ol>li {
   cursor: pointer;
 }
 
-.datalist > ol > li::before {
+.datalist>ol>li::before {
   padding: 0 8px;
   content: counter(datalistOrder) ".";
   counter-increment: datalistOrder;
   font-weight: bold;
 }
 
-.datalist > ol > li::after {
+.datalist>ol>li::after {
   padding: 0 8px;
   content: attr(cname);
   /* font-size: 10px; */
@@ -102,7 +102,7 @@
   color: #00a8cc;
 }
 
-.datalist > ol > li:hover,
+.datalist>ol>li:hover,
 .datalistHover {
   color: #f00;
   font-weight: bold;
@@ -141,19 +141,19 @@ a,
   border: solid 1px black;
 }
 
-.result table tr:hover > td,
-.result table .trHover > td {
+.result table tr:hover>td,
+.result table .trHover>td {
   color: #ccc !important;
   background-color: #000 !important;
 }
 
 .result table tr[star="1"],
-.result table tr[star="1"] > td {
+.result table tr[star="1"]>td {
   background-color: #8cba51;
   color: #1b262c;
 }
 
-.result table tr[exists="false"] > td:nth-child(1) {
+.result table tr[exists="false"]>td:nth-child(1) {
   background: #512b58 !important;
 }
 
@@ -161,7 +161,13 @@ a,
   content: "🖤";
 }
 
-.result tr[invisible="1"] {
+.result tr[star="1"] button[name="star"]:hover::after {
+  content: "取消收藏";
+}
+
+.result tr[invisible="1"],
+.result tr[star-invisible="1"],
+.result tr[viewed-invisible="1"] {
   position: absolute;
   left: -9999px;
   max-height: 0px;
@@ -177,21 +183,31 @@ a,
   content: "❤️";
 }
 
+.result tr button[name="star"]:hover::after {
+  content: "收藏";
+}
+
 .result tr a[name="delete"]::before {
   content: "🗑️";
+}
+
+.result tr a[name="delete"]:hover::after {
+  content: "删除文件";
 }
 
 .result tr a[name="empty"]::before {
   content: "🈳";
 }
 
+.result tr a[name="empty"]:hover::after {
+  content: "清空文件";
+}
+
 .result tr a[name="native"][href^="./src/viewer.html?file="]::before {
   content: "📚";
 }
 
-.result
-  tr
-  a[name="native"][href^="./src/viewer.html?file="][href*="&condition="]::before {
+.result tr a[name="native"][href^="./src/viewer.html?file="][href*="&condition="]::before {
   content: "📜";
 }
 
@@ -203,12 +219,20 @@ a,
   content: "🧹";
 }
 
+.result tr button[name="clear"]:hover::after {
+  content: "清除记录";
+}
+
 .result tr a[name="item"]::before {
   content: "📁";
 }
 
 .result tr button[name="invisible"]::before {
   content: "🏴";
+}
+
+.result tr button[name="invisible"]:hover::after {
+  content: "隐藏";
 }
 
 .result tr a[name="everything"]::before {
@@ -226,41 +250,41 @@ a,
   text-align: center;
 }
 
-.pager > * {
+.pager>* {
   cursor: pointer;
   margin: 0 4px;
 }
 
-.pager > .disabled {
+.pager>.disabled {
   color: gray;
   cursor: not-allowed;
 }
 
-.pager > .first::before {
+.pager>.first::before {
   content: "|<";
 }
 
-.pager > .prev::before {
+.pager>.prev::before {
   content: "<<";
 }
 
-.pager > .next::before {
+.pager>.next::before {
   content: ">>";
 }
 
-.pager > .last::before {
+.pager>.last::before {
   content: ">|";
 }
 
-.pager > .pagedisplay::after {
+.pager>.pagedisplay::after {
   content: " / " attr(max);
 }
 
-.pager > .pagedisplay input {
+.pager>.pagedisplay input {
   max-width: 1em;
 }
 
-.pager > .pagedisplay input::-webkit-outer-spin-button,
+.pager>.pagedisplay input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;
 }

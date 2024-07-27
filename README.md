@@ -146,7 +146,3 @@ Name | Raw | Version | Last-Modified | Create-Time | Description
 --- | --- | --- | --- | --- | ---
 [webVideo](webVideo/index.js) | [Raw](https://github.com/dodying/Nodejs/raw/master/webVideo/index.js) | 1.1.897 | 2022-08-21 13:47:47 | 2020-10-27 15:58:28 | 根据list.txt下载网页视频（主要是NSFW）
 
-
-#### 捐赠
-
-![donation](./donation.jpg)

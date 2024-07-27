@@ -11,3 +11,7 @@ build
 /dayi/data
 /dayi/dayi.zip
 webVideo/chrome-win
+webVideo/chrome-win.zip
+videoTagger/img/tagger/*.jpg
+comicBrowser/*.sql.gz
+sync.ffs_db

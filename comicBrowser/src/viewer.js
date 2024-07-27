@@ -3,10 +3,10 @@
 // ==Headers==
 // @Name:               viewer
 // @Description:        viewer
-// @Version:            1.0.1594
+// @Version:            1.0.1620
 // @Author:             dodying
 // @Created:            2020-02-08 18:17:38
-// @Modified:           2024-02-14 21:08:35
+// @Modified:           2024-02-16 20:04:31
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,jszip
@@ -93,7 +93,7 @@ const imageExt = ['.png', '.jpg', '.gif', '.webp'];
 const videoExt = ['.mp4', '.m4v'];
 const supportedExt = [].concat(imageExt, videoExt);
 let isTopLast, isBottomLast;
-let keypressLastTime = 0;
+const lastTime = { wheel: 0, scroll: 0, keypress: 0 };
 let resultList = null;
 let lastScrollTop = 0;
 let lastScrollEnd = true;
@@ -105,7 +105,7 @@ const viewPageMax = -3; // 当阅读到最后几页时，不保存记录
 let viewMode = viewModes[0];
 const mousemoveDelay = 50; // mousemove时间的延迟
 const fixHeight = 1; // TO ENHANCEMENT 1px 待测试
-const keypressTimeout = 80; // 小于此时间的keypress事件不触发
+const debouncedTimeout = 80; // 小于此时间的wheel/scroll/keypress事件不触发
 const scorllMode = 'jquery'; // jquery||auto，jquery时使用jquery.animate来显示滚动动画，否则使用css的scroll-behavior:smooth
 const scrollHeight = 50; // 滚动高度
 const scrollTime = 200; // 仅jquery，每滚动单位高度（可视页面高度）所需时间
@@ -114,7 +114,7 @@ const maxWidth = 940;
 const maxHeight = 970;
 let zoomPercent = 120; // 缩放百分比
 const zoomPercentStep = 5; // 缩放百分比间隔
-const loadPageHeight = 100; // 距离底部或顶部多高时，读取页面
+const loadPageHeight = window.innerHeight * 0.9; // 距离底部或顶部多高时，读取页面
 const keyMap = { // 按键事件
   // 说明请看 keyHelp
   // 全局通用
@@ -247,7 +247,6 @@ async function loadImage(reverse, loadCount = pageLoadCount) {
 
   $('.content').removeAttr('disable-scroll');
   $('.titlebar').hide();
-  getCurrentPage();
   const goon = reverse ? i >= 0 : i < fileList.length;
   if (fileList[0] === $('.content>div').eq(0).attr('name')) $('.content').attr('is-top', 'true');
   if (fileList.slice(-1)[0] === $('.content>div').eq(-1).attr('name')) $('.content').attr('is-bottom', 'true');
@@ -268,7 +267,12 @@ async function jumpToImage(page) {
       $('.content').removeAttr('disable-scroll');
       break;
     } else if (pageLeft) {
-      pageLeft = await loadImage(reverse, Math.abs(index - indexFirst));
+      if ($('.content>div.current').length) {
+        pageLeft = await loadImage(reverse, Math.abs(index - indexFirst));
+      } else {
+        pageLeft = await loadImage(reverse, 5);
+        getCurrentPage();
+      }
     } else {
       break;
     }
@@ -527,7 +531,9 @@ function showFileList(files, title) {
 function scrollTop({
   top, left = 0, speed, absolute = false, noEvent = false,
 }) {
-  if (scorllMode === 'jquery') {
+  if (viewMode === 'single') {
+    // noop
+  } else if (scorllMode === 'jquery') {
     $(scrollElement).css('scroll-behavior', 'unset');
     if (!speed) {
       speed = (Math.abs(absolute ? scrollElement.scrollTop - top : top) / scrollElement.clientHeight) * scrollTime;
@@ -558,9 +564,6 @@ async function scrollEvent(type = 'down') {
   isTopLast = isTopNow();
   isBottomLast = isBottomNow();
 
-  getCurrentPage();
-  if ($('.content').attr('disable-scroll')) return;
-  const thisScrollTop = scrollElement.scrollTop;
   if (viewMode === 'single') {
     const raw = $('.content>div.current');
     if (type === 'up') {
@@ -572,39 +575,17 @@ async function scrollEvent(type = 'down') {
     }
     raw.removeClass('current');
     getCurrentPage();
-  } else if (thisScrollTop > lastScrollTop) { // 向下滚动
-    // eslint-disable-next-line no-shadow
-    const { scrollHeight } = scrollElement;
-    const height = $('.content').height() + thisScrollTop;
-    if (height + loadPageHeight >= scrollHeight) {
-      await loadImage();
-    }
-  } else if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
-    lastScrollEnd = false;
-    await loadImage(true);
-    await waitInMs(500);
 
-    const offset = $(`.content>div[name="${viewInfo.page}"]`).offset();
-    if (offset) {
-      $('.content').attr('disable-scroll', 'true');
-      const preferTop = scrollElement.scrollTop + offset.top;
-      scrollTop({
-        top: preferTop, left: 0, speed: 100, absolute: true, noEvent: true,
-      });
-      let scrollEnd;
-      scrollEnd = setInterval(() => {
-        if (Math.abs(preferTop - scrollElement.scrollTop) <= fixHeight) {
-          clearInterval(scrollEnd);
-          $('.content').removeAttr('disable-scroll');
-          lastScrollEnd = true;
-          scrollEnd = null;
-        }
-      }, 200);
-    }
+    electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
+    updateTitleUrl();
   }
-  lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
-  electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
-  updateTitleUrl();
+
+  if (type === 'up' && isTopNow() && isTopLast) {
+    await showFile({ relativeBook: 'prev' });
+  } else if (type === 'down' && isBottomNow() && isBottomLast) {
+    await showFile({ relativeBook: 'next' });
+  }
+  // $('.content').trigger('');
 }
 
 // Main
@@ -620,22 +601,52 @@ async function main() {
     }
   });
   $('.content').on('wheel', async (e) => {
-    if (new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
-    if (e.type === 'wheel') {
-      scrollEvent(e.originalEvent.deltaY < 0 ? 'up' : 'down');
-      e.preventDefault();
-    }
+    if (new Date().getTime() - new Date(lastTime.wheel).getTime() <= debouncedTimeout) return;
+    scrollEvent(e.originalEvent.deltaY < 0 ? 'up' : 'down');
 
-    if (e.originalEvent.deltaY < 0 && isTopNow() && isTopLast) {
-      await showFile({ relativeBook: 'prev' });
-    } else if (e.originalEvent.deltaY > 0 && isBottomNow() && isBottomLast) {
-      await showFile({ relativeBook: 'next' });
-    }
-
-    keypressLastTime = new Date().getTime();
+    lastTime.wheel = new Date().getTime();
   });
   $('.content').on('scroll', async (e) => {
-    if (viewMode === 'single') scrollElement.scrollTop = 0;
+    if (new Date().getTime() - new Date(lastTime.scroll).getTime() <= debouncedTimeout) return;
+
+    getCurrentPage();
+    if ($('.content').attr('disable-scroll')) return;
+    const thisScrollTop = scrollElement.scrollTop;
+    if (thisScrollTop > lastScrollTop) { // 向下滚动
+      // eslint-disable-next-line no-shadow
+      const { scrollHeight } = scrollElement;
+      const height = $('.content').height() + thisScrollTop;
+      if (height + loadPageHeight >= scrollHeight) {
+        await loadImage();
+      }
+    } else if (lastScrollEnd && fileList.indexOf(viewInfo.page) > 0 && thisScrollTop <= loadPageHeight) {
+      lastScrollEnd = false;
+      await loadImage(true);
+      await waitInMs(500);
+
+      const offset = $(`.content>div[name="${viewInfo.page}"]`).offset();
+      if (offset) {
+        $('.content').attr('disable-scroll', 'true');
+        const preferTop = scrollElement.scrollTop + offset.top;
+        scrollTop({
+          top: preferTop, left: 0, speed: 100, absolute: true, noEvent: true,
+        });
+        let scrollEnd;
+        scrollEnd = setInterval(() => {
+          if (Math.abs(preferTop - scrollElement.scrollTop) <= fixHeight) {
+            clearInterval(scrollEnd);
+            $('.content').removeAttr('disable-scroll');
+            lastScrollEnd = true;
+            scrollEnd = null;
+          }
+        }, 200);
+      }
+    }
+    lastScrollTop = thisScrollTop <= 0 ? 0 : thisScrollTop;
+    electron.remote.getCurrentWindow().setProgressBar((fileList.indexOf(viewInfo.page) + 1) / fileList.length);
+    updateTitleUrl();
+
+    lastTime.scroll = new Date().getTime();
   });
 
   // 内容-鼠标移动
@@ -783,13 +794,13 @@ async function main() {
     openFile();
     return false;
   });
-  Mousetrap.bind(keyMap.closeAndSave, async (e, combo) => { // 关闭并保存本书记录
+  Mousetrap.bind(keyMap.closeAndSave, async (e, combo) => { // 关闭并保存记录
     await rememberPosition(false, true);
     $('.content').attr('disable-scroll', 'true').empty();
     $('.openfile').show();
     return false;
   });
-  Mousetrap.bind(keyMap.closeAndClear, async (e, combo) => { // 关闭并清除本书记录
+  Mousetrap.bind(keyMap.closeAndClear, async (e, combo) => { // 关闭并清除记录
     $('.content').attr('disable-scroll', 'true').empty();
     $('.openfile').show();
 
@@ -898,7 +909,7 @@ async function main() {
     await tooltip('文件已清空/删除', viewInfo.file);
   });
   Mousetrap.bind([].concat(keyMap.up, keyMap.down, 'home', 'end'), async (e, combo) => { // 上下键
-    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return false;
+    if (e.type === 'keypress' && new Date().getTime() - new Date(lastTime.keypress).getTime() <= debouncedTimeout) return false;
     if ([].concat(keyMap.up, 'home').includes(combo) && isTopNow() && isTopLast) { // 打开上一本书籍
       await showFile({ relativeBook: 'prev' });
     } else if ([].concat(keyMap.down, 'end').includes(combo) && isBottomNow() && isBottomLast) { // 打开下一本书籍
@@ -911,7 +922,7 @@ async function main() {
       scrollEvent(combo === 'end' ? 'down' : 'up');
     }
 
-    keypressLastTime = new Date().getTime();
+    lastTime.keypress = new Date().getTime();
     return false;
   });
   Mousetrap.bind([].concat(keyMap.shiftAndUp, keyMap.shiftAndDown), (e, combo) => { // shift+上下键 滚动到顶部或底部
@@ -1090,7 +1101,7 @@ async function main() {
     $('.content>div.current').get(0).scrollIntoView();
     await tooltip('当前浏览模式', viewMode);
   });
-  Mousetrap.bind(keyMap.Save, async (e, combo) => { // 关闭并保存本书记录
+  Mousetrap.bind(keyMap.Save, async (e, combo) => { // 保存记录
     await rememberPosition(false, true);
     return false;
   });

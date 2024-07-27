@@ -2,9 +2,9 @@
 // ==Headers==
 // @Name:               avRenamer
 // @Description:        将文件夹下的不可描述视频按规则分类并命名
-// @Version:            1.1.771
+// @Version:            1.1.787
 // @Author:             dodying
-// @Modified:           2024-02-14 16:26:12
+// @Modified:           2024-04-21 16:57:37
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            readline-sync,fs-extra,request-promise,socks5-http-client,socks5-https-client,cheerio,iconv-lite,chardet
@@ -88,6 +88,21 @@ const libs = [
       censored: () => 'COS',
       actor: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[0].brand.name,
       release: (res, $) => JSON.parse($('script[type="application/ld+json"]').html())[1].uploadDate,
+    },
+  },
+  { // FANTIA-POSTS
+    id: 'FANTIA-POSTS',
+    name: [/^FANTIA-POSTS-(\d+)$/i],
+    censored: 'COS',
+    test: 'FANTIA-POSTS-2505479',
+    valid: async (name) => `https://fantia.jp/posts/${name.match(/^FANTIA-POSTS-(\d+)$/i)[1]}`,
+    getInfo: {
+      id: (res, $) => `FANTIA-POSTS-${new URL(res.request.uri.href).pathname.match(/\/posts\/(\d+)/)[1]}`,
+      title: (res, $) => JSON.parse($('script[type="application/ld+json"]').html()).headline,
+      cover: (res, $) => $('[property="og:image"]').attr('content').replace(/blurred_ogp/, 'main'),
+      censored: () => 'COS',
+      actor: (res, $) => JSON.parse($('script[type="application/ld+json"]').html()).author.name,
+      release: (res, $) => JSON.parse($('script[type="application/ld+json"]').html()).datePublished,
     },
   },
   { // KissCos
@@ -687,7 +702,7 @@ const libs = [
       studio: '.movie-panel-info>div:contains("片商")>span.value,.movie-panel-info>div:contains("賣家")>span.value',
     },
   },
-  { // 女優と作品検索
+  { // AV女優別名サーチ
     id: 'MSIN.JP',
     test: 'FC2PPV-3274087',
     valid: async (name) => {

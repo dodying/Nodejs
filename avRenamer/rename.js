@@ -3,9 +3,9 @@
 // ==Headers==
 // @Name:               rename
 // @Description:        重命名
-// @Version:            1.0.147
+// @Version:            1.0.150
 // @Author:             dodying
-// @Modified:           2023-01-22 11:43:47
+// @Modified:           2024-04-08 22:13:48
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            readline-sync
@@ -39,7 +39,7 @@ const main = async () => {
         console.log(`无需:\t${name}`);
         continue;
       }
-      const renamed = rename(name, true);
+      const { full: renamed } = rename(name);
       if (valid(renamed, true)) {
         let nameNew = renamed.toUpperCase();
         let fileNew = path.join(thisdir, `${nameNew}${ext.toLowerCase()}`);

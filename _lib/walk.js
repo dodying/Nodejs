@@ -3,11 +3,15 @@ const path = require('path');
 
 const getValue = (value, dafaultValue) => {
   if (value instanceof Array) {
+    // noop
   } else if (value instanceof RegExp || typeof value === 'string') {
+    // eslint-disable-next-line no-param-reassign
     value = [].concat(value);
   } else if (typeof value === 'number') {
+    // eslint-disable-next-line no-param-reassign
     value = [].concat(value.toString());
   } else {
+    // eslint-disable-next-line no-param-reassign
     value = dafaultValue;
   }
   return value;
@@ -21,6 +25,8 @@ class Option {
       nodir: false,
       nofile: false,
       recursive: true,
+      endswithslash: false,
+      depth: Infinity,
     }, other);
     this.ignore = getValue(this.ignore, []);
     this.ignoreDir = getValue(this.ignoreDir, []);
@@ -39,11 +45,14 @@ class Option {
  * @param {object} option
  */
 
-const walk = function (dir, option = {}) {
+const walk = function (dir, option = {}, depth = 1) {
   // console.log('walk', dir);
+  // eslint-disable-next-line no-param-reassign
   option = new Option(dir, option);
 
-  let output = [];
+  const output = [];
+  if (depth > option.depth) return [];
+
   let list = [];
   try {
     list = fs.readdirSync(dir);
@@ -54,13 +63,14 @@ const walk = function (dir, option = {}) {
     if (option.match && !option.match.some((i) => fullpath.match(i))) continue;
 
     const name = option.fullpath ? fullpath : path.relative(option.dir, fullpath);
-    if (fs.existsSync(fullpath) && fs.statSync(fullpath).isDirectory()) { // isDirectory
+    if (!fs.existsSync(fullpath)) continue;
+    if (fs.statSync(fullpath).isDirectory()) { // isDirectory
       const dirname = path.basename(file);
       if (option.ignoreDir.some((i) => dirname.match(i))) continue;
       if (option.matchDir && !option.matchDir.some((i) => dirname.match(i))) continue;
 
-      if (!option.nodir) output.push(name);
-      if (option.recursive) output = output.concat(walk(fullpath, option) || []);
+      if (!option.nodir) output.push(option.endswithslash ? `${name}\\` : name);
+      if (option.recursive) output.push(walk(fullpath, option, depth + 1) || []);
     } else {
       const basename = path.basename(file);
       if (option.ignoreFile.some((i) => basename.match(i))) continue;
@@ -70,13 +80,15 @@ const walk = function (dir, option = {}) {
       if (!option.nofile) output.push(name);
     }
   }
-  return output;
+  return output.flat();
 };
-walk.sync = async function (dir, option = {}) {
+walk.sync = async function (dir, option = {}, depth = 0) {
   // console.log('walk', dir);
+  // eslint-disable-next-line no-param-reassign
   option = new Option(dir, option);
+  const output = [];
+  if (depth > option.depth) return [];
 
-  let output = [];
   let list = [];
   try {
     list = await fs.promises.readdir(dir);
@@ -93,7 +105,7 @@ walk.sync = async function (dir, option = {}) {
       if (option.matchDir && !option.matchDir.some((i) => dirname.match(i))) continue;
 
       if (!option.nodir) output.push(name);
-      if (option.recursive) output = output.concat(await walk.sync(fullpath, option) || []);
+      if (option.recursive) output.push(await walk.sync(fullpath, option, depth + 1) || []);
     } else {
       const basename = path.basename(file);
       if (option.ignoreFile.some((i) => basename.match(i))) continue;
@@ -103,7 +115,7 @@ walk.sync = async function (dir, option = {}) {
       if (!option.nofile) output.push(name);
     }
   }
-  return output;
+  return output.flat();
 };
 
 module.exports = walk;

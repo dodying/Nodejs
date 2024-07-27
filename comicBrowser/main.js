@@ -1,10 +1,11 @@
+/* eslint-disable prefer-destructuring,no-loop-func,no-shadow,no-use-before-define,no-param-reassign,global-require,import/no-extraneous-dependencies,camelcase */
 // ==Headers==
 // @Name:               main
 // @Description:        浏览comic
-// @Version:            1.0.1010
+// @Version:            1.0.1120
 // @Author:             dodying
 // @Created:            2020-01-28 21:26:56
-// @Modified:           2023-04-23 18:56:20
+// @Modified:           2024-02-15 21:09:56
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            fs-extra,electron,electron-reload,mysql2,jszip
@@ -17,7 +18,7 @@ const windows = {};
 let config = {};
 let store = {};
 let tray = null;
-let isQuiting = false;
+// let isQuiting = false;
 
 let connection = null;
 let connectionLastTime = null;
@@ -131,7 +132,7 @@ const openWindow = (url) => {
           break;
         } else {
           windowHistory.splice(0, 1);
-          i--;
+          i = i - 1;
         }
       }
     });
@@ -245,7 +246,7 @@ const updateTableFiles = async (obj) => {
   let arr = [];
   for (const file of filesNew) {
     if (arr.length >= 100) {
-      const arr1 = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
+      const arr1 = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : mysql.escape(j))).join(', ')})`).join(',\n');
       await connection.query(queryString + arr1);
       arr = [];
     }
@@ -277,7 +278,7 @@ const updateTableFiles = async (obj) => {
     // 检测有无info.txt
     if (fileList.filter((item) => item.match(/(^|\/)info\.txt$/)).length === 0) {
       console.warn('压缩档内不存在info.txt: ', file);
-      return new Error('no info.txt');
+      continue;
     }
 
     // 读取info.txt
@@ -290,6 +291,7 @@ const updateTableFiles = async (obj) => {
     for (const i of mainTag) {
       if (i in info) tags[i] = info[i];
     }
+    // eslint-disable-next-line no-nested-ternary
     let artist = tags.artist ? tags.artist : tags.group ? tags.group : [];
     artist = artist.map((i) => i.split('|')[0].trim()).sort().slice(0, 3).join(', ');
     arr.push([
@@ -297,16 +299,16 @@ const updateTableFiles = async (obj) => {
       info.title, ...getTitleMain(info.title),
       info.jTitle, ...getTitleMain(info.jTitle),
       info.Category, info.web, info.lang,
-      isNaN(parseInt(info.length)) ? 0 : parseInt(info.length),
+      Number.isNaN(parseInt(info.length, 10)) ? 0 : parseInt(info.length, 10),
       info.Posted, info.Uploader,
-      isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
-      isNaN(parseInt(info.Favorited)) ? 0 : parseInt(info.Favorited),
+      Number.isNaN(parseFloat(info.Rating)) ? 0 : parseFloat(info.Rating),
+      Number.isNaN(parseInt(info.Favorited, 10)) ? 0 : parseInt(info.Favorited, 10),
       info.downloadTime,
       JSON.stringify(tags),
     ]);
   }
   if (arr.length) {
-    arr = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : connection.escape(j))).join(', ')})`).join(',\n');
+    arr = arr.map((i) => `(${i.map((j) => (j === 'NULL' ? 'NULL' : mysql.escape(j))).join(', ')})`).join(',\n');
     await connection.query(queryString + arr);
   }
   console.timeEnd('INSERT INTO');
@@ -316,7 +318,7 @@ const updateTableFiles = async (obj) => {
   arr = [];
   for (const file of filesDeleted) {
     if (arr.length >= 100) {
-      const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
+      const arr1 = arr.map((i) => `path=${mysql.escape(i)}`).join(' OR ');
       await connection.query(queryString + arr1);
       arr = [];
     }
@@ -324,7 +326,7 @@ const updateTableFiles = async (obj) => {
     arr.push(file);
   }
   if (arr.length) {
-    const arr1 = arr.map((i) => `path=${connection.escape(i)}`).join(' OR ');
+    const arr1 = arr.map((i) => `path=${mysql.escape(i)}`).join(' OR ');
     await connection.query(queryString + arr1);
   }
   console.timeEnd('DELETE INTO');
@@ -353,7 +355,7 @@ const rebuildTrayMenu = () => {
     {
       label: '显示所有窗口',
       click: (menuItem, browserWindow, event) => {
-        for (const id in windows) {
+        for (const id of Object.keys(windows)) {
           windows[id].show();
         }
         rebuildTrayMenu();
@@ -362,7 +364,7 @@ const rebuildTrayMenu = () => {
     {
       label: '隐藏所有窗口',
       click: (menuItem, browserWindow, event) => {
-        for (const id in windows) {
+        for (const id of Object.keys(windows)) {
           windows[id].hide();
         }
         rebuildTrayMenu();
@@ -371,7 +373,7 @@ const rebuildTrayMenu = () => {
     { type: 'separator' },
   ];
 
-  for (const id in windows) {
+  for (const id of Object.keys(windows)) {
     if (windows[id].isVisible()) continue;
     menuItem.push({
       label: `${id}: ${windows[id].getTitle().substr(0, 40)}`,
@@ -387,16 +389,16 @@ const rebuildTrayMenu = () => {
     {
       label: '保存并退出',
       click: (menuItem, browserWindow, event) => {
-        isQuiting = true;
+        // isQuiting = true;
         saveLastTabs();
-        for (const id in windows) windows[id].close();
+        for (const id of Object.keys(windows)) windows[id].close();
       },
     },
     {
       label: '退出',
       click: (menuItem, browserWindow, event) => {
-        isQuiting = true;
-        for (const id in windows) windows[id].close();
+        // isQuiting = true;
+        for (const id of Object.keys(windows)) windows[id].close();
       },
     },
   );
@@ -407,7 +409,7 @@ const rebuildTrayMenu = () => {
 const saveLastTabs = () => {
   const urls = [];
   const separator = __dirname.replace(/\\/g, '/');
-  for (const id in windows) {
+  for (const id of Object.keys(windows)) {
     let url = windows[id].webContents.getURL();
     const arr = url.split(separator);
     if (arr.length > 1) url = `.${arr.slice(1).join(separator)}`;
@@ -454,7 +456,7 @@ ipcMain.on('open-external', async (event, url, name) => {
     const cover = path.resolve(path.dirname(fullpath), `${path.parse(fullpath).name}.jpg`);
     if (fse.existsSync(cover)) fse.unlinkSync(cover);
 
-    await connection.query('DELETE FROM files WHERE ' + `path=${connection.escape(url)}`);
+    await connection.query(`DELETE FROM files WHERE path=${mysql.escape(url)}`);
 
     store[name] = Array.from(new Set([].concat(store[name] || [], url)));
     if (store.lastViewPosition && url in store.lastViewPosition) delete store.lastViewPosition[url];
@@ -501,7 +503,7 @@ ipcMain.on('clear', (event) => {
   delete store.history;
   delete store.delete;
   for (const i of ['lastViewPosition', 'lastViewTime']) {
-    for (const file in store[i]) {
+    for (const file of Object.keys(store[i])) {
       const fullpath = path.resolve(config.libraryFolder, file);
       if (!fse.existsSync(fullpath)) delete store[i][file];
     }
@@ -513,7 +515,7 @@ ipcMain.on('clear', (event) => {
       const fullpath = path.resolve(config.libraryFolder, file);
       if (!fse.existsSync(fullpath)) {
         store[i].splice(j, 1);
-        j--;
+        j = j - 1;
       }
     }
   }
@@ -539,13 +541,13 @@ ipcMain.on('database-connect', async (event, obj, todo) => {
       event.returnValue = ['No Such Database', code];
     }
   } else if (todo === 'init') {
-    let queryString = `CREATE DATABASE ${obj.database} CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci`;
+    let queryString = `CREATE DATABASE IF NOT EXISTS ${obj.database} CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci`;
     await connection.query(queryString);
 
     queryString = `USE ${obj.database}`;
     await connection.query(queryString);
 
-    queryString = `CREATE TABLE \`files\` (${[
+    queryString = `CREATE TABLE IF NOT EXISTS \`files\` (${[
       'id int unsigned not null auto_increment',
       ...Object.keys(columns).map((i) => `${i} ${columns[i]}`),
       'PRIMARY KEY (id)',
@@ -686,12 +688,12 @@ ipcMain.on('hide-tab', (event, id) => {
 });
 
 ipcMain.on('hide-all-tabs', (event) => {
-  for (const id in windows) windows[id].hide();
+  for (const id of Object.keys(windows)) windows[id].hide();
   rebuildTrayMenu();
 });
 
 ipcMain.on('close-all-tabs', (event, id) => {
-  for (const id in windows) windows[id].close();
+  for (const id of Object.keys(windows)) windows[id].close();
 });
 
 app.on('window-all-closed', () => {

@@ -1,10 +1,11 @@
+/* eslint-disable no-param-reassign,no-use-before-define,import/no-extraneous-dependencies,no-shadow,no-loop-func,camelcase */
 // ==Headers==
 // @Name:               index
 // @Description:        index
-// @Version:            1.0.1926
+// @Version:            1.0.1984
 // @Author:             dodying
 // @Created:            2020-02-04 13:54:15
-// @Modified:           2023-12-19 21:56:37
+// @Modified:           2024-02-16 19:36:59
 // @Namespace:          https://github.com/dodying/Nodejs
 // @SupportURL:         https://github.com/dodying/Nodejs/issues
 // @Require:            electron,mysql2
@@ -140,6 +141,7 @@ const showResult = (page) => {
   if (lastResult.length && !('time_view' in lastResult[0])) { // 仅在第一次，增加属性time_view，方便后续排序等操作
     for (const i of lastResult) {
       i.time_view = store.lastViewTime ? store.lastViewTime[i.path] || '' : '';
+      i.viewed = i.time_view || (store.lastViewPosition && store.lastViewPosition[i.path]) ? 1 : 0;
     }
   }
 
@@ -194,10 +196,11 @@ const showResult = (page) => {
     const tagString = encodeURIComponent(JSON.stringify(row.tags));
     const star = store.star && store.star.includes(row.path) ? 1 : 0;
     const invisible = store.invisible && store.invisible.includes(row.path) ? 1 : 0;
-    let tr = `<tr class="${order % 2 ? 'even' : 'odd'}" path="${row.path}" star="${star}" tags="${tagString}" invisible="${invisible}">`; // path 用于定位
+    let tr = `<tr class="${order % 2 ? 'even' : 'odd'}" path="${row.path}" star="${star}" viewed="${row.viewed}" tags="${tagString}" invisible="${invisible}">`; // path 用于定位
 
     // td order
-    tr = `${tr}<td>${order++}</td>`;
+    tr = `${tr}<td>${order}</td>`;
+    order = order + 1;
 
     for (const i in showInfo) {
       if (showInfo[i][0]) {
@@ -209,7 +212,8 @@ const showResult = (page) => {
           const date = new Date(time);
           text = `<span datetime="${time}" title="${date.toLocaleString('zh-CN', { hour12: false })}"></span>`;
         } else if (['rating'].includes(i)) {
-          const precent = row.rating / 5 * 100;
+          const precent = (row.rating / 5) * 100;
+          // eslint-disable-next-line no-nested-ternary
           const color = row.rating >= 4 ? '#0f0' : row.rating >= 2.5 ? '#ff0' : '#f00';
 
           attr.push(`style="background-image:-webkit-linear-gradient(left, ${color} ${precent}%, white ${100 - precent}%);"`);
@@ -280,7 +284,7 @@ const showResult = (page) => {
   $(scrollElement).on('scroll', () => {
     const total = $(scrollElement).prop('scrollHeight');
     let current = $(scrollElement).prop('scrollTop');
-    current = current + Math.min(parseInt($(scrollElement).css('height')), document.documentElement.clientHeight);
+    current = current + Math.min(parseInt($(scrollElement).css('height'), 10), document.documentElement.clientHeight);
     electron.remote.getCurrentWindow().setProgressBar(Math.min(current / total, 1));
   });
   resultTable = $('.tableBody');
@@ -302,7 +306,7 @@ const showResult = (page) => {
 const showBookmarks = () => {
   const conditions = ipcRenderer.sendSync('config', 'get', 'bookmarkCondition', {});
   const html = ['<ul>'];
-  for (const name in conditions) {
+  for (const name of Object.keys(conditions)) {
     const condition = encodeURIComponent(conditions[name]);
     html.push(`<li><a name="native" href="./src/index.html?condition=${condition}">${name}</a></li>`);
   }
@@ -386,7 +390,7 @@ const showCondition = (conditions) => {
 };
 const calcRelativeTime = (time) => {
   const lasttime = new Date(time).getTime();
-  if (isNaN(lasttime)) return '';
+  if (Number.isNaN(lasttime)) return '';
   const delta = new Date().getTime() - lasttime;
   const info = {
     ms: 1,
@@ -399,7 +403,7 @@ const calcRelativeTime = (time) => {
   };
   let suf;
   let t = delta;
-  for (const i in info) {
+  for (const i of Object.keys(info)) {
     const m = t / info[i]; // 倍数
     const r = t % info[i]; // 余数
     if (m >= 1 || info[i] - r <= 2) { // 进阶
@@ -578,7 +582,7 @@ const main = async () => {
       }
 
       tags.forEach((i) => {
-        for (const key in i.data) {
+        for (const key of Object.keys(i.data)) {
           const name = i.data[key].name.replace(/!\[(.*?)\]\((.*?)\)/g, '');
           if (key.match(value) || name.match(value)) {
             html.push(`<li cname="${name}">${key}</li>`);
@@ -749,15 +753,35 @@ const main = async () => {
     ipcRenderer.sendSync('clear');
   });
 
-  // 按钮-切换hide
-  let invisible = true;
+  // 按钮-【显示/隐藏】被隐藏的文件
   $('.filter').find('[name="toggle-invisible"]').on('click', async (e) => {
-    if (invisible) {
-      $('.query>.result tr[invisible="1"]').attr('raw-invisible', '1').attr('invisible', null);
-    } else {
-      $('.query>.result tr[raw-invisible="1"]').attr('invisible', '1').attr('raw-invisible', null);
+    const statusAll = ['hide', 'show'];
+    const statusNow = $(e.target).attr('status') || statusAll[0];
+    const status = statusAll[(statusAll.indexOf(statusNow) + 1) % statusAll.length];
+    $(e.target).attr('status', status);
+    if (status === 'hide') {
+      $('.query>.result>.tableBody tr[raw-invisible="1"]').attr('invisible', '1').attr('raw-invisible', null);
+    } else if (status === 'show') {
+      $('.query>.result>.tableBody tr[invisible="1"]').attr('raw-invisible', '1').attr('invisible', null);
     }
-    invisible = !invisible;
+    scrollToLast();
+  });
+  // 按钮-【所有/只显示/隐藏】收藏/阅读过
+  $('.filter').find('[name="toggle-star"],[name="toggle-viewed"]').on('click', async (e) => {
+    const name = $(e.target).attr('name').match(/^toggle-(.*)$/)[1];
+    const statusAll = ['all', 'hide', 'only'];
+    const statusNow = $(e.target).attr('status') || statusAll[0];
+    const status = statusAll[(statusAll.indexOf(statusNow) + 1) % statusAll.length];
+    $(e.target).attr('status', status);
+    if (status === 'all') {
+      $(`.query>.result>.tableBody tr[${name}-invisible]`).attr(`${name}-invisible`, null);
+    } else if (status === 'only') {
+      $(`.query>.result>.tableBody tr[${name}="1"][${name}-invisible]`).attr(`${name}-invisible`, null);
+      $(`.query>.result>.tableBody tr:not([${name}="1"]):not([${name}-invisible])`).attr(`${name}-invisible`, '1');
+    } else if (status === 'hide') {
+      $(`.query>.result>.tableBody tr[${name}="1"]:not([${name}-invisible])`).attr(`${name}-invisible`, '1');
+      $(`.query>.result>.tableBody tr:not([${name}="1"])[${name}-invisible]`).attr(`${name}-invisible`, null);
+    }
     scrollToLast();
   });
 
@@ -793,7 +817,7 @@ const main = async () => {
       fs.readFile(src, (err, buffer) => {
         $(target).prop('image_loading', null);
         if (err) {
-
+          // noop
         } else {
           const blob = new window.Blob([new Uint8Array(buffer)]);
           cover = URL.createObjectURL(blob);
@@ -838,10 +862,10 @@ const main = async () => {
     loading = false;
   });
   $('.result').on('mousemove', 'tr>[name^="title"]', (e) => {
-    const _width = $('.preview[name="tags"]').outerWidth();
-    const _height = $('.preview[name="tags"]').outerHeight();
-    let left = _width + e.clientX + 10 < window.innerWidth ? e.clientX + 5 : e.clientX - _width - 5;
-    let top = _height + e.clientY + 10 < window.innerHeight ? e.clientY + 5 : e.clientY - _height - 5;
+    const outerWidth = $('.preview[name="tags"]').outerWidth();
+    const outerHeight = $('.preview[name="tags"]').outerHeight();
+    let left = outerWidth + e.clientX + 10 < window.innerWidth ? e.clientX + 5 : e.clientX - outerWidth - 5;
+    let top = outerHeight + e.clientY + 10 < window.innerHeight ? e.clientY + 5 : e.clientY - outerHeight - 5;
     if (left < 0) left = 0;
     if (top < 0) top = 0;
     $('.preview[name="tags"]').css({ left, top });
@@ -972,6 +996,7 @@ const main = async () => {
         if (!name || !rememberHistory) return true;
         if (!('history' in obj)) obj.history = [];
         obj.history.unshift(href);
+        return false;
       }, 'store');
     }
 
@@ -987,7 +1012,7 @@ const main = async () => {
   // 全局快捷键
   let keypressLastTime = 0;
   Mousetrap.bind([].concat(keyMap.up, keyMap.down), async (e, combo) => { // 上下键
-    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return;
+    if (e.type === 'keypress' && new Date().getTime() - new Date(keypressLastTime).getTime() <= keypressTimeout) return false;
 
     if (keyMap.up.includes(combo)) { // 向上滚动
       scrollElement.scrollTop = scrollElement.scrollTop + -scrollHeight;
@@ -1048,6 +1073,7 @@ const main = async () => {
           arr = arr.sort((a, b) => {
             const ta = new Date(a.time_download).getTime();
             const tb = new Date(b.time_download).getTime();
+            // eslint-disable-next-line no-nested-ternary
             return ta > tb ? -1 : ta < tb ? 1 : 0;
           });
           for (let i = 1; i < arr.length; i++) {
